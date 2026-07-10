@@ -55,30 +55,12 @@ func (ns NullAuthUserStatus) Value() (driver.Value, error) {
 	return string(ns.AuthUserStatus), nil
 }
 
-type AuthEmailVerification struct {
-	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	TokenHash string             `json:"token_hash"`
-	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
-	UsedAt    pgtype.Timestamptz `json:"used_at"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
 type AuthOauthAccount struct {
 	ID             pgtype.UUID        `json:"id"`
 	UserID         pgtype.UUID        `json:"user_id"`
 	Provider       string             `json:"provider"`
 	ProviderUserID string             `json:"provider_user_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-}
-
-type AuthPasswordResetToken struct {
-	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	TokenHash string             `json:"token_hash"`
-	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
-	UsedAt    pgtype.Timestamptz `json:"used_at"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type AuthPermission struct {
@@ -112,17 +94,33 @@ type AuthRolePermission struct {
 }
 
 type AuthUser struct {
-	ID            pgtype.UUID        `json:"id"`
-	Email         string             `json:"email"`
-	PasswordHash  pgtype.Text        `json:"password_hash"`
-	EmailVerified bool               `json:"email_verified"`
-	Status        AuthUserStatus     `json:"status"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID              pgtype.UUID        `json:"id"`
+	Email           string             `json:"email"`
+	Phone           pgtype.Text        `json:"phone"`
+	FullName        string             `json:"full_name"`
+	Handle          string             `json:"handle"`
+	PasswordHash    pgtype.Text        `json:"password_hash"`
+	Status          AuthUserStatus     `json:"status"`
+	TokenVersion    int64              `json:"token_version"`
+	IsEmailVerified bool               `json:"is_email_verified"`
+	IsPhoneVerified bool               `json:"is_phone_verified"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AuthUserPin struct {
+	ID             pgtype.UUID        `json:"id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	PinHash        string             `json:"pin_hash"`
+	FailedAttempts int32              `json:"failed_attempts"`
+	LockedUntil    pgtype.Timestamptz `json:"locked_until"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type AuthUserRole struct {
 	UserID     pgtype.UUID        `json:"user_id"`
 	RoleID     pgtype.UUID        `json:"role_id"`
+	GrantedBy  pgtype.UUID        `json:"granted_by"`
 	AssignedAt pgtype.Timestamptz `json:"assigned_at"`
 }

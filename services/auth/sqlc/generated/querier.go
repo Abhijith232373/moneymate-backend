@@ -13,43 +13,52 @@ import (
 type Querier interface {
 	AssignPermissionToRole(ctx context.Context, arg AssignPermissionToRoleParams) error
 	AssignRoleToUser(ctx context.Context, arg AssignRoleToUserParams) error
-	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) (AuthEmailVerification, error)
+	CountUsers(ctx context.Context) (int64, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (AuthOauthAccount, error)
-	CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) (AuthPasswordResetToken, error)
+	CreatePIN(ctx context.Context, arg CreatePINParams) error
 	CreatePermission(ctx context.Context, arg CreatePermissionParams) (AuthPermission, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (AuthRefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (AuthRole, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error)
-	DeleteExpiredEmailVerifications(ctx context.Context) error
-	DeleteExpiredPasswordResetTokens(ctx context.Context) error
 	DeleteExpiredRefreshTokens(ctx context.Context) error
 	DeletePermission(ctx context.Context, id pgtype.UUID) error
 	DeleteRole(ctx context.Context, id pgtype.UUID) error
-	DeleteUser(ctx context.Context, id pgtype.UUID) error
-	GetEmailVerification(ctx context.Context, tokenHash string) (AuthEmailVerification, error)
+	EmailExists(ctx context.Context, email string) (bool, error)
 	GetOAuthAccount(ctx context.Context, arg GetOAuthAccountParams) (AuthOauthAccount, error)
 	GetOAuthAccountsByUser(ctx context.Context, userID pgtype.UUID) ([]AuthOauthAccount, error)
-	GetPasswordResetToken(ctx context.Context, tokenHash string) (AuthPasswordResetToken, error)
+	GetPINByUserID(ctx context.Context, userID pgtype.UUID) (AuthUserPin, error)
 	GetPermissionByID(ctx context.Context, id pgtype.UUID) (AuthPermission, error)
 	GetPermissionByName(ctx context.Context, name string) (AuthPermission, error)
 	GetRefreshToken(ctx context.Context, tokenHash string) (AuthRefreshToken, error)
 	GetRoleByID(ctx context.Context, id pgtype.UUID) (AuthRole, error)
 	GetRoleByName(ctx context.Context, name string) (AuthRole, error)
 	GetRolePermissions(ctx context.Context, roleID pgtype.UUID) ([]AuthPermission, error)
+	GetTokenVersion(ctx context.Context, id pgtype.UUID) (int64, error)
 	GetUserByEmail(ctx context.Context, email string) (AuthUser, error)
+	GetUserByHandle(ctx context.Context, handle string) (AuthUser, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (AuthUser, error)
+	GetUserByPhone(ctx context.Context, phone pgtype.Text) (AuthUser, error)
 	GetUserRoles(ctx context.Context, userID pgtype.UUID) ([]AuthRole, error)
+	HandleExists(ctx context.Context, handle string) (bool, error)
+	IncrementPINFailedAttempts(ctx context.Context, userID pgtype.UUID) (int32, error)
+	IncrementTokenVersion(ctx context.Context, id pgtype.UUID) (int64, error)
 	ListPermissions(ctx context.Context) ([]AuthPermission, error)
 	ListRoles(ctx context.Context) ([]AuthRole, error)
-	MarkEmailVerificationUsed(ctx context.Context, tokenHash string) error
-	MarkPasswordResetTokenUsed(ctx context.Context, tokenHash string) error
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]AuthUser, error)
+	LockPIN(ctx context.Context, arg LockPINParams) error
+	PINExists(ctx context.Context, userID pgtype.UUID) (bool, error)
+	PhoneExists(ctx context.Context, phone pgtype.Text) (bool, error)
 	RemovePermissionFromRole(ctx context.Context, arg RemovePermissionFromRoleParams) error
 	RemoveRoleFromUser(ctx context.Context, arg RemoveRoleFromUserParams) error
+	ResetPINFailedAttempts(ctx context.Context, userID pgtype.UUID) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	SoftDeleteUser(ctx context.Context, id pgtype.UUID) error
+	UpdatePINHash(ctx context.Context, arg UpdatePINHashParams) error
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) error
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	VerifyEmail(ctx context.Context, id pgtype.UUID) error
+	VerifyPhone(ctx context.Context, id pgtype.UUID) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -11,58 +11,95 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createUser = `-- name: CreateUser :one
+const countUsers = `-- name: CountUsers :one
+SELECT count(*) FROM auth.users
+`
 
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createUser = `-- name: CreateUser :one
 INSERT INTO auth.users (
     id,
     email,
+    phone,
+    full_name,
+    handle,
     password_hash
 )
 VALUES (
-    $1,
-    $2,
-    $3
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, email, password_hash, email_verified, status, created_at, updated_at
+RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at
 `
 
 type CreateUserParams struct {
 	ID           pgtype.UUID `json:"id"`
 	Email        string      `json:"email"`
+	Phone        pgtype.Text `json:"phone"`
+	FullName     string      `json:"full_name"`
+	Handle       string      `json:"handle"`
 	PasswordHash pgtype.Text `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.ID, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.ID,
+		arg.Email,
+		arg.Phone,
+		arg.FullName,
+		arg.Handle,
+		arg.PasswordHash,
+	)
 	var i AuthUser
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Phone,
+		&i.FullName,
+		&i.Handle,
 		&i.PasswordHash,
-		&i.EmailVerified,
 		&i.Status,
+		&i.TokenVersion,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteUser = `-- name: DeleteUser :exec
+const emailExists = `-- name: EmailExists :one
+SELECT EXISTS(
+    SELECT 1 FROM auth.users WHERE email = $1
+) AS exists
+`
 
-DELETE
-FROM auth.users
+func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRow(ctx, emailExists, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getTokenVersion = `-- name: GetTokenVersion :one
+SELECT token_version FROM auth.users
 WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteUser, id)
-	return err
+func (q *Queries) GetTokenVersion(ctx context.Context, id pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getTokenVersion, id)
+	var token_version int64
+	err := row.Scan(&token_version)
+	return token_version, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-
-SELECT id, email, password_hash, email_verified, status, created_at, updated_at
-FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
 WHERE email = $1
 `
 
@@ -72,9 +109,39 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AuthUser, e
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Phone,
+		&i.FullName,
+		&i.Handle,
 		&i.PasswordHash,
-		&i.EmailVerified,
 		&i.Status,
+		&i.TokenVersion,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByHandle = `-- name: GetUserByHandle :one
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+WHERE handle = $1
+`
+
+func (q *Queries) GetUserByHandle(ctx context.Context, handle string) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, getUserByHandle, handle)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Phone,
+		&i.FullName,
+		&i.Handle,
+		&i.PasswordHash,
+		&i.Status,
+		&i.TokenVersion,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -82,9 +149,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AuthUser, e
 }
 
 const getUserByID = `-- name: GetUserByID :one
-
-SELECT id, email, password_hash, email_verified, status, created_at, updated_at
-FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
 WHERE id = $1
 `
 
@@ -94,17 +159,145 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (AuthUser, er
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Phone,
+		&i.FullName,
+		&i.Handle,
 		&i.PasswordHash,
-		&i.EmailVerified,
 		&i.Status,
+		&i.TokenVersion,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const updatePassword = `-- name: UpdatePassword :exec
+const getUserByPhone = `-- name: GetUserByPhone :one
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+WHERE phone = $1
+`
 
+func (q *Queries) GetUserByPhone(ctx context.Context, phone pgtype.Text) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, getUserByPhone, phone)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Phone,
+		&i.FullName,
+		&i.Handle,
+		&i.PasswordHash,
+		&i.Status,
+		&i.TokenVersion,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const handleExists = `-- name: HandleExists :one
+SELECT EXISTS(
+    SELECT 1 FROM auth.users WHERE handle = $1
+) AS exists
+`
+
+func (q *Queries) HandleExists(ctx context.Context, handle string) (bool, error) {
+	row := q.db.QueryRow(ctx, handleExists, handle)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const incrementTokenVersion = `-- name: IncrementTokenVersion :one
+UPDATE auth.users
+SET
+    token_version = token_version + 1,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING token_version
+`
+
+func (q *Queries) IncrementTokenVersion(ctx context.Context, id pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, incrementTokenVersion, id)
+	var token_version int64
+	err := row.Scan(&token_version)
+	return token_version, err
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]AuthUser, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuthUser{}
+	for rows.Next() {
+		var i AuthUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Phone,
+			&i.FullName,
+			&i.Handle,
+			&i.PasswordHash,
+			&i.Status,
+			&i.TokenVersion,
+			&i.IsEmailVerified,
+			&i.IsPhoneVerified,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const phoneExists = `-- name: PhoneExists :one
+SELECT EXISTS(
+    SELECT 1 FROM auth.users WHERE phone = $1
+) AS exists
+`
+
+func (q *Queries) PhoneExists(ctx context.Context, phone pgtype.Text) (bool, error) {
+	row := q.db.QueryRow(ctx, phoneExists, phone)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const softDeleteUser = `-- name: SoftDeleteUser :exec
+UPDATE auth.users
+SET
+    status = 'deleted',
+    updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteUser(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteUser, id)
+	return err
+}
+
+const updatePassword = `-- name: UpdatePassword :exec
 UPDATE auth.users
 SET
     password_hash = $2,
@@ -123,7 +316,6 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 }
 
 const updateUserStatus = `-- name: UpdateUserStatus :exec
-
 UPDATE auth.users
 SET
     status = $2,
@@ -142,15 +334,28 @@ func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusPara
 }
 
 const verifyEmail = `-- name: VerifyEmail :exec
-
 UPDATE auth.users
 SET
-    email_verified = TRUE,
+    is_email_verified  = TRUE,
+    status = 'active',
     updated_at = NOW()
 WHERE id = $1
 `
 
 func (q *Queries) VerifyEmail(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, verifyEmail, id)
+	return err
+}
+
+const verifyPhone = `-- name: VerifyPhone :exec
+UPDATE auth.users
+SET
+    is_phone_verified = TRUE,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) VerifyPhone(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, verifyPhone, id)
 	return err
 }
