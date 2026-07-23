@@ -21,6 +21,7 @@ type DatabaseConfig struct {
 	MaxIdleTime     time.Duration
 
 	DSN string
+	MigrationsPath string
 }
 
 
@@ -37,6 +38,7 @@ func LoadDatabaseConfig(v *viper.Viper, schema string) DatabaseConfig {
 		MaxIdleConns:    v.GetInt("database.max_idle_conns"),
 		MaxConnLifetime: v.GetDuration("database.max_conn_lifetime"),
 		MaxIdleTime:     v.GetDuration("database.max_idle_time"),
+		MigrationsPath:  v.GetString("database.migrations_path"),
 	}
 
 	cfg.DSN = fmt.Sprintf(

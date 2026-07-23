@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -37,6 +38,11 @@ func Build(cfg *config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = postgres.RunMigrations(cfg.Database.DSN, cfg.Database.MigrationsPath)
+	if err != nil {
+		return nil, fmt.Errorf("run migrations: %w", err)
+	}
+
 	redisClient, err := setupRedis(cfg)
 	if err != nil {
 		return nil, err
