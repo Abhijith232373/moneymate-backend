@@ -22,22 +22,19 @@ func RegisterRoutes(
 
 	api.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"status": "ok",
+			"status":  "ok",
 			"service": "gateway",
 		})
 	})
-
 	userAuth := api.Group("/auth")
-	userAuth.Post("/register", proxy.AuthProxy(authAddr, "/user/auth/register"))
-	userAuth.Post("/login", proxy.AuthProxy(authAddr, "/user/auth/login"))
-	userAuth.Post("/otp/send", proxy.AuthProxy(authAddr, "/user/auth/otp/send"))
-	userAuth.Post("/otp/verify", proxy.AuthProxy(authAddr, "/user/auth/otp/verify"))
+	userAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/user/register"))
+	userAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
+	userAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
+	userAuth.Post("/otp/send", proxy.AuthProxy(authAddr, "/auth/otp/send"))
+	userAuth.Post("/otp/verify", proxy.AuthProxy(authAddr, "/auth/otp/verify"))
 
 	merchantAuth := api.Group("/merchant/auth")
-	merchantAuth.Post("/register", proxy.AuthProxy(authAddr, "/merchant/auth/register"))
-	merchantAuth.Post("/login", proxy.AuthProxy(authAddr, "/merchant/auth/login"))
-	merchantAuth.Post("/otp/send", proxy.AuthProxy(authAddr, "/merchant/auth/otp/send"))
-	merchantAuth.Post("/otp/verify", proxy.AuthProxy(authAddr, "/merchant/auth/otp/verify"))
+	merchantAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/merchant/register"))
 
 	secure := api.Group("/secure")
 	secure.Use(authMiddleware)
