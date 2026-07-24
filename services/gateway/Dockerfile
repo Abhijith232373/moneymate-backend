@@ -1,5 +1,5 @@
 FROM golang:1.26-alpine AS base
-WORKDIR  /moneymate-backend
+WORKDIR /moneymate-backend
 
 RUN apk add --no-cache git
 
@@ -14,14 +14,14 @@ COPY services/merchant/go.mod services/merchant/go.mod
 RUN go work sync
 
 FROM base AS dev
-WORKDIR  /moneymate-backend/services/gateway
+WORKDIR /moneymate-backend/services/gateway
 
 RUN go install github.com/air-verse/air@latest
 
 CMD ["air", "-c", ".air.toml"]
 
 FROM base AS builder
-WORKDIR  /moneymate-backend
+WORKDIR /moneymate-backend
 
 COPY shared/ shared/
 COPY services/gateway/ services/gateway/
@@ -33,10 +33,18 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 FROM alpine:3.19 AS prod
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
 
-COPY --from=builder /bin/gateway /bin/gateway
+# Establish execution context for relative path resolution
+WORKDIR /app
+
+# Copy binary from root of builder
+COPY --from=builder /bin/gateway ./gateway
+
+# Copy config directory from workspace source
+COPY --from=builder /moneymate-backend/services/gateway/config ./config
+
+USER appuser
 
 EXPOSE 8080
 
-CMD ["/bin/gateway"]
+CMD ["./gateway"]
