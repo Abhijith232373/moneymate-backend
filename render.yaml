@@ -33,7 +33,6 @@ services:
         value: "superuser"
       - key: REDIS_ADDR
         value: "red-d9i4417avr4c73a448l0:6379"
-      # SECURE VARS - Defined only in Render Dashboard UI
       - key: POSTGRES_PASSWORD
         sync: false
       - key: JWT_ACCESS_SECRET
@@ -76,7 +75,6 @@ services:
         value: "10"
       - key: POOL_MAX_CONNS
         value: "10"
-      # SECURE VARS - Defined only in Render Dashboard UI
       - key: POSTGRES_PASSWORD
         sync: false
 
@@ -105,6 +103,5 @@ services:
         value: "red-d9i4417avr4c73a448l0:6379"
       - key: REDIS_ADDR
         value: "red-d9i4417avr4c73a448l0:6379"
-      # SECURE VARS - Defined only in Render Dashboard UI
       - key: JWT_ACCESS_SECRET
         sync: false
