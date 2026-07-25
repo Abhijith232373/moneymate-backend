@@ -13,13 +13,6 @@ COPY services/merchant/go.mod services/merchant/go.mod
 
 RUN go work sync
 
-FROM base AS dev
-WORKDIR /moneymate-backend/services/auth
-RUN git config --global --add safe.directory /moneymate-backend
-RUN go install github.com/air-verse/air@latest
-RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-CMD ["air", "-c", ".air.toml"]
-
 FROM base AS builder
 WORKDIR /moneymate-backend
 COPY shared/ shared/
@@ -30,9 +23,9 @@ FROM alpine:3.19 AS prod
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 
+RUN mkdir -p /app/config
 COPY --from=builder /bin/auth ./auth
-COPY --from=builder /moneymate-backend/services/auth/config ./config
-COPY --from=builder /moneymate-backend/services/auth/migrations ./migrations
+COPY --from=builder /moneymate-backend/services/auth/config/config.yaml ./config/config.yaml
 
 USER appuser
 EXPOSE 8081
