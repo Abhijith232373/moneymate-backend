@@ -207,6 +207,23 @@ func (r *userRepo) SoftDelete(ctx context.Context, userID uuid.UUID) error {
     }
     return nil
 }
+func (r *userRepo) AdminUpdate(ctx context.Context, userID uuid.UUID, fullName, email, phone, passwordHash *string) (*domain.User, error) {
+	row, err := r.queries(ctx).AdminUpdateUser(ctx, db.AdminUpdateUserParams{
+		ID:           uuidToPgtype(userID),
+		FullName:     stringPtrToText(fullName),
+		Email:        stringPtrToText(email),
+		Phone:        stringPtrToText(phone),
+		PasswordHash: stringPtrToText(passwordHash),
+	})
+	if err != nil {
+		mappedErr := apperrors.MapDBErrors(err)
+		if mappedErr != err {
+			return nil, mappedErr
+		}
+		return nil, fmt.Errorf("admin update user: %w", err)
+	}
+	return toDomainUser(row), nil
+}
 
 // ── Token Version ─────────────────────────────────────────────────
 

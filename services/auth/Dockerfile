@@ -1,3 +1,4 @@
+
 FROM golang:1.26-alpine AS base
 WORKDIR /moneymate-backend
 

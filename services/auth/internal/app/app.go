@@ -39,13 +39,22 @@ func Build(cfg *config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	dsn := fmt.Sprintf(
-    "postgres://%s:%s@%s:%s/%s?sslmode=disable",
+
+// dsn := fmt.Sprintf(
+//     "postgres://%s:%s@%s:%s/%s?sslmode=disable&x-migrations-table=auth.schema_migrations",
+//     cfg.Database.User, 
+// 	cfg.Database.Password,
+// 	cfg.Database.Host,
+// 	cfg.Database.Port,
+// 	cfg.Database.Name,
+// )
+dsn := fmt.Sprintf(
+    "postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=auth",
     cfg.Database.User,
-    cfg.Database.Password,
-    cfg.Database.Host,
-    cfg.Database.Port,
-    cfg.Database.Name,
+	cfg.Database.Password, 
+	cfg.Database.Host, 
+	cfg.Database.Port, 
+	cfg.Database.Name,
 )
 	err = postgres.RunMigrations(dsn, cfg.Database.MigrationsPath)
 	if err != nil {

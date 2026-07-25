@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) (AuthUser, error)
 	AssignPermissionToRole(ctx context.Context, arg AssignPermissionToRoleParams) error
 	AssignRoleToUser(ctx context.Context, arg AssignRoleToUserParams) error
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
