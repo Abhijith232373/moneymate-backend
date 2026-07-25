@@ -24,32 +24,30 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: CONFIG_PATH
-        value: "./config/config.yaml"
+        value: "/app/config/config.yaml"
       - key: POSTGRES_HOST
         value: "dpg-d9hk7pl8nd3s73d7cji0-a"
       - key: POSTGRES_PORT
         value: "5432"
-      # Using the Render provisioned superuser to guarantee DB connection
       - key: POSTGRES_USER
         value: "superuser"
-      - key: POSTGRES_PASSWORD
-        value: "41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8"
-      - key: POSTGRES_DB
-        value: "moneymate_ld80"
       - key: REDIS_ADDR
         value: "red-d9i4417avr4c73a448l0:6379"
+      # SECURE VARS - Defined only in Render Dashboard UI
+      - key: POSTGRES_PASSWORD
+        sync: false
       - key: JWT_ACCESS_SECRET
-        value: "idekmanjustbesumbullsht"
+        sync: false
       - key: JWT_REFRESH_SECRET
-        value: "idekmanjustbesumbullsht2"
+        sync: false
       - key: SMTP_HOST
-        value: "smtp.gmail.com"
+        sync: false
       - key: SMTP_PORT
-        value: "587"
+        sync: false
       - key: SMTP_USERNAME
-        value: "moneymate2026@gmail.com"
+        sync: false
       - key: SMTP_PASSWORD
-        value: "viif uqfa qznf zjia"
+        sync: false
 
   # ── Merchant Service ──
   - type: web
@@ -65,23 +63,22 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: CONFIG_PATH
-        value: "./config/config.yaml"
+        value: "/app/config/config.yaml"
       - key: POSTGRES_HOST
         value: "dpg-d9hk7pl8nd3s73d7cji0-a"
       - key: POSTGRES_PORT
         value: "5432"
       - key: POSTGRES_USER
         value: "superuser"
-      - key: POSTGRES_PASSWORD
-        value: "41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8"
-      - key: POSTGRES_DB
-        value: "moneymate_ld80"
       - key: DB_POOL_MAX_CONNS
         value: "10"
       - key: POSTGRES_MAX_CONNS
         value: "10"
       - key: POOL_MAX_CONNS
         value: "10"
+      # SECURE VARS - Defined only in Render Dashboard UI
+      - key: POSTGRES_PASSWORD
+        sync: false
 
   # ── API Gateway (Public Ingress) ──
   - type: web
@@ -97,18 +94,17 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: CONFIG_PATH
-        value: "./config/config.yaml"
-      # Gateway targets the internal Auth gRPC port
+        value: "/app/config/config.yaml"
       - key: SERVICES_AUTH_ADDR
         value: "auth-service:9091"
       - key: AUTH_SERVICE_URL
         value: "auth-service:9091"
-      # Gateway targets the internal Merchant HTTP port
       - key: MERCHANT_SERVICE_URL
         value: "merchant-service:9092"
       - key: REDIS_ADDRESS
         value: "red-d9i4417avr4c73a448l0:6379"
       - key: REDIS_ADDR
         value: "red-d9i4417avr4c73a448l0:6379"
+      # SECURE VARS - Defined only in Render Dashboard UI
       - key: JWT_ACCESS_SECRET
-        value: "idekmanjustbesumbullsht"
+        sync: false
