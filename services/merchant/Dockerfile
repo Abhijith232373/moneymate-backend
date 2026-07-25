@@ -1,53 +1,37 @@
-
 FROM golang:1.26-alpine AS base
-WORKDIR /moneymate
+WORKDIR /moneymate-backend
 
-# install dependencies
 RUN apk add --no-cache git
+ENV GONOSUMCHECK=* GONOSUMDB=*
+ENV GOFLAGS=-buildvcs=false
 
-# copy go workspace files first for layer caching
 COPY go.work go.work.sum ./
-
-# copy all go.mod files so workspace resolves
 COPY shared/go.mod shared/go.mod
 COPY services/auth/go.mod services/auth/go.mod
 COPY services/gateway/go.mod services/gateway/go.mod
 COPY services/merchant/go.mod services/merchant/go.mod
 
-# download dependencies
 RUN go work sync
 
 FROM base AS dev
-WORKDIR /moneymate/services/merchant
-
-# install air for hot reload
+WORKDIR /moneymate-backend/services/merchant
 RUN go install github.com/air-verse/air@latest
-
-# install migrate CLI for database migrations
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-
-# air watches for changes and rebuilds
 CMD ["air", "-c", ".air.toml"]
 
 FROM base AS builder
-WORKDIR /moneymate
-
-# copy all source needed for merchant
+WORKDIR /moneymate-backend
 COPY shared/ shared/
 COPY services/merchant/ services/merchant/
-
-# build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -o /bin/merchant \
-    ./services/merchant/cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/merchant ./services/merchant/cmd/main.go
 
 FROM alpine:3.19 AS prod
-
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+
+COPY --from=builder /bin/merchant ./merchant
+COPY --from=builder /moneymate-backend/services/merchant/config ./config
+
 USER appuser
-
-COPY --from=builder /bin/merchant /bin/merchant
-
 EXPOSE 9092
-
-CMD ["/bin/merchant"]
+CMD ["./merchant"]
