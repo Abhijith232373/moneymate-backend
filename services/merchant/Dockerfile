@@ -29,9 +29,9 @@ FROM alpine:3.19 AS prod
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 
-# Copy binary and config explicitly into /app/config
+RUN mkdir -p /app/config
 COPY --from=builder /bin/merchant ./merchant
-COPY --from=builder /moneymate-backend/services/merchant/config ./config
+COPY --from=builder /moneymate-backend/services/merchant/config/config.yaml ./config/config.yaml
 
 USER appuser
 EXPOSE 9092
