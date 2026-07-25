@@ -1,4 +1,10 @@
 services:
+  # ── Internal Redis Cache (Free) ──
+  - type: keyvalue
+    name: moneymate-redis
+    region: singapore
+    plan: free
+
   # ── Auth Service ──
   - type: web
     name: auth-service
@@ -12,10 +18,26 @@ services:
         value: "8081"
       - key: ENVIRONMENT
         value: production
+      - key: POSTGRES_USER
+        value: "superuser"
+      - key: POSTGRES_PASSWORD
+        value: "41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8"
+      - key: POSTGRES_DB
+        value: "moneymate_ld80"
       - key: DB_URL
         value: postgresql://superuser:41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8@dpg-d9hk7pl8nd3s73d7cji0-a/moneymate_ld80?sslmode=require&search_path=auth
       - key: AUTH_DB_URL
         value: postgresql://superuser:41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8@dpg-d9hk7pl8nd3s73d7cji0-a/moneymate_ld80?sslmode=require&search_path=auth
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: moneymate-redis
+          property: connectionString
+      - key: REDIS_ADDR
+        fromService:
+          type: keyvalue
+          name: moneymate-redis
+          property: connectionString
 
   # ── Merchant Service ──
   - type: web
@@ -30,6 +52,12 @@ services:
         value: "9092"
       - key: ENVIRONMENT
         value: production
+      - key: POSTGRES_USER
+        value: "superuser"
+      - key: POSTGRES_PASSWORD
+        value: "41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8"
+      - key: POSTGRES_DB
+        value: "moneymate_ld80"
       - key: MERCHANT_DB_URL
         value: postgresql://superuser:41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8@dpg-d9hk7pl8nd3s73d7cji0-a/moneymate_ld80?sslmode=require&search_path=merchant
 
@@ -52,3 +80,13 @@ services:
         value: auth-service:8081
       - key: MERCHANT_SERVICE_URL
         value: http://merchant-service:9092
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: moneymate-redis
+          property: connectionString
+      - key: REDIS_ADDRESS
+        fromService:
+          type: keyvalue
+          name: moneymate-redis
+          property: connectionString

@@ -37,7 +37,7 @@ func Build(cfg *config.Config) (*App, error) {
 
 	// HTTP Setup
 	httpHandler := transporthttp.NewMerchantHandler(storeUseCase)
-	httpServer := setupHTTPServer(cfg, httpHandler)
+	httpServer := setupHTTPServer(httpHandler)
 
 	httpAddr := cfg.Server.HTTPAddr
 	if httpAddr == "" {
@@ -52,7 +52,7 @@ func Build(cfg *config.Config) (*App, error) {
 	}, nil
 }
 
-func setupHTTPServer(cfg *config.Config, handler *transporthttp.MerchantHandler) *fiber.App {
+func setupHTTPServer(handler *transporthttp.MerchantHandler) *fiber.App {
 	server := fiber.New(fiber.Config{
 		AppName: "merchant-service",
 	})
