@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -38,13 +39,22 @@ func Build(cfg *config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	dsn := fmt.Sprintf(
-    "postgres://%s:%s@%s:%s/%s?sslmode=disable",
+
+// dsn := fmt.Sprintf(
+//     "postgres://%s:%s@%s:%s/%s?sslmode=disable&x-migrations-table=auth.schema_migrations",
+//     cfg.Database.User, 
+// 	cfg.Database.Password,
+// 	cfg.Database.Host,
+// 	cfg.Database.Port,
+// 	cfg.Database.Name,
+// )
+dsn := fmt.Sprintf(
+    "postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=auth",
     cfg.Database.User,
-    cfg.Database.Password,
-    cfg.Database.Host,
-    cfg.Database.Port,
-    cfg.Database.Name,
+	cfg.Database.Password, 
+	cfg.Database.Host, 
+	cfg.Database.Port, 
+	cfg.Database.Name,
 )
 	err = postgres.RunMigrations(dsn, cfg.Database.MigrationsPath)
 	if err != nil {
@@ -117,7 +127,13 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	txMgr := sharedpgxtx.New(pool)
 
 	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, store, txMgr, h, g, issuer, jwtCfg)
-	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailer, cfg.OTP)
+
+	otpMailerIface := usecase.EmailSender(otpMailer)
+	if cfg.Env == "dev" {
+		otpMailerIface = mailer.NewDevOtpMail()
+		log.Println("[DEV MODE] OTP codes will be logged to console instead of sent via email")
+	}
+	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 
 
 	return transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret)

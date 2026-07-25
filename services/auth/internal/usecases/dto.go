@@ -79,6 +79,9 @@ type VerifyRegistrationOTPResponse struct {
 	Verified bool
 }
 
+type RefreshTokenRequest struct {
+    RefreshToken string
+}
 
 
 //admin
@@ -148,4 +151,9 @@ type AssignRoleRequest struct {
 	UserID    uuid.UUID
 	RoleID    uuid.UUID
 	GrantedBy *uuid.UUID 
+}
+type RefreshTokenResponse struct {
+    AccessToken     string    `json:"access_token"`
+    RefreshToken    string    `json:"refresh_token"`
+    AccessExpiresAt time.Time `json:"access_expires_at"`
 }
