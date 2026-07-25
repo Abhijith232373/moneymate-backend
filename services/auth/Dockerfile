@@ -27,6 +27,7 @@ WORKDIR /app
 RUN mkdir -p /app/config
 COPY --from=builder /bin/auth ./auth
 COPY --from=builder /moneymate-backend/services/auth/config/config.yaml ./config/config.yaml
+COPY --from=builder /moneymate-backend/services/auth/migrations ./migrations
 
 USER appuser
 EXPOSE 8081
