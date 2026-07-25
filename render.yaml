@@ -1,5 +1,5 @@
 services:
-  # ── Internal Redis Cache (Free) ──
+  # ── Internal Redis Cache ──
   - type: keyvalue
     name: moneymate-redis
     region: singapore
@@ -17,27 +17,39 @@ services:
     envVars:
       - key: PORT
         value: "8081"
+      - key: HTTP_PORT
+        value: "8081"
+      - key: GRPC_PORT
+        value: "9091"
       - key: ENVIRONMENT
-        value: production
+        value: "production"
+      - key: CONFIG_PATH
+        value: "./config/config.yaml"
       - key: POSTGRES_HOST
         value: "dpg-d9hk7pl8nd3s73d7cji0-a"
       - key: POSTGRES_PORT
         value: "5432"
+      # Using the Render provisioned superuser to guarantee DB connection
       - key: POSTGRES_USER
         value: "superuser"
       - key: POSTGRES_PASSWORD
         value: "41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8"
       - key: POSTGRES_DB
         value: "moneymate_ld80"
-      - key: DB_URL
-        value: postgresql://superuser:41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8@dpg-d9hk7pl8nd3s73d7cji0-a/moneymate_ld80?sslmode=require&search_path=auth
-      - key: AUTH_DB_URL
-        value: postgresql://superuser:41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8@dpg-d9hk7pl8nd3s73d7cji0-a/moneymate_ld80?sslmode=require&search_path=auth
-      # Hardcoded to bypass the "too many colons" Go panic
-      - key: REDIS_URL
-        value: "red-d9i4417avr4c73a448l0:6379"
       - key: REDIS_ADDR
         value: "red-d9i4417avr4c73a448l0:6379"
+      - key: JWT_ACCESS_SECRET
+        value: "idekmanjustbesumbullsht"
+      - key: JWT_REFRESH_SECRET
+        value: "idekmanjustbesumbullsht2"
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        value: "moneymate2026@gmail.com"
+      - key: SMTP_PASSWORD
+        value: "viif uqfa qznf zjia"
 
   # ── Merchant Service ──
   - type: web
@@ -51,7 +63,9 @@ services:
       - key: PORT
         value: "9092"
       - key: ENVIRONMENT
-        value: production
+        value: "production"
+      - key: CONFIG_PATH
+        value: "./config/config.yaml"
       - key: POSTGRES_HOST
         value: "dpg-d9hk7pl8nd3s73d7cji0-a"
       - key: POSTGRES_PORT
@@ -62,8 +76,12 @@ services:
         value: "41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8"
       - key: POSTGRES_DB
         value: "moneymate_ld80"
-      - key: MERCHANT_DB_URL
-        value: postgresql://superuser:41tRCqFMbMCgPwg2K3gB64JECN1Q9ih8@dpg-d9hk7pl8nd3s73d7cji0-a/moneymate_ld80?sslmode=require&search_path=merchant
+      - key: DB_POOL_MAX_CONNS
+        value: "10"
+      - key: POSTGRES_MAX_CONNS
+        value: "10"
+      - key: POOL_MAX_CONNS
+        value: "10"
 
   # ── API Gateway (Public Ingress) ──
   - type: web
@@ -77,15 +95,20 @@ services:
       - key: PORT
         value: "8080"
       - key: ENVIRONMENT
-        value: production
-      - key: AUTH_SERVICE_URL
-        value: http://auth-service:8081
+        value: "production"
+      - key: CONFIG_PATH
+        value: "./config/config.yaml"
+      # Gateway targets the internal Auth gRPC port
       - key: SERVICES_AUTH_ADDR
-        value: auth-service:8081
+        value: "auth-service:9091"
+      - key: AUTH_SERVICE_URL
+        value: "auth-service:9091"
+      # Gateway targets the internal Merchant HTTP port
       - key: MERCHANT_SERVICE_URL
-        value: http://merchant-service:9092
-      # Hardcoded to bypass the "too many colons" Go panic
-      - key: REDIS_URL
-        value: "red-d9i4417avr4c73a448l0:6379"
+        value: "merchant-service:9092"
       - key: REDIS_ADDRESS
         value: "red-d9i4417avr4c73a448l0:6379"
+      - key: REDIS_ADDR
+        value: "red-d9i4417avr4c73a448l0:6379"
+      - key: JWT_ACCESS_SECRET
+        value: "idekmanjustbesumbullsht"
