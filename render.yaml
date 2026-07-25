@@ -4,6 +4,7 @@ services:
     name: moneymate-redis
     region: singapore
     plan: free
+    ipAllowList: [] # This empty array is the required fix
 
   # ── Auth Service ──
   - type: web
