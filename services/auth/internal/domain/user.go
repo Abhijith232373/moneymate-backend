@@ -68,6 +68,6 @@ type UserRepository interface {
     IncrementTokenVersion(ctx context.Context, userID uuid.UUID) (int64, error)
     GetTokenVersion(ctx context.Context, userID uuid.UUID) (int64, error)
     SoftDelete(ctx context.Context, userID uuid.UUID) error
-
+    AdminUpdate(ctx context.Context, userID uuid.UUID, fullName, email, phone, passwordHash *string) (*User, error)
     ListUsers(ctx context.Context, filter ListUsersFilter, page Pagination) (*ListUsersResult, error)
 }

@@ -81,3 +81,71 @@ type VerifyRegistrationOTPResponse struct {
 
 
 
+//admin
+
+type AdminUserSummary struct {
+	ID              string `json:"id"`
+	Email           string `json:"email"`
+	Phone           string `json:"phone,omitempty"`
+	FullName        string `json:"full_name"`
+	Handle          string `json:"handle"`
+	Status          string `json:"status"`
+	IsEmailVerified bool   `json:"is_email_verified"`
+	IsPhoneVerified bool   `json:"is_phone_verified"`
+	CreatedAt       string `json:"created_at"`
+}
+
+type UserDetail struct {
+	AdminUserSummary
+	Roles []string `json:"roles"`
+}
+
+
+type ListUsersRequest struct {
+	Status   string
+	Search   string
+	SortBy   string
+	SortDesc bool
+	Page     int
+	PageSize int
+}
+
+type ListUsersResponse struct {
+	Users      []AdminUserSummary `json:"users"`
+	TotalCount int64         `json:"total_count"`
+	Page       int           `json:"page"`
+	PageSize   int           `json:"page_size"`
+}
+
+type UpdateUserRequest struct {
+	FullName *string
+	Email    *string
+	Phone    *string
+	Password *string 
+}
+
+// ── Role Management ──────────────────────────────────────────────
+
+type CreateRoleRequest struct {
+	Name        string
+	Description *string
+}
+
+type UpdateRoleRequest struct {
+	Name        *string
+	Description *string
+}
+
+type RoleSummary struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+type AssignRoleRequest struct {
+	UserID    uuid.UUID
+	RoleID    uuid.UUID
+	GrantedBy *uuid.UUID 
+}
