@@ -29,3 +29,25 @@ type GetStoreResponse struct {
 	Plan      string `json:"plan"`
 	LegalName string `json:"legal_name"`
 }
+
+type CreateCampaignRequest struct {
+	Name           string  `json:"name"`
+	OfferType      string  `json:"offer_type"`
+	RewardValue    float64 `json:"reward_value"`
+	MinBillAmount  float64 `json:"min_bill_amount"`
+	StartDate      string  `json:"start_date"` // YYYY-MM-DD
+	EndDate        string  `json:"end_date"`   // YYYY-MM-DD
+}
+
+type CampaignResponse struct {
+	ID             string  `json:"id"`
+	StoreID        string  `json:"store_id"`
+	Name           string  `json:"name"`
+	OfferType      string  `json:"offer_type"`
+	RewardValue    float64 `json:"reward_value"`
+	MinBillAmount  float64 `json:"min_bill_amount"`
+	StartDate      string  `json:"start_date"`
+	EndDate        string  `json:"end_date"`
+	IsActive       bool    `json:"is_active"`
+	CreatedAt      string  `json:"created_at"`
+}

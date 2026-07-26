@@ -11,10 +11,15 @@ import (
 )
 
 type Querier interface {
+	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
 	CreateStore(ctx context.Context, arg CreateStoreParams) (CreateStoreRow, error)
+	GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, error)
+	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]Campaign, error)
+	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]Campaign, error)
 	GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, error)
 	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreByOwnerIDRow, error)
 	SubmitKYC(ctx context.Context, arg SubmitKYCParams) error
+	UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignStatusParams) error
 	UpdateStoreStatus(ctx context.Context, arg UpdateStoreStatusParams) error
 }
 

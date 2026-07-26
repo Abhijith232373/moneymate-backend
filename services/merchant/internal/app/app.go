@@ -35,13 +35,17 @@ func Build(cfg *config.Config) (*App, error) {
 	storeRepo := repo.NewStoreRepo(pool)
 	storeUseCase := usecases.NewStoreUseCase(storeRepo)
 
+	campaignRepo := repo.NewCampaignRepo(pool)
+	campaignUseCase := usecases.NewCampaignUseCase(campaignRepo, storeRepo)
+
 	// HTTP Setup
 	httpHandler := transporthttp.NewMerchantHandler(storeUseCase)
-	httpServer := setupHTTPServer(httpHandler)
+	campaignHandler := transporthttp.NewCampaignHandler(campaignUseCase)
+	httpServer := setupHTTPServer(httpHandler, campaignHandler)
 
 	httpAddr := cfg.Server.HTTPAddr
 	if httpAddr == "" {
-		httpAddr = "0.0.0.0:50053"
+		httpAddr = "0.0.0.0:9093"
 	}
 
 	return &App{
@@ -52,7 +56,7 @@ func Build(cfg *config.Config) (*App, error) {
 	}, nil
 }
 
-func setupHTTPServer(handler *transporthttp.MerchantHandler) *fiber.App {
+func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *transporthttp.CampaignHandler) *fiber.App {
 	server := fiber.New(fiber.Config{
 		AppName: "merchant-service",
 	})
@@ -70,7 +74,7 @@ func setupHTTPServer(handler *transporthttp.MerchantHandler) *fiber.App {
 
 	// No-op auth middleware for now, or use real one when JWT config is wired
 	noopAuth := func(c fiber.Ctx) error { return c.Next() }
-	transporthttp.RegisterRoutes(server, handler, noopAuth)
+	transporthttp.RegisterRoutes(server, handler, campaignHandler, noopAuth)
 
 	return server
 }

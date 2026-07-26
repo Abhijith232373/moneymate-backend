@@ -108,8 +108,8 @@ type Campaign struct {
 	RewardValue    pgtype.Numeric
 	MinBillAmount  pgtype.Numeric
 	TargetAudience string
-	StartDate      pgtype.Date
-	EndDate        pgtype.Date
+	StartDate      time.Time
+	EndDate        time.Time
 	IsActive       bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
