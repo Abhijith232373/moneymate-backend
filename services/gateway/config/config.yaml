@@ -27,9 +27,9 @@ rate_limiting:
   window_seconds: 60
 
 cors:
-  allow_origins: "http://localhost:3000,http://localhost:8080"
+  allow_origins: "http://localhost:3000,http://localhost:5173,http://localhost:8080"
   allow_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-  allow_headers: "Authorization,Content-Type,Idempotency-Key,X-Transaction-Token,X-Transaction-ID"
+  allow_headers: "Authorization,Content-Type,Idempotency-Key,X-Transaction-Token,X-Transaction-Id,X-Device-Id"
 
 tracing:
   enabled: false

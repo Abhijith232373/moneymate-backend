@@ -26,16 +26,29 @@ func RegisterRoutes(
 			"service": "gateway",
 		})
 	})
+
+	// ── User Auth ──────────────────────────────────────────────────
 	userAuth := api.Group("/auth")
 	userAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/user/register"))
 	userAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
 	userAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
 	userAuth.Post("/otp/send", proxy.AuthProxy(authAddr, "/auth/otp/send"))
 	userAuth.Post("/otp/verify", proxy.AuthProxy(authAddr, "/auth/otp/verify"))
+	userAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
+	// ── Merchant Auth ──────────────────────────────────────────────
 	merchantAuth := api.Group("/merchant/auth")
 	merchantAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/merchant/register"))
+	merchantAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
+	merchantAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
+	merchantAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
+	// ── Admin Auth ─────────────────────────────────────────────────
+	adminAuth := api.Group("/admin/auth")
+	adminAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
+	adminAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+
+	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
 	secure.Use(authMiddleware)
 	secure.Get("/profile", func(c fiber.Ctx) error {
@@ -48,6 +61,7 @@ func RegisterRoutes(
 		})
 	})
 
+	// ── Merchant (authenticated + role=merchant) ───────────────────
 	merchant := api.Group("/merchant")
 	merchant.Use(authMiddleware)
 	merchant.Use(middlewares.RequireRole("merchant"))
@@ -57,6 +71,33 @@ func RegisterRoutes(
 		})
 	})
 
+	// ── Admin (authenticated + role=admin) ─────────────────────────
+	admin := api.Group("/admin")
+	admin.Use(authMiddleware)
+	admin.Use(middlewares.RequireRole("admin"))
+
+	admin.Get("/dashboard", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"success": true,
+			"message": "admin dashboard data",
+			"data": fiber.Map{
+				"total_users":        0,
+				"total_merchants":    0,
+				"pending_reviews":    0,
+				"total_transactions": 0,
+			},
+		})
+	})
+
+	admin.Get("/merchants", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"success": true,
+			"message": "merchant list placeholder",
+			"data":    []interface{}{},
+		})
+	})
+
+	// ── Downstream service proxies ─────────────────────────────────
 	downstreamServices := []string{"payment", "merchant", "campaign", "debt", "pod", "scheduler", "referral", "rewards", "routing", "notification"}
 	for _, svc := range downstreamServices {
 		svcName := svc
