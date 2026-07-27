@@ -108,7 +108,7 @@ RETURNING *;
 -- name: ListUsers :many
 SELECT * FROM auth.users
 WHERE
-    (sqlc.narg('status')::auth_user_status IS NULL OR status = sqlc.narg('status'))
+    (sqlc.narg('status')::auth.user_status IS NULL OR status = sqlc.narg('status'))
     AND (
         sqlc.narg('search')::text IS NULL
         OR email ILIKE '%' || sqlc.narg('search')::text || '%'
@@ -128,7 +128,7 @@ LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 -- name: CountUsers :one
 SELECT COUNT(*) FROM auth.users
 WHERE
-    (sqlc.narg('status')::auth_user_status IS NULL OR status = sqlc.narg('status'))
+    (sqlc.narg('status')::auth.user_status IS NULL OR status = sqlc.narg('status'))
     AND (
         sqlc.narg('search')::text IS NULL
         OR email ILIKE '%' || sqlc.narg('search')::text || '%'

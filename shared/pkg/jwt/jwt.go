@@ -91,7 +91,6 @@ func GenerateRefreshToken(p RefreshTokenParams, cfg Config) (token, hash string,
             ID:       jti,
         },
         UserID:   p.UserID,
-        DeviceID: p.DeviceID,
     }
 
     signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).

@@ -57,6 +57,7 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 			})
 		}
 
+		c.Set("Content-Type", resp.Header.Get("Content-Type"))
 		return c.Status(resp.StatusCode).Send(respBody)
 	}
 }
@@ -94,7 +95,7 @@ func AuthProxyGET(authAddr, targetPath string) fiber.Handler {
 				"error":   "failed to read upstream response",
 			})
 		}
-
+		c.Set("Content-Type", resp.Header.Get("Content-Type"))
 		return c.Status(resp.StatusCode).Send(respBody)
 	}
 }

@@ -1,1 +1,1 @@
--- CREATE SCHEMA IF NOT EXISTS auth; already created by database init scripts
+CREATE SCHEMA IF NOT EXISTS auth; 

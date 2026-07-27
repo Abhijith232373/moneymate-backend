@@ -18,16 +18,6 @@ func NewUserHandler(adminUserUsecase usecase.AdminUserUsecase) *UserHandler {
 	return &UserHandler{adminUserUsecase: adminUserUsecase}
 }
 
-type updateUserRequest struct {
-	FullName *string `json:"full_name" validate:"omitempty,min=1"`
-	Email    *string `json:"email" validate:"omitempty,email"`
-	Phone    *string `json:"phone" validate:"omitempty"`
-	Password *string `json:"password" validate:"omitempty,min=8"`
-}
-
-type updateUserStatusRequest struct {
-	Status string `json:"status" validate:"required,oneof=pending active suspended"`
-}
 
 func (h *UserHandler) ListUsers(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))

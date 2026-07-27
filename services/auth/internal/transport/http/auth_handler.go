@@ -65,15 +65,10 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return response.BadRequest(c, formatValidationErrors(err), "validation failed")
 	}
 
-	deviceID := c.Get("X-Device-Id")
-	if deviceID == "" {
-		return response.BadRequest(c, nil, "X-Device-Id header is required")
-	}
 
 	ucReq := usecase.LoginRequest{
 		Identifier: req.Email,
 		Password:   req.Password,
-		DeviceID:   deviceID,
 		UserAgent:  c.Get("User-Agent"),
 		IPAddress:  c.IP(),
 	}

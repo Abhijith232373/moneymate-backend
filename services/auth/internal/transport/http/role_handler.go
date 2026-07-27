@@ -16,20 +16,7 @@ func NewRoleHandler(adminRoleUsecase usecase.AdminRoleUsecase) *RoleHandler {
 	return &RoleHandler{adminRoleUsecase: adminRoleUsecase}
 }
 
-type createRoleRequest struct {
-	Name        string  `json:"name" validate:"required,min=2,max=50"`
-	Description *string `json:"description" validate:"omitempty"`
-}
 
-type updateRoleRequest struct {
-	Name        *string `json:"name" validate:"omitempty,min=2,max=50"`
-	Description *string `json:"description" validate:"omitempty"`
-}
-
-type assignRoleRequest struct {
-	UserID string `json:"user_id" validate:"required,uuid"`
-	RoleID string `json:"role_id" validate:"required,uuid"`
-}
 
 func (h *RoleHandler) CreateRole(c fiber.Ctx) error {
 	var req createRoleRequest

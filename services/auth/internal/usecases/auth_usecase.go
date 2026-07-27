@@ -39,7 +39,7 @@ type IDGenerator interface {
 
 type TokenIssuer interface {
 	IssueAccessToken(userID uuid.UUID, handle string, roles []string, tokenVersion int64) (string, time.Time, error)
-	IssueRefreshToken(userID uuid.UUID, deviceID string) (token, tokenHash string, expiresAt time.Time, err error)
+	IssueRefreshToken(userID uuid.UUID) (token, tokenHash string, expiresAt time.Time, err error)
 }
 
 type authUsecase struct {
@@ -184,7 +184,7 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 
 func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	email := normalizeEmail(req.Identifier)
-	if email == "" || req.Password == "" || req.DeviceID == "" {
+	if email == "" || req.Password == ""  {
 		return nil, apperrors.ErrInvalidInput
 	}
 
@@ -227,7 +227,7 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if err != nil {
 		return nil, fmt.Errorf("issue access token: %w", err)
 	}
-	refreshToken, refreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID, req.DeviceID)
+	refreshToken, refreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("issue refresh token: %w", err)
 	}
@@ -384,7 +384,7 @@ func (u *authUsecase) RefreshToken(ctx context.Context, req RefreshTokenRequest)
     }
 
     // 8. Issue new refresh token (rotation)
-    newRefreshToken, newRefreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID, claims.DeviceID)
+    newRefreshToken, newRefreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID)
     if err != nil {
         return nil, fmt.Errorf("issue refresh token: %w", err)
     }
