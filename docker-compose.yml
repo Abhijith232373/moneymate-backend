@@ -42,6 +42,7 @@ services:
       - SERVER_PORT=8080
       - SERVICES_AUTH_ADDR=auth:8081
       - REDIS_ADDRESS=redis:6379
+
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -73,6 +74,8 @@ services:
       - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      - POSTGRES_USER=${AUTH_DB_USER}
+      - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD}
       - REDIS_ADDR=redis:6379
       - ENVIRONMENT=${ENVIRONMENT}
     expose:

@@ -94,12 +94,21 @@ SELECT EXISTS(
     SELECT 1 FROM auth.users WHERE phone = $1
 ) AS exists;
 
+-- name: AdminUpdateUser :one
+UPDATE auth.users
+SET
+    full_name     = COALESCE(sqlc.narg('full_name'), full_name),
+    email         = COALESCE(sqlc.narg('email'), email),
+    phone         = COALESCE(sqlc.narg('phone'), phone),
+    password_hash = COALESCE(sqlc.narg('password_hash'), password_hash),
+    updated_at    = NOW()
+WHERE id = sqlc.arg('id')
+RETURNING *;
 
 -- name: ListUsers :many
 SELECT * FROM auth.users
 WHERE
     (sqlc.narg('status')::auth_user_status IS NULL OR status = sqlc.narg('status'))
-    AND (sqlc.narg('role')::text IS NULL OR role = sqlc.narg('role'))
     AND (
         sqlc.narg('search')::text IS NULL
         OR email ILIKE '%' || sqlc.narg('search')::text || '%'
@@ -120,7 +129,6 @@ LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 SELECT COUNT(*) FROM auth.users
 WHERE
     (sqlc.narg('status')::auth_user_status IS NULL OR status = sqlc.narg('status'))
-    AND (sqlc.narg('role')::text IS NULL OR role = sqlc.narg('role'))
     AND (
         sqlc.narg('search')::text IS NULL
         OR email ILIKE '%' || sqlc.narg('search')::text || '%'

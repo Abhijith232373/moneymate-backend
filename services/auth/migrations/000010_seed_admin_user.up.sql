@@ -15,7 +15,8 @@ INSERT INTO auth.users (
     false,
     NOW(),
     NOW()
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Assign admin role
 INSERT INTO auth.user_roles (user_id, role_id, assigned_at)
@@ -23,4 +24,5 @@ VALUES (
     'b0000000-0000-0000-0000-000000000001',
     'a0000000-0000-0000-0000-000000000003',
     NOW()
-);
+)
+ON CONFLICT (user_id, role_id) DO NOTHING;

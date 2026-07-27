@@ -5,15 +5,17 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/moneymate-2026/moneymate-backend/gateway/config"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/middlewares"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
-	"github.com/moneymate-2026/moneymate-backend/gateway/internal/transport/http"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/tracing"
+	"github.com/moneymate-2026/moneymate-backend/gateway/internal/transport/http"
 	ws "github.com/moneymate-2026/moneymate-backend/gateway/internal/websocket"
 	"github.com/redis/go-redis/v9"
 )
@@ -74,6 +76,11 @@ func main() {
 	app.Use(middlewares.Logger)
 	app.Use(rateLimitMiddleware)
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: strings.Split(cfg.CORS.AllowOrigins, ","),
+		AllowMethods: strings.Split(cfg.CORS.AllowMethods, ","),
+		AllowHeaders: strings.Split(cfg.CORS.AllowHeaders, ","),
+	}))
 	http.RegisterRoutes(app, authMiddleware, authClient, serviceRegistry, hub, cfg.Services.AuthAddr)
 
 	go func() {

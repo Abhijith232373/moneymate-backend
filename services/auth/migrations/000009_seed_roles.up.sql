@@ -1,7 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 INSERT INTO auth.roles (id, name, description) VALUES
-    (gen_random_uuid(), 'user', 'Standard end user account'),
-    (gen_random_uuid(), 'merchant', 'Merchant/business account'),
-    (gen_random_uuid(), 'admin', 'Internal administrator account')
+    ('a0000000-0000-0000-0000-000000000001', 'user', 'Standard end user account'),
+    ('a0000000-0000-0000-0000-000000000002', 'merchant', 'Merchant/business account'),
+    ('a0000000-0000-0000-0000-000000000003', 'admin', 'Internal administrator account')
 ON CONFLICT (name) DO NOTHING;
