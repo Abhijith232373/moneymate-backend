@@ -46,5 +46,5 @@ func LoadDatabaseConfig(v *viper.Viper, schema string) DatabaseConfig {
     cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, schema,
     cfg.MaxOpenConns, cfg.MinOpenConns, cfg.MaxConnLifetime, cfg.MaxIdleTime,
 )
-	return cfg
+	return cfg	
 }
