@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/config"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/adapter/postgres/repo"
@@ -24,6 +23,7 @@ type App struct {
 	HTTPAddr   string
 }
 
+// Build initializes all database pools, repositories, use cases, and HTTP handlers for the merchant service.
 func Build(cfg *config.Config) (*App, error) {
 	ctx := context.Background()
 
@@ -38,10 +38,29 @@ func Build(cfg *config.Config) (*App, error) {
 	campaignRepo := repo.NewCampaignRepo(pool)
 	campaignUseCase := usecases.NewCampaignUseCase(campaignRepo, storeRepo)
 
+	rewardRepo := repo.NewRewardRepo(pool)
+	rewardUseCase := usecases.NewRewardUseCase(rewardRepo, storeRepo)
+
+	subscriptionRepo := repo.NewSubscriptionRepo(pool)
+	subscriptionUseCase := usecases.NewSubscriptionUseCase(subscriptionRepo, storeRepo, campaignRepo)
+
+	kycRepo := repo.NewKYCRepo(pool)
+	kycUseCase := usecases.NewKYCUseCase(kycRepo)
+
+	dashboardUseCase := usecases.NewDashboardUseCase(storeRepo, rewardRepo, campaignRepo)
+
+	adminRepo := repo.NewAdminRepo(pool, storeRepo, campaignRepo, kycRepo)
+	adminUseCase := usecases.NewAdminUseCase(adminRepo)
+
 	// HTTP Setup
 	httpHandler := transporthttp.NewMerchantHandler(storeUseCase)
 	campaignHandler := transporthttp.NewCampaignHandler(campaignUseCase)
-	httpServer := setupHTTPServer(httpHandler, campaignHandler)
+	rewardHandler := transporthttp.NewRewardHandler(rewardUseCase)
+	subscriptionHandler := transporthttp.NewSubscriptionHandler(subscriptionUseCase)
+	kycHandler := transporthttp.NewKYCHandler(kycUseCase)
+	dashboardHandler := transporthttp.NewDashboardHandler(dashboardUseCase)
+	adminHandler := transporthttp.NewAdminHandler(adminUseCase)
+	httpServer := setupHTTPServer(httpHandler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, adminHandler)
 
 	httpAddr := cfg.Server.HTTPAddr
 	if httpAddr == "" {
@@ -56,7 +75,8 @@ func Build(cfg *config.Config) (*App, error) {
 	}, nil
 }
 
-func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *transporthttp.CampaignHandler) *fiber.App {
+// setupHTTPServer configures Fiber middleware, CORS policies, health check, and registers all REST routes.
+func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *transporthttp.CampaignHandler, rewardHandler *transporthttp.RewardHandler, subscriptionHandler *transporthttp.SubscriptionHandler, kycHandler *transporthttp.KYCHandler, dashboardHandler *transporthttp.DashboardHandler, adminHandler *transporthttp.AdminHandler) *fiber.App {
 	server := fiber.New(fiber.Config{
 		AppName: "merchant-service",
 	})
@@ -74,10 +94,14 @@ func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *tr
 
 	// No-op auth middleware for now, or use real one when JWT config is wired
 	noopAuth := func(c fiber.Ctx) error { return c.Next() }
-	transporthttp.RegisterRoutes(server, handler, campaignHandler, noopAuth)
+	transporthttp.RegisterRoutes(server, handler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, noopAuth)
+	transporthttp.RegisterAdminRoutes(server, adminHandler, noopAuth)
 
 	return server
 }
+
+
+
 
 func (a *App) Run() error {
 	// Start HTTP server

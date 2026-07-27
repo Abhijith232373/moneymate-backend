@@ -24,6 +24,7 @@ type Store struct {
 	DisplayID         string
 	Status            string
 	Plan              string
+	LogoURL           string
 }
 
 // KYCDocument represents compliance data.
@@ -46,4 +47,8 @@ type MerchantRepository interface {
 	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (*Store, error)
 	UpdateStoreStatus(ctx context.Context, storeID uuid.UUID, status string) error
 	GetPendingStores(ctx context.Context) ([]*Store, error)
+	GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUID) (*Store, error)
+	GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (*Store, error)
+	UpdateStoreProfileByStoreID(ctx context.Context, store *Store) (*Store, error)
+	UpdateStoreProfileByOwnerID(ctx context.Context, store *Store) (*Store, error)
 }
