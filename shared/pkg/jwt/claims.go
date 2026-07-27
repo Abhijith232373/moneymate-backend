@@ -13,7 +13,6 @@ type AccesClaims struct {
 type RefreshClaims struct {
     jwt.RegisteredClaims
     UserID   string `json:"uid"`
-    DeviceID string `json:"did"`
 }
 
 type TransactionClaims struct {

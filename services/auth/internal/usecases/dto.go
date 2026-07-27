@@ -28,7 +28,6 @@ type RegisterResponse struct {
 type LoginRequest struct {
 	Identifier string
 	Password   string
-	DeviceID   string
 	UserAgent  string
 	IPAddress  string
 }

@@ -35,6 +35,11 @@ type LogConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+type AdminConfig struct {
+    Email    string
+    Password string
+}
+
 type Config struct {
 	Env      string
 	Server   ServerConfig             `mapstructure:"server"`
@@ -44,7 +49,8 @@ type Config struct {
 	JWT      sharedconfig.JWTConfig
 	Argon2   Argon2Config             `mapstructure:"argon2"`
 	Log      LogConfig                `mapstructure:"log"`
-	SMTP     sharedconfig.SMTPConfig
+	Admin    sharedconfig.AdminConfig
+	Email    sharedconfig.EmailConfig 
 }
 
 func LoadConfig() (*Config, error) {
@@ -68,9 +74,10 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg.Database = sharedconfig.LoadDatabaseConfig(v, "auth")
-	cfg.SMTP = sharedconfig.LoadSMTPConfig(v)
+	cfg.Email = sharedconfig.LoadEmailConfig(v) 
 	cfg.Redis = sharedconfig.LoadRedisConfig(v)
 	cfg.JWT = sharedconfig.LoadJWTConfig(v)
+	cfg.Admin    = sharedconfig.LoadAdminConfig(v) 
 
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
 
