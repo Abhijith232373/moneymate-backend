@@ -302,7 +302,7 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 
 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 	adminRoleUC := usecase.NewAdminRoleUsecase(roleRepo, userRepo, g)
-	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h)
+	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
 
 	return &transporthttp.Handlers{
 		Auth: transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret),

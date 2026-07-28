@@ -84,6 +84,13 @@ type RefreshTokenRequest struct {
 
 
 //admin
+type CreateUserRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Phone    string `json:"phone"`
+	FullName string `json:"full_name" validate:"required"`
+	Password string `json:"password" validate:"required,min=8"`
+	Role     string `json:"role" validate:"required"`
+}
 
 type AdminUserSummary struct {
 	ID              string `json:"id"`

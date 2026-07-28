@@ -41,9 +41,9 @@ func RequireAuth(authClient proxy.AuthClient) fiber.Handler {
 		c.Locals("user_id", claims.UserID)
 		c.Locals("email", claims.Email)
 		c.Locals("role", claims.Role)
-		if claims.MerchantID != "" {
-			c.Locals("merchant_id", claims.MerchantID)
-		}
+		// if claims.MerchantID != "" {
+		// 	c.Locals("merchant_id", claims.MerchantID)
+		// }
 
 		return c.Next()
 	}
@@ -80,3 +80,4 @@ func RequireTransactionAuth(authClient proxy.AuthClient) fiber.Handler {
 		return c.Next()
 	}
 }
+

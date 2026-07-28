@@ -47,6 +47,7 @@ func registerRoleRoutes(router fiber.Router, h *RoleHandler ) {
 
 func registerUserRoutes(router fiber.Router, h *UserHandler ) {
 	users := router.Group("/admin/users", )
+	users.Post("/",h.CreateUser)
 	users.Get("/", h.ListUsers)
 	users.Get("/:id", h.GetUser)
 	users.Put("/:id", h.UpdateUser)
