@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -69,8 +71,14 @@ func Build(cfg *config.Config) (*App, error) {
 	httpServer := setupHTTPServer(httpHandler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, adminHandler, hub)
 
 	httpAddr := cfg.Server.HTTPAddr
+	if port := os.Getenv("PORT"); port != "" {
+		httpAddr = port
+	}
 	if httpAddr == "" {
-		httpAddr = "0.0.0.0:9093"
+		httpAddr = "9093"
+	}
+	if !strings.Contains(httpAddr, ":") {
+		httpAddr = "0.0.0.0:" + httpAddr
 	}
 
 	return &App{
