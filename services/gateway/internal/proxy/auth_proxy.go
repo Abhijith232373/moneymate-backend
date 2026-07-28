@@ -17,7 +17,8 @@ var authHTTPClient = &http.Client{Timeout: 10 * time.Second}
 // important headers (X-Device-Id, User-Agent, Authorization) are forwarded.
 // The auth-svc response (status + JSON body) is returned as-is.
 func AuthProxy(authAddr, targetPath string) fiber.Handler {
-	baseURL := "http://" + authAddr
+	// baseURL := "http://" + authAddr
+	baseURL := authAddr
 	return func(c fiber.Ctx) error {
 		body := c.Body()
 
@@ -64,7 +65,8 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 
 // AuthProxyGET returns a Fiber handler that proxies GET requests to auth-svc.
 func AuthProxyGET(authAddr, targetPath string) fiber.Handler {
-	baseURL := "http://" + authAddr
+	// baseURL := "http://" + authAddr
+	baseURL :=  authAddr
 	return func(c fiber.Ctx) error {
 		req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseURL+targetPath, nil)
 		if err != nil {
