@@ -57,7 +57,7 @@ func main() {
 
 	serviceRegistry := proxy.NewServiceRegistry(cfg.Services.Downstream)
 
-	authMiddleware := middlewares.RequireAuth(authClient)
+	authMiddleware := middlewares.RequireAuth(cfg.JWT.Secret)
 	rateLimitMiddleware := middlewares.RateLimiter(
 		rdb,
 		cfg.RateLimiting.MaxRequests,

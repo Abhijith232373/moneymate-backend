@@ -45,6 +45,9 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 		if v := c.Get("User-Agent"); v != "" {
 			req.Header.Set("User-Agent", v)
 		}
+		if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
+			req.Header.Set("X-User-Id", uid)
+		}
 
 		resp, err := authHTTPClient.Do(req)
 		if err != nil {
