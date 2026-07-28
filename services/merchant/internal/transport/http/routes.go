@@ -72,6 +72,11 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 	}
 }
 
+// RegisterWebSocketRoutes wires the websocket endpoint for merchant live updates
+func RegisterWebSocketRoutes(router fiber.Router, handler fiber.Handler) {
+	router.Get("/ws", handler)
+}
+
 // RegisterAdminRoutes wires all HTTP endpoints for platform administrators to perform CRUD and governance operations.
 func RegisterAdminRoutes(router fiber.Router, ah *AdminHandler, authMiddleware fiber.Handler) {
 	if ah == nil {
