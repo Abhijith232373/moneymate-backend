@@ -13,6 +13,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BillingCycleType string
+
+const (
+	BillingCycleTypeMonthly BillingCycleType = "monthly"
+	BillingCycleTypeAnnual  BillingCycleType = "annual"
+)
+
+func (e *BillingCycleType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BillingCycleType(s)
+	case string:
+		*e = BillingCycleType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BillingCycleType: %T", src)
+	}
+	return nil
+}
+
+type NullBillingCycleType struct {
+	BillingCycleType BillingCycleType
+	Valid            bool // Valid is true if BillingCycleType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBillingCycleType) Scan(value interface{}) error {
+	if value == nil {
+		ns.BillingCycleType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BillingCycleType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBillingCycleType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BillingCycleType), nil
+}
+
 type MerchantStatus string
 
 const (
@@ -55,6 +97,138 @@ func (ns NullMerchantStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.MerchantStatus), nil
+}
+
+type RedemptionStatus string
+
+const (
+	RedemptionStatusProcessing RedemptionStatus = "processing"
+	RedemptionStatusCompleted  RedemptionStatus = "completed"
+	RedemptionStatusFailed     RedemptionStatus = "failed"
+	RedemptionStatusRejected   RedemptionStatus = "rejected"
+)
+
+func (e *RedemptionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RedemptionStatus(s)
+	case string:
+		*e = RedemptionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RedemptionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullRedemptionStatus struct {
+	RedemptionStatus RedemptionStatus
+	Valid            bool // Valid is true if RedemptionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRedemptionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.RedemptionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RedemptionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRedemptionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RedemptionStatus), nil
+}
+
+type RewardTransactionType string
+
+const (
+	RewardTransactionTypeEarning    RewardTransactionType = "earning"
+	RewardTransactionTypeRedemption RewardTransactionType = "redemption"
+	RewardTransactionTypeAdjustment RewardTransactionType = "adjustment"
+	RewardTransactionTypeBonus      RewardTransactionType = "bonus"
+)
+
+func (e *RewardTransactionType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RewardTransactionType(s)
+	case string:
+		*e = RewardTransactionType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RewardTransactionType: %T", src)
+	}
+	return nil
+}
+
+type NullRewardTransactionType struct {
+	RewardTransactionType RewardTransactionType
+	Valid                 bool // Valid is true if RewardTransactionType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRewardTransactionType) Scan(value interface{}) error {
+	if value == nil {
+		ns.RewardTransactionType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RewardTransactionType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRewardTransactionType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RewardTransactionType), nil
+}
+
+type SubscriptionBillingStatus string
+
+const (
+	SubscriptionBillingStatusActive   SubscriptionBillingStatus = "active"
+	SubscriptionBillingStatusPastDue  SubscriptionBillingStatus = "past_due"
+	SubscriptionBillingStatusCanceled SubscriptionBillingStatus = "canceled"
+	SubscriptionBillingStatusTrialing SubscriptionBillingStatus = "trialing"
+)
+
+func (e *SubscriptionBillingStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SubscriptionBillingStatus(s)
+	case string:
+		*e = SubscriptionBillingStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SubscriptionBillingStatus: %T", src)
+	}
+	return nil
+}
+
+type NullSubscriptionBillingStatus struct {
+	SubscriptionBillingStatus SubscriptionBillingStatus
+	Valid                     bool // Valid is true if SubscriptionBillingStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSubscriptionBillingStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.SubscriptionBillingStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SubscriptionBillingStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSubscriptionBillingStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SubscriptionBillingStatus), nil
 }
 
 type SubscriptionPlan string
@@ -108,8 +282,8 @@ type Campaign struct {
 	RewardValue    pgtype.Numeric
 	MinBillAmount  pgtype.Numeric
 	TargetAudience string
-	StartDate      pgtype.Date
-	EndDate        pgtype.Date
+	StartDate      time.Time
+	EndDate        time.Time
 	IsActive       bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
@@ -125,6 +299,52 @@ type KycDocument struct {
 	VerifiedAt     pgtype.Timestamptz
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+type MerchantSubscription struct {
+	ID                 uuid.UUID
+	StoreID            uuid.UUID
+	PlanCode           string
+	Status             SubscriptionBillingStatus
+	BillingCycle       BillingCycleType
+	CurrentPeriodStart time.Time
+	CurrentPeriodEnd   time.Time
+	AutoRenew          bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type RedemptionRequest struct {
+	ID                     uuid.UUID
+	StoreID                uuid.UUID
+	Amount                 pgtype.Numeric
+	BankTransferAuthorized bool
+	Status                 RedemptionStatus
+	ReferenceID            *string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type RewardBalance struct {
+	ID                     uuid.UUID
+	StoreID                uuid.UUID
+	AvailableBalance       pgtype.Numeric
+	TotalScans             int64
+	PremiumPoints          int64
+	WeeklyGrowthPercentage pgtype.Numeric
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type RewardTransaction struct {
+	ID              uuid.UUID
+	StoreID         uuid.UUID
+	CampaignName    string
+	DisplayID       string
+	Status          string
+	Amount          pgtype.Numeric
+	TransactionType RewardTransactionType
+	CreatedAt       time.Time
 }
 
 type Store struct {
@@ -143,4 +363,29 @@ type Store struct {
 	Plan              SubscriptionPlan
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	LogoUrl           *string
+}
+
+type SubscriptionChangeLog struct {
+	ID           uuid.UUID
+	StoreID      uuid.UUID
+	OldPlanCode  string
+	NewPlanCode  string
+	ChangeReason string
+	ChangedAt    time.Time
+}
+
+type SubscriptionTier struct {
+	ID                 uuid.UUID
+	PlanCode           string
+	Name               string
+	Price              pgtype.Numeric
+	BillingCycle       BillingCycleType
+	Description        string
+	MaxActiveCampaigns int32
+	IsMostPopular      bool
+	Features           []byte
+	IsActive           bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }

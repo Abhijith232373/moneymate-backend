@@ -55,29 +55,8 @@ CREATE TABLE kyc_documents (
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. Campaigns / Offers Table
-CREATE TABLE campaigns (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    store_id            UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-    
-    -- Campaign Setup
-    name                VARCHAR(255) NOT NULL,
-    offer_type          VARCHAR(100) NOT NULL, 
-    reward_value        NUMERIC(10, 2) NOT NULL,
-    min_bill_amount     NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    target_audience     VARCHAR(100) NOT NULL,
-    
-    start_date          DATE NOT NULL,
-    end_date            DATE NOT NULL,
-    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
-    
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 5. Performance Indices
+-- 4. Performance Indices
 CREATE INDEX idx_stores_owner_id ON stores(owner_id);
 CREATE INDEX idx_stores_display_id ON stores(display_id);
 CREATE INDEX idx_stores_contact_email ON stores(contact_email);
 CREATE INDEX idx_kyc_store_id ON kyc_documents(store_id);
-CREATE INDEX idx_campaigns_store_id_active ON campaigns(store_id) WHERE is_active = TRUE;
