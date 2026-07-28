@@ -31,12 +31,11 @@ func (i *Issuer) IssueAccessToken(userID uuid.UUID, handle string, roles []strin
     return token, expiresAt, nil
 }
 
-func (i *Issuer) IssueRefreshToken(userID uuid.UUID, deviceID string) (token, tokenHash string, expiresAt time.Time, err error) {
+func (i *Issuer) IssueRefreshToken(userID uuid.UUID) (token, tokenHash string, expiresAt time.Time, err error) {
     expiresAt = time.Now().Add(time.Duration(i.cfg.RefreshExpiryHrs) * time.Hour)
 
     token, tokenHash, err = jwtutil.GenerateRefreshToken(jwtutil.RefreshTokenParams{
         UserID:   userID.String(),
-        DeviceID: deviceID,
     }, i.cfg)
     if err != nil {
         return "", "", time.Time{}, err

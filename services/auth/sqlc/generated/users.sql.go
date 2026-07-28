@@ -14,11 +14,11 @@ import (
 const adminUpdateUser = `-- name: AdminUpdateUser :one
 UPDATE auth.users
 SET
-    full_name  = COALESCE($1, full_name),
-    email      = COALESCE($2, email),
-    phone      = COALESCE($3, phone),
-    password_hash      = COALESCE($4, phone),
-    updated_at = NOW()
+    full_name     = COALESCE($1, full_name),
+    email         = COALESCE($2, email),
+    phone         = COALESCE($3, phone),
+    password_hash = COALESCE($4, password_hash),
+    updated_at    = NOW()
 WHERE id = $5
 RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at
 `
@@ -60,7 +60,7 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*) FROM auth.users
 WHERE
-    ($1::auth_user_status IS NULL OR status = $1)
+    ($1::auth.user_status IS NULL OR status = $1)
     AND (
         $2::text IS NULL
         OR email ILIKE '%' || $2::text || '%'
@@ -70,8 +70,8 @@ WHERE
 `
 
 type CountUsersParams struct {
-	Status interface{} `json:"status"`
-	Search pgtype.Text `json:"search"`
+	Status NullAuthUserStatus `json:"status"`
+	Search pgtype.Text        `json:"search"`
 }
 
 func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, error) {
@@ -289,7 +289,7 @@ func (q *Queries) IncrementTokenVersion(ctx context.Context, id pgtype.UUID) (in
 const listUsers = `-- name: ListUsers :many
 SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
 WHERE
-    ($1::auth_user_status IS NULL OR status = $1)
+    ($1::auth.user_status IS NULL OR status = $1)
     AND (
         $2::text IS NULL
         OR email ILIKE '%' || $2::text || '%'
@@ -308,12 +308,12 @@ LIMIT $6 OFFSET $5
 `
 
 type ListUsersParams struct {
-	Status   interface{} `json:"status"`
-	Search   pgtype.Text `json:"search"`
-	SortBy   string      `json:"sort_by"`
-	SortDesc bool        `json:"sort_desc"`
-	Offset   int32       `json:"offset"`
-	Limit    int32       `json:"limit"`
+	Status   NullAuthUserStatus `json:"status"`
+	Search   pgtype.Text        `json:"search"`
+	SortBy   string             `json:"sort_by"`
+	SortDesc bool               `json:"sort_desc"`
+	Offset   int32              `json:"offset"`
+	Limit    int32              `json:"limit"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]AuthUser, error) {
