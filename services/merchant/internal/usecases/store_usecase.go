@@ -104,3 +104,83 @@ func generateDisplayID() (string, error) {
 func (uc *StoreUseCase) GetPendingStores(ctx context.Context) ([]*domain.Store, error) {
 	return uc.repo.GetPendingStores(ctx)
 }
+
+type UpdateProfileInput struct {
+	StoreID           string
+	OwnerID           string
+	BusinessName      string
+	DBAName           string
+	Address           string
+	BusinessType      string
+	TaxID             string
+	OwnerName         string
+	Email             string
+	Mobile            string
+	ProfileImage      string
+}
+
+// GetProfile retrieves the store profile by store UUID or owner UUID.
+func (uc *StoreUseCase) GetProfile(ctx context.Context, id string) (*domain.Store, error) {
+	parsedUUID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid UUID format for profile lookup: %w", err)
+	}
+
+	store, err := uc.repo.GetStoreProfileByStoreID(ctx, parsedUUID)
+	if err == nil && store != nil && store.ID != uuid.Nil {
+		return store, nil
+	}
+
+	return uc.repo.GetStoreProfileByOwnerID(ctx, parsedUUID)
+}
+
+// UpdateProfile updates store profile fields.
+func (uc *StoreUseCase) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*domain.Store, error) {
+	var storeID, ownerID uuid.UUID
+	if in.StoreID != "" {
+		storeID, _ = uuid.Parse(in.StoreID)
+	}
+	if in.OwnerID != "" {
+		ownerID, _ = uuid.Parse(in.OwnerID)
+	}
+
+	if storeID == uuid.Nil && ownerID == uuid.Nil {
+		return nil, fmt.Errorf("either StoreID or OwnerID must be provided")
+	}
+
+	var dba *string
+	if in.DBAName != "" {
+		dba = &in.DBAName
+	}
+	var tax *string
+	if in.TaxID != "" {
+		tax = &in.TaxID
+	}
+
+	store := &domain.Store{
+		ID:                storeID,
+		OwnerID:           ownerID,
+		LegalName:         strings.TrimSpace(in.BusinessName),
+		DBAName:           dba,
+		RegisteredAddress: strings.TrimSpace(in.Address),
+		Type:              in.BusinessType,
+		TaxID:             tax,
+		OwnerName:         strings.TrimSpace(in.OwnerName),
+		ContactEmail:      strings.ToLower(strings.TrimSpace(in.Email)),
+		MobileNumber:      strings.TrimSpace(in.Mobile),
+		LogoURL:           in.ProfileImage,
+	}
+
+	if storeID != uuid.Nil {
+		res, err := uc.repo.UpdateStoreProfileByStoreID(ctx, store)
+		if err == nil && res != nil && res.ID != uuid.Nil {
+			return res, nil
+		}
+	}
+
+	if ownerID != uuid.Nil {
+		return uc.repo.UpdateStoreProfileByOwnerID(ctx, store)
+	}
+
+	return nil, fmt.Errorf("failed to update store profile")
+}

@@ -97,3 +97,147 @@ func (h *MerchantHandler) GetPendingStores(c fiber.Ctx) error {
 		"stores": responseList,
 	})
 }
+
+func resolveMerchantID(c fiber.Ctx) string {
+	if id := c.Params("store_id"); id != "" {
+		return id
+	}
+	if id := c.Params("owner_id"); id != "" {
+		return id
+	}
+	if id := c.Query("store_id"); id != "" {
+		return id
+	}
+	if id := c.Query("owner_id"); id != "" {
+		return id
+	}
+	if id := c.Get("X-Store-ID"); id != "" {
+		return id
+	}
+	if id := c.Get("X-User-ID"); id != "" {
+		return id
+	}
+	if id, ok := c.Locals("user_id").(string); ok && id != "" {
+		return id
+	}
+	if id, ok := c.Locals("sub").(string); ok && id != "" {
+		return id
+	}
+	return ""
+}
+
+func (h *MerchantHandler) GetProfile(c fiber.Ctx) error {
+	id := resolveMerchantID(c)
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "store_id or owner_id is required to fetch profile"})
+	}
+
+	store, err := h.usecase.GetProfile(c.Context(), id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"success": false, "error": "profile not found: " + err.Error()})
+	}
+
+	var dba, tax string
+	if store.DBAName != nil {
+		dba = *store.DBAName
+	}
+	if store.TaxID != nil {
+		tax = *store.TaxID
+	}
+
+	status := store.Status
+	switch status {
+	case "active", "verified":
+		status = "Verified"
+	case "pending_kyc":
+		status = "Pending Review"
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data": ProfileResponse{
+			StoreID:      store.ID.String(),
+			OwnerID:      store.OwnerID.String(),
+			BusinessName: store.LegalName,
+			DBAName:      dba,
+			Address:      store.RegisteredAddress,
+			BusinessType: store.Type,
+			TaxID:        tax,
+			OwnerName:    store.OwnerName,
+			Email:        store.ContactEmail,
+			Mobile:       store.MobileNumber,
+			ProfileImage: store.LogoURL,
+			Status:       status,
+			DisplayID:    store.DisplayID,
+			Plan:         store.Plan,
+		},
+	})
+}
+
+func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
+	id := resolveMerchantID(c)
+	var req UpdateProfileRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "invalid request payload"})
+	}
+
+	input := usecases.UpdateProfileInput{
+		BusinessName: req.BusinessName,
+		DBAName:      req.DBAName,
+		Address:      req.Address,
+		BusinessType: req.BusinessType,
+		TaxID:        req.TaxID,
+		OwnerName:    req.OwnerName,
+		Email:        req.Email,
+		Mobile:       req.Mobile,
+		ProfileImage: req.ProfileImage,
+	}
+
+	if id != "" {
+		input.StoreID = id
+		input.OwnerID = id
+	}
+
+	store, err := h.usecase.UpdateProfile(c.Context(), input)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+
+	var dba, tax string
+	if store.DBAName != nil {
+		dba = *store.DBAName
+	}
+	if store.TaxID != nil {
+		tax = *store.TaxID
+	}
+
+	status := store.Status
+	switch status {
+	case "active", "verified":
+		status = "Verified"
+	case "pending_kyc":
+		status = "Pending Review"
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Business profile updated successfully!",
+		"data": ProfileResponse{
+			StoreID:      store.ID.String(),
+			OwnerID:      store.OwnerID.String(),
+			BusinessName: store.LegalName,
+			DBAName:      dba,
+			Address:      store.RegisteredAddress,
+			BusinessType: store.Type,
+			TaxID:        tax,
+			OwnerName:    store.OwnerName,
+			Email:        store.ContactEmail,
+			Mobile:       store.MobileNumber,
+			ProfileImage: store.LogoURL,
+			Status:       status,
+			DisplayID:    store.DisplayID,
+			Plan:         store.Plan,
+		},
+	})
+}
+

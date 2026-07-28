@@ -118,3 +118,161 @@ func (r *StoreRepo) GetPendingStores(ctx context.Context) ([]*domain.Store, erro
 	}
 	return stores, nil
 }
+
+// GetStoreProfileByStoreID retrieves the complete merchant profile by store ID.
+func (r *StoreRepo) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUID) (*domain.Store, error) {
+	row, err := r.q.GetStoreProfileByStoreID(ctx, storeID)
+	if err != nil {
+		return nil, fmt.Errorf("StoreRepo.GetStoreProfileByStoreID failed: %w", err)
+	}
+
+	dba := row.DbaName
+	tax := row.TaxID
+	return &domain.Store{
+		ID:                row.ID,
+		OwnerID:           row.OwnerID,
+		OwnerName:         row.OwnerName,
+		ContactEmail:      row.ContactEmail,
+		MobileNumber:      row.MobileNumber,
+		LegalName:         row.LegalName,
+		DBAName:           &dba,
+		Type:              row.BusinessType,
+		TaxID:             &tax,
+		RegisteredAddress: row.RegisteredAddress,
+		DisplayID:         row.DisplayID,
+		Status:            row.Status,
+		Plan:              row.Plan,
+		LogoURL:           row.LogoUrl,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}
+
+// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner ID.
+func (r *StoreRepo) GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (*domain.Store, error) {
+	row, err := r.q.GetStoreProfileByOwnerID(ctx, ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("StoreRepo.GetStoreProfileByOwnerID failed: %w", err)
+	}
+
+	dba := row.DbaName
+	tax := row.TaxID
+	return &domain.Store{
+		ID:                row.ID,
+		OwnerID:           row.OwnerID,
+		OwnerName:         row.OwnerName,
+		ContactEmail:      row.ContactEmail,
+		MobileNumber:      row.MobileNumber,
+		LegalName:         row.LegalName,
+		DBAName:           &dba,
+		Type:              row.BusinessType,
+		TaxID:             &tax,
+		RegisteredAddress: row.RegisteredAddress,
+		DisplayID:         row.DisplayID,
+		Status:            row.Status,
+		Plan:              row.Plan,
+		LogoURL:           row.LogoUrl,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}
+
+// UpdateStoreProfileByStoreID updates the merchant profile using store ID.
+func (r *StoreRepo) UpdateStoreProfileByStoreID(ctx context.Context, store *domain.Store) (*domain.Store, error) {
+	var dba, tax string
+	if store.DBAName != nil {
+		dba = *store.DBAName
+	}
+	if store.TaxID != nil {
+		tax = *store.TaxID
+	}
+
+	arg := generated.UpdateStoreProfileByStoreIDParams{
+		StoreID:           store.ID,
+		LegalName:         store.LegalName,
+		DbaName:           dba,
+		RegisteredAddress: store.RegisteredAddress,
+		BusinessType:      store.Type,
+		TaxID:             tax,
+		OwnerName:         store.OwnerName,
+		ContactEmail:      store.ContactEmail,
+		MobileNumber:      store.MobileNumber,
+		LogoUrl:           store.LogoURL,
+	}
+
+	row, err := r.q.UpdateStoreProfileByStoreID(ctx, arg)
+	if err != nil {
+		return nil, fmt.Errorf("StoreRepo.UpdateStoreProfileByStoreID failed: %w", err)
+	}
+
+	resDba := row.DbaName
+	resTax := row.TaxID
+	return &domain.Store{
+		ID:                row.ID,
+		OwnerID:           row.OwnerID,
+		OwnerName:         row.OwnerName,
+		ContactEmail:      row.ContactEmail,
+		MobileNumber:      row.MobileNumber,
+		LegalName:         row.LegalName,
+		DBAName:           &resDba,
+		Type:              row.BusinessType,
+		TaxID:             &resTax,
+		RegisteredAddress: row.RegisteredAddress,
+		DisplayID:         row.DisplayID,
+		Status:            row.Status,
+		Plan:              row.Plan,
+		LogoURL:           row.LogoUrl,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}
+
+// UpdateStoreProfileByOwnerID updates the merchant profile using owner ID.
+func (r *StoreRepo) UpdateStoreProfileByOwnerID(ctx context.Context, store *domain.Store) (*domain.Store, error) {
+	var dba, tax string
+	if store.DBAName != nil {
+		dba = *store.DBAName
+	}
+	if store.TaxID != nil {
+		tax = *store.TaxID
+	}
+
+	arg := generated.UpdateStoreProfileByOwnerIDParams{
+		OwnerID:           store.OwnerID,
+		LegalName:         store.LegalName,
+		DbaName:           dba,
+		RegisteredAddress: store.RegisteredAddress,
+		BusinessType:      store.Type,
+		TaxID:             tax,
+		OwnerName:         store.OwnerName,
+		ContactEmail:      store.ContactEmail,
+		MobileNumber:      store.MobileNumber,
+		LogoUrl:           store.LogoURL,
+	}
+
+	row, err := r.q.UpdateStoreProfileByOwnerID(ctx, arg)
+	if err != nil {
+		return nil, fmt.Errorf("StoreRepo.UpdateStoreProfileByOwnerID failed: %w", err)
+	}
+
+	resDba := row.DbaName
+	resTax := row.TaxID
+	return &domain.Store{
+		ID:                row.ID,
+		OwnerID:           row.OwnerID,
+		OwnerName:         row.OwnerName,
+		ContactEmail:      row.ContactEmail,
+		MobileNumber:      row.MobileNumber,
+		LegalName:         row.LegalName,
+		DBAName:           &resDba,
+		Type:              row.BusinessType,
+		TaxID:             &resTax,
+		RegisteredAddress: row.RegisteredAddress,
+		DisplayID:         row.DisplayID,
+		Status:            row.Status,
+		Plan:              row.Plan,
+		LogoURL:           row.LogoUrl,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	}, nil
+}

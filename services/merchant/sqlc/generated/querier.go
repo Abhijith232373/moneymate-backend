@@ -11,11 +11,60 @@ import (
 )
 
 type Querier interface {
+	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
+	// CreateRedemptionRequest logs a merchant's withdrawal request to their bank account.
+	CreateRedemptionRequest(ctx context.Context, arg CreateRedemptionRequestParams) (RedemptionRequest, error)
+	// CreateRewardBalance initializes the financial and scan stats record for a newly registered store.
+	CreateRewardBalance(ctx context.Context, arg CreateRewardBalanceParams) (RewardBalance, error)
+	// CreateRewardTransaction inserts an immutable ledger entry for a reward earning or redemption event.
+	CreateRewardTransaction(ctx context.Context, arg CreateRewardTransactionParams) (RewardTransaction, error)
 	CreateStore(ctx context.Context, arg CreateStoreParams) (CreateStoreRow, error)
+	// CreateSubscriptionChangeLog inserts an immutable audit ledger entry for tier upgrades and downgrades.
+	CreateSubscriptionChangeLog(ctx context.Context, arg CreateSubscriptionChangeLogParams) (SubscriptionChangeLog, error)
+	// CreateSubscriptionPlan inserts or updates a pricing tier catalog entry with JSONB features and promotional limits.
+	CreateSubscriptionPlan(ctx context.Context, arg CreateSubscriptionPlanParams) (SubscriptionTier, error)
+	// DeductRewardBalance atomically subtracts redeemed funds from the available balance if sufficient funds exist.
+	DeductRewardBalance(ctx context.Context, arg DeductRewardBalanceParams) error
+	GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, error)
+	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]Campaign, error)
+	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]Campaign, error)
+	// GetKYCStatusByStoreID retrieves the verification standing and document URLs for a merchant store joined with core store status.
+	GetKYCStatusByStoreID(ctx context.Context, storeID uuid.UUID) (GetKYCStatusByStoreIDRow, error)
 	GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, error)
+	// GetRewardBalanceByStoreID fetches the current rewards center summary metrics for a specific merchant store.
+	GetRewardBalanceByStoreID(ctx context.Context, storeID uuid.UUID) (RewardBalance, error)
+	// GetRewardTransactionsByStoreID retrieves paginated transaction history with optional time-range and keyword search filtering.
+	GetRewardTransactionsByStoreID(ctx context.Context, arg GetRewardTransactionsByStoreIDParams) ([]RewardTransaction, error)
 	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreByOwnerIDRow, error)
+	// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner user ID.
+	GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreProfileByOwnerIDRow, error)
+	// GetStoreProfileByStoreID retrieves the complete merchant profile including contact info, business details, and logo.
+	GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUID) (GetStoreProfileByStoreIDRow, error)
+	// GetStoreStatusByID retrieves the current state machine status string for a specific merchant store.
+	GetStoreStatusByID(ctx context.Context, id uuid.UUID) (string, error)
+	// GetSubscriptionByStoreID fetches the active billing record and renewal lifecycle for a specific merchant store.
+	GetSubscriptionByStoreID(ctx context.Context, storeID uuid.UUID) (MerchantSubscription, error)
+	// GetSubscriptionPlans retrieves the full catalog of active pricing tiers ordered by cost.
+	GetSubscriptionPlans(ctx context.Context) ([]SubscriptionTier, error)
+	// InsertKYCDocuments inserts a new compliance documentation record during store onboarding or fallback initialization.
+	InsertKYCDocuments(ctx context.Context, arg InsertKYCDocumentsParams) (KycDocument, error)
 	SubmitKYC(ctx context.Context, arg SubmitKYCParams) error
+	UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignStatusParams) error
+	// UpdateKYCDocumentsByStoreID modifies existing compliance file URLs and resets verification standing to unverified.
+	UpdateKYCDocumentsByStoreID(ctx context.Context, arg UpdateKYCDocumentsByStoreIDParams) (KycDocument, error)
+	// UpdateRewardBalance modifies the balance, scan counts, and growth stats in a high-concurrency safe manner.
+	UpdateRewardBalance(ctx context.Context, arg UpdateRewardBalanceParams) error
+	// UpdateStorePlanEnum synchronizes the core store record's plan enum column with the active subscription tier.
+	UpdateStorePlanEnum(ctx context.Context, arg UpdateStorePlanEnumParams) error
+	// UpdateStoreProfileByOwnerID modifies merchant business info, contact details, and logo using the owner user ID.
+	UpdateStoreProfileByOwnerID(ctx context.Context, arg UpdateStoreProfileByOwnerIDParams) (UpdateStoreProfileByOwnerIDRow, error)
+	// UpdateStoreProfileByStoreID modifies merchant business info, contact details, and logo.
+	UpdateStoreProfileByStoreID(ctx context.Context, arg UpdateStoreProfileByStoreIDParams) (UpdateStoreProfileByStoreIDRow, error)
 	UpdateStoreStatus(ctx context.Context, arg UpdateStoreStatusParams) error
+	// UpdateStoreStatusByID transitions the store's overarching state machine status and returns the updated text.
+	UpdateStoreStatusByID(ctx context.Context, arg UpdateStoreStatusByIDParams) (string, error)
+	// UpsertMerchantSubscription atomically creates or updates a store's billing subscription record.
+	UpsertMerchantSubscription(ctx context.Context, arg UpsertMerchantSubscriptionParams) (MerchantSubscription, error)
 }
 
 var _ Querier = (*Queries)(nil)

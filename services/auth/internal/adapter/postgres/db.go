@@ -49,7 +49,7 @@ func RunMigrations(dsn string, migrationsPath string) error {
 	log.Println("Running database migrations...")
 
 	m, err := migrate.New(
-		fmt.Sprintf("file://%s", migrationsPath),
+		fmt.Sprintf("file:/%s", migrationsPath),
 		dsn,
 	)
 	if err != nil {
