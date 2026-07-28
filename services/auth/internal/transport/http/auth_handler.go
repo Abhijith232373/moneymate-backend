@@ -176,14 +176,10 @@ func (h *AuthHandler) VerifyAccessToken(c fiber.Ctx) error {
     if err != nil {
         return response.Unauthorized(c, "invalid or expired token")
     }
-
-    // Determine role from claims — first role in the list, default "user"
     role := "user"
     if len(claims.Roles) > 0 {
         role = claims.Roles[0]
     }
-
-    // JWT doesn't carry email — look it up from the database
     userID, err := uuid.Parse(claims.UserID)
     if err != nil {
         return response.Unauthorized(c, "invalid user ID in token")

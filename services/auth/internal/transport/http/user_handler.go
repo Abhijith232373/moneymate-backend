@@ -19,6 +19,29 @@ func NewUserHandler(adminUserUsecase usecase.AdminUserUsecase) *UserHandler {
 }
 
 
+
+func (h *UserHandler) CreateUser(c fiber.Ctx) error {
+	var req createUserRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return response.BadRequest(c, nil, "invalid request body")
+	}
+	if err := validate.Struct(req); err != nil {
+		return response.BadRequest(c, formatValidationErrors(err), "validation failed")
+	}
+
+	resp, err := h.adminUserUsecase.CreateUser(c.Context(), usecase.CreateUserRequest{
+		Email:    req.Email,
+		Phone:    req.Phone,
+		FullName: req.FullName,
+		Password: req.Password,
+		Role:     req.Role,
+	})
+	if err != nil {
+		return handleError(c, err)
+	}
+	return response.Created(c, "user created", resp)
+}
+
 func (h *UserHandler) ListUsers(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	pageSize, _ := strconv.Atoi(c.Query("page_size", "20"))

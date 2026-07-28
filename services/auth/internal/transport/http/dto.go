@@ -59,3 +59,13 @@ type assignRoleRequest struct {
 	UserID string `json:"user_id" validate:"required,uuid"`
 	RoleID string `json:"role_id" validate:"required,uuid"`
 }
+
+//admin
+
+type createUserRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Phone    string `json:"phone"`
+	FullName string `json:"full_name" validate:"required"`
+	Password string `json:"password" validate:"required,min=8"`
+	Role     string `json:"role" validate:"required"`
+}

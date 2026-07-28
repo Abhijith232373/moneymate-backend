@@ -43,10 +43,19 @@ func RegisterRoutes(
 	merchantAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
 	merchantAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
-	// ── Admin Auth ─────────────────────────────────────────────────
-	adminAuth := api.Group("/admin/auth")
-	adminAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
-	adminAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+	// ── Admin ─────────────────────────────────────────────────
+	adminRoutes := api.Group("/admin")
+	adminRoutes.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
+	adminRoutes.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+		// admin user management
+		adminUser:=adminRoutes.Group("/users")
+			adminRoutes.Post("/",proxy.AuthProxy(authAddr,"/admin/users"))
+			adminUser.Get("/",proxy.AuthProxy(authAddr,"/admin/users"))
+			adminUser.Get("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+			adminUser.Put("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+			adminUser.Patch("/:id/status",proxy.AuthProxy(authAddr,"/admin/users/:id/status"))
+			adminUser.Delete("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+
 
 	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
