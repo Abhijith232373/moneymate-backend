@@ -1,18 +1,16 @@
 package middlewares
 
 import (
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
+	jwtutil "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 )
 
-// RequireAuth creates a Fiber middleware that validates the JWT by calling auth-svc
-// via gRPC. On success, it injects user_id, role, and optionally merchant_id into
-// the Fiber context so downstream handlers can access them via c.Locals("user_id").
-func RequireAuth(authClient proxy.AuthClient) fiber.Handler {
+func RequireAuth(jwtSecret string) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		// Extract the Authorization header: "Bearer <token>"
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -29,28 +27,27 @@ func RequireAuth(authClient proxy.AuthClient) fiber.Handler {
 
 		token := parts[1]
 
-		// Call auth-svc gRPC to verify the token
-		claims, err := authClient.VerifyAccessToken(c.Context(), token)
+		claims, err := jwtutil.ParseAccessToken(token, jwtSecret)
 		if err != nil {
+			log.Print(err)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid or expired token",
 			})
 		}
 
-		// Inject identity into context — downstream handlers and RBAC middleware read these
+		role := "user"
+		if len(claims.Roles) > 0 {
+			role = claims.Roles[0]
+		}
+
 		c.Locals("user_id", claims.UserID)
 		c.Locals("email", claims.Email)
-		c.Locals("role", claims.Role)
-		// if claims.MerchantID != "" {
-		// 	c.Locals("merchant_id", claims.MerchantID)
-		// }
+		c.Locals("role", role)
 
 		return c.Next()
 	}
 }
 
-// RequireTransactionAuth is similar but validates a short-lived transaction token.
-// Used on payment endpoints above the user's configured threshold (see doc.md §5.8).
 func RequireTransactionAuth(authClient proxy.AuthClient) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		transactionToken := c.Get("X-Transaction-Token")

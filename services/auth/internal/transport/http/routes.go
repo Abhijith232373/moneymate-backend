@@ -21,7 +21,7 @@ func RegisterRoutes(router fiber.Router, h *Handlers, ) {
 func registerAuthRoutes(router fiber.Router, h *AuthHandler) {
 	auth := router.Group("/auth")
 	auth.Post("/login", h.Login)
-	auth.Post("/logout", h.Logout)
+	auth.Post("/logout", RequireUserID, h.Logout)
 	auth.Post("/otp/send", h.SendRegistrationOTP)
 	auth.Post("/otp/verify", h.VerifyRegistrationOTP)
 	auth.Post("/user/register", h.Register(domain.AccountTypeUser))
@@ -43,8 +43,7 @@ func registerRoleRoutes(router fiber.Router, h *RoleHandler ) {
 	roles.Post("/assign", h.AssignRoleToUser)
 	roles.Delete("/users/:userId/roles/:roleId", h.RemoveRoleFromUser)
 	roles.Get("/users/:userId", h.GetUserRoles)
-}
-
+} 
 func registerUserRoutes(router fiber.Router, h *UserHandler ) {
 	users := router.Group("/admin/users", )
 	users.Post("/",h.CreateUser)

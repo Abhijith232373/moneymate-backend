@@ -18,16 +18,18 @@ func withScheme(addr string) string {
 	}
 	return "http://" + addr
 }
-// AuthProxy returns a Fiber handler that transparently proxies requests
-// to the given auth-svc path. The request body, Content-Type, and
-// important headers (X-Device-Id, User-Agent, Authorization) are forwarded.
-// The auth-svc response (status + JSON body) is returned as-is.
+
 func AuthProxy(authAddr, targetPath string) fiber.Handler {
 	baseURL := withScheme(authAddr)
 	return func(c fiber.Ctx) error {
+		upstreamPath := targetPath
+		for _, p := range c.Route().Params {
+			upstreamPath = strings.ReplaceAll(upstreamPath, ":"+p, c.Params(p))
+		}
 		body := c.Body()
-
-		req, err := http.NewRequestWithContext(c.Context(), c.Method(), baseURL+targetPath, bytes.NewReader(body))
+		
+		
+		req, err := http.NewRequestWithContext(c.Context(), c.Method(), baseURL+upstreamPath, bytes.NewReader(body))
 		if err != nil {
 			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 				"success": false,
@@ -44,6 +46,9 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 		}
 		if v := c.Get("User-Agent"); v != "" {
 			req.Header.Set("User-Agent", v)
+		}
+		if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
+			req.Header.Set("X-User-Id", uid)
 		}
 
 		resp, err := authHTTPClient.Do(req)
