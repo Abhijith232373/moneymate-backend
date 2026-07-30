@@ -10,6 +10,7 @@ CREATE TABLE campaigns (
     reward_value        NUMERIC(10, 2) NOT NULL,
     min_bill_amount     NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     target_audience     VARCHAR(100) NOT NULL,
+    banner_url          TEXT,
     
     start_date          DATE NOT NULL,
     end_date            DATE NOT NULL,

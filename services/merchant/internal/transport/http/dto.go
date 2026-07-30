@@ -18,14 +18,18 @@ type RegisterStoreRequest struct {
 type RegisterStoreResponse struct {
 	StoreID   string `json:"store_id"`
 	DisplayID string `json:"display_id"`
-	Status    string `json:"status"`
+	VPA          string `json:"vpa"`
+	QRCodeBase64 string `json:"qr_code_base64"`
+	Status       string `json:"status"`
 	Plan      string `json:"plan"`
 }
 
 type GetStoreResponse struct {
 	StoreID   string `json:"store_id"`
 	DisplayID string `json:"display_id"`
-	Status    string `json:"status"`
+	VPA          string `json:"vpa"`
+	QRCodeBase64 string `json:"qr_code_base64"`
+	Status       string `json:"status"`
 	Plan      string `json:"plan"`
 	LegalName string `json:"legal_name"`
 }
@@ -37,6 +41,7 @@ type CreateCampaignRequest struct {
 	MinBillAmount  float64 `json:"min_bill_amount"`
 	StartDate      string  `json:"start_date"` // YYYY-MM-DD
 	EndDate        string  `json:"end_date"`   // YYYY-MM-DD
+	BannerURL      string  `json:"banner_url,omitempty"`
 }
 
 type CampaignResponse struct {
@@ -48,6 +53,7 @@ type CampaignResponse struct {
 	MinBillAmount  float64 `json:"min_bill_amount"`
 	StartDate      string  `json:"start_date"`
 	EndDate        string  `json:"end_date"`
+	BannerURL      string  `json:"banner_url,omitempty"`
 	IsActive       bool    `json:"is_active"`
 	CreatedAt      string  `json:"created_at"`
 }
@@ -199,6 +205,8 @@ type ProfileResponse struct {
 	ProfileImage string `json:"profileImage"`
 	Status       string `json:"status"`
 	DisplayID    string `json:"displayId"`
+	VPA          string `json:"vpa"`
+	QRCodeBase64 string `json:"qr_code_base64"`
 	Plan         string `json:"plan"`
 }
 
@@ -257,5 +265,6 @@ type DashboardResponse struct {
 	Campaigns    []DashboardCampaignResponse    `json:"campaigns"`
 	Balance      float64                        `json:"balance"`
 	MerchantID   string                         `json:"merchant_id"`
+	VPA          string                         `json:"vpa"`
 	BusinessName string                         `json:"business_name"`
 }

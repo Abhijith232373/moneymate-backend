@@ -86,6 +86,7 @@ func RegisterAdminRoutes(router fiber.Router, ah *AdminHandler, authMiddleware f
 	setupAdminGroup := func(grp fiber.Router) {
 		if authMiddleware != nil {
 			grp.Use(authMiddleware)
+			grp.Use(RequireAdmin())
 		}
 
 		// Stores / Merchants

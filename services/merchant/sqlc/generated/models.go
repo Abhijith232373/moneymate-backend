@@ -287,6 +287,7 @@ type Campaign struct {
 	IsActive       bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	BannerUrl      *string
 }
 
 type KycDocument struct {
@@ -364,6 +365,8 @@ type Store struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	LogoUrl           *string
+	Vpa               string
+	QrCodeBase64      string
 }
 
 type SubscriptionChangeLog struct {

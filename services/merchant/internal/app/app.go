@@ -36,6 +36,18 @@ func Build(cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("connect db: %w", err)
 	}
 
+	migrationDSN := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=merchant",
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.Name,
+	)
+	if err := postgres.RunMigrations(migrationDSN, cfg.Database.MigrationsPath); err != nil {
+		return nil, fmt.Errorf("run migrations: %w", err)
+	}
+
 	storeRepo := repo.NewStoreRepo(pool)
 	storeUseCase := usecases.NewStoreUseCase(storeRepo)
 

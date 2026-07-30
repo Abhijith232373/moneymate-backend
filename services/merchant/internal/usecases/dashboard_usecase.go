@@ -14,6 +14,7 @@ type DashboardOutput struct {
 	Campaigns    []DashboardCamp
 	Balance      float64
 	MerchantID   string
+	VPA          string
 	BusinessName string
 }
 
@@ -63,6 +64,7 @@ func NewDashboardUseCase(sr domain.MerchantRepository, rr domain.RewardRepositor
 func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*DashboardOutput, error) {
 	var storeID uuid.UUID
 	var merchantIDStr string
+	var vpaStr string
 	var businessName string
 
 	if id != "" {
@@ -70,6 +72,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			if store, err := uc.storeRepo.GetStoreProfileByStoreID(ctx, parsedUUID); err == nil && store != nil && store.ID != uuid.Nil {
 				storeID = store.ID
 				merchantIDStr = store.DisplayID
+				vpaStr = store.VPA
 				businessName = store.LegalName
 				if store.DBAName != nil && *store.DBAName != "" {
 					businessName = *store.DBAName
@@ -77,6 +80,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			} else if storeByOwner, err := uc.storeRepo.GetStoreProfileByOwnerID(ctx, parsedUUID); err == nil && storeByOwner != nil && storeByOwner.ID != uuid.Nil {
 				storeID = storeByOwner.ID
 				merchantIDStr = storeByOwner.DisplayID
+				vpaStr = storeByOwner.VPA
 				businessName = storeByOwner.LegalName
 				if storeByOwner.DBAName != nil && *storeByOwner.DBAName != "" {
 					businessName = *storeByOwner.DBAName
@@ -84,6 +88,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			} else {
 				storeID = parsedUUID
 				merchantIDStr = "MM-8823-XA"
+				vpaStr = "guest@moneymate"
 				businessName = "Guest Merchant"
 			}
 		}
@@ -92,6 +97,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 	if storeID == uuid.Nil {
 		storeID = uuid.New()
 		merchantIDStr = "MM-9823-XA"
+		vpaStr = "guest@moneymate"
 		businessName = "Guest Merchant"
 	}
 
@@ -211,6 +217,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 		Campaigns:    dashCamps,
 		Balance:      summary.AvailableBalance,
 		MerchantID:   merchantIDStr,
+		VPA:          vpaStr,
 		BusinessName: businessName,
 	}, nil
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type Querier interface {
-	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
+	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (CreateCampaignRow, error)
 	// CreateRedemptionRequest logs a merchant's withdrawal request to their bank account.
 	CreateRedemptionRequest(ctx context.Context, arg CreateRedemptionRequestParams) (RedemptionRequest, error)
 	// CreateRewardBalance initializes the financial and scan stats record for a newly registered store.
@@ -25,9 +25,9 @@ type Querier interface {
 	CreateSubscriptionPlan(ctx context.Context, arg CreateSubscriptionPlanParams) (SubscriptionTier, error)
 	// DeductRewardBalance atomically subtracts redeemed funds from the available balance if sufficient funds exist.
 	DeductRewardBalance(ctx context.Context, arg DeductRewardBalanceParams) error
-	GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, error)
-	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]Campaign, error)
-	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]Campaign, error)
+	GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaignByIDRow, error)
+	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]GetCampaignsByOwnerIDRow, error)
+	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]GetCampaignsByStoreIDRow, error)
 	// GetKYCStatusByStoreID retrieves the verification standing and document URLs for a merchant store joined with core store status.
 	GetKYCStatusByStoreID(ctx context.Context, storeID uuid.UUID) (GetKYCStatusByStoreIDRow, error)
 	GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, error)

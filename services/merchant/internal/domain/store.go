@@ -22,6 +22,8 @@ type Store struct {
 	TaxID             *string
 	RegisteredAddress string
 	DisplayID         string
+	VPA               string
+	QRCodeBase64      string
 	Status            string
 	Plan              string
 	LogoURL           string

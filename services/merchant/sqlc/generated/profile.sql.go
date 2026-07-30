@@ -16,7 +16,7 @@ const getStoreProfileByOwnerID = `-- name: GetStoreProfileByOwnerID :one
 SELECT 
     id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 FROM stores
 WHERE owner_id = $1
 LIMIT 1
@@ -34,6 +34,8 @@ type GetStoreProfileByOwnerIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               string
+	QrCodeBase64      string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -57,6 +59,8 @@ func (q *Queries) GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUI
 		&i.TaxID,
 		&i.RegisteredAddress,
 		&i.DisplayID,
+		&i.Vpa,
+		&i.QrCodeBase64,
 		&i.Status,
 		&i.Plan,
 		&i.LogoUrl,
@@ -70,7 +74,7 @@ const getStoreProfileByStoreID = `-- name: GetStoreProfileByStoreID :one
 SELECT 
     id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 FROM stores
 WHERE id = $1
 LIMIT 1
@@ -88,6 +92,8 @@ type GetStoreProfileByStoreIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               string
+	QrCodeBase64      string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -111,6 +117,8 @@ func (q *Queries) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUI
 		&i.TaxID,
 		&i.RegisteredAddress,
 		&i.DisplayID,
+		&i.Vpa,
+		&i.QrCodeBase64,
 		&i.Status,
 		&i.Plan,
 		&i.LogoUrl,
@@ -135,7 +143,7 @@ SET legal_name = COALESCE(NULLIF($1::text, ''), legal_name),
 WHERE owner_id = $10
 RETURNING id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 `
 
 type UpdateStoreProfileByOwnerIDParams struct {
@@ -163,6 +171,8 @@ type UpdateStoreProfileByOwnerIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               string
+	QrCodeBase64      string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -197,6 +207,8 @@ func (q *Queries) UpdateStoreProfileByOwnerID(ctx context.Context, arg UpdateSto
 		&i.TaxID,
 		&i.RegisteredAddress,
 		&i.DisplayID,
+		&i.Vpa,
+		&i.QrCodeBase64,
 		&i.Status,
 		&i.Plan,
 		&i.LogoUrl,
@@ -221,7 +233,7 @@ SET legal_name = COALESCE(NULLIF($1::text, ''), legal_name),
 WHERE id = $10
 RETURNING id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 `
 
 type UpdateStoreProfileByStoreIDParams struct {
@@ -249,6 +261,8 @@ type UpdateStoreProfileByStoreIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               string
+	QrCodeBase64      string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -283,6 +297,8 @@ func (q *Queries) UpdateStoreProfileByStoreID(ctx context.Context, arg UpdateSto
 		&i.TaxID,
 		&i.RegisteredAddress,
 		&i.DisplayID,
+		&i.Vpa,
+		&i.QrCodeBase64,
 		&i.Status,
 		&i.Plan,
 		&i.LogoUrl,

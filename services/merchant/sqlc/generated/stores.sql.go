@@ -15,10 +15,10 @@ import (
 const createStore = `-- name: CreateStore :one
 INSERT INTO stores (
     owner_id, owner_name, contact_email, mobile_number, 
-    legal_name, dba_name, business_type, tax_id, registered_address, display_id
+    legal_name, dba_name, business_type, tax_id, registered_address, display_id, vpa, qr_code_base64
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, display_id, status, plan, created_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+) RETURNING id, display_id, vpa, qr_code_base64, status, plan, created_at
 `
 
 type CreateStoreParams struct {
@@ -32,14 +32,18 @@ type CreateStoreParams struct {
 	TaxID             *string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               string
+	QrCodeBase64      string
 }
 
 type CreateStoreRow struct {
-	ID        uuid.UUID
-	DisplayID string
-	Status    MerchantStatus
-	Plan      SubscriptionPlan
-	CreatedAt time.Time
+	ID           uuid.UUID
+	DisplayID    string
+	Vpa          string
+	QrCodeBase64 string
+	Status       MerchantStatus
+	Plan         SubscriptionPlan
+	CreatedAt    time.Time
 }
 
 func (q *Queries) CreateStore(ctx context.Context, arg CreateStoreParams) (CreateStoreRow, error) {
@@ -54,11 +58,15 @@ func (q *Queries) CreateStore(ctx context.Context, arg CreateStoreParams) (Creat
 		arg.TaxID,
 		arg.RegisteredAddress,
 		arg.DisplayID,
+		arg.Vpa,
+		arg.QrCodeBase64,
 	)
 	var i CreateStoreRow
 	err := row.Scan(
 		&i.ID,
 		&i.DisplayID,
+		&i.Vpa,
+		&i.QrCodeBase64,
 		&i.Status,
 		&i.Plan,
 		&i.CreatedAt,
@@ -116,7 +124,7 @@ func (q *Queries) GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, 
 
 const getStoreByOwnerID = `-- name: GetStoreByOwnerID :one
 SELECT 
-    id, display_id, legal_name, status, plan 
+    id, display_id, vpa, legal_name, status, plan 
 FROM stores 
 WHERE owner_id = $1 LIMIT 1
 `
@@ -124,6 +132,7 @@ WHERE owner_id = $1 LIMIT 1
 type GetStoreByOwnerIDRow struct {
 	ID        uuid.UUID
 	DisplayID string
+	Vpa       string
 	LegalName string
 	Status    MerchantStatus
 	Plan      SubscriptionPlan
@@ -135,6 +144,7 @@ func (q *Queries) GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (Get
 	err := row.Scan(
 		&i.ID,
 		&i.DisplayID,
+		&i.Vpa,
 		&i.LegalName,
 		&i.Status,
 		&i.Plan,

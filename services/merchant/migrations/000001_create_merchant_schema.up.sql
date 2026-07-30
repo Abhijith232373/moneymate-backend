@@ -31,6 +31,9 @@ CREATE TABLE stores (
     
     -- System Generated (QR & State)
     display_id          VARCHAR(20) NOT NULL UNIQUE, -- UI: ID: MM-9823-XA
+    vpa                 VARCHAR(50) UNIQUE,
+    qr_code_base64      TEXT,
+    logo_url            TEXT,
     status              merchant_status NOT NULL DEFAULT 'pending_kyc',
     plan                subscription_plan NOT NULL DEFAULT 'essential', --
     

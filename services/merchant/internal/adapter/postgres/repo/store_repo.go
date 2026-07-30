@@ -37,6 +37,8 @@ func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*do
 		TaxID:             store.TaxID,
 		RegisteredAddress: store.RegisteredAddress,
 		DisplayID:         store.DisplayID,
+		Vpa:               store.VPA,
+		QrCodeBase64:      store.QRCodeBase64,
 	}
 
 	row, err := r.q.CreateStore(ctx, arg)
@@ -47,6 +49,8 @@ func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*do
 	store.ID = row.ID
 	store.Status = string(row.Status)
 	store.Plan = string(row.Plan)
+	store.VPA = row.Vpa
+	store.QRCodeBase64 = row.QrCodeBase64
 	store.CreatedAt = row.CreatedAt
 
 	return store, nil
@@ -77,6 +81,7 @@ func (r *StoreRepo) GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (*
 	return &domain.Store{
 		ID:        row.ID,
 		DisplayID: row.DisplayID,
+		VPA:       row.Vpa,
 		LegalName: row.LegalName,
 		Status:    string(row.Status),
 		Plan:      string(row.Plan),
@@ -140,6 +145,8 @@ func (r *StoreRepo) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.U
 		TaxID:             &tax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               row.Vpa,
+		QRCodeBase64:      row.QrCodeBase64,
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,
@@ -169,6 +176,8 @@ func (r *StoreRepo) GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.U
 		TaxID:             &tax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               row.Vpa,
+		QRCodeBase64:      row.QrCodeBase64,
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,
@@ -219,6 +228,8 @@ func (r *StoreRepo) UpdateStoreProfileByStoreID(ctx context.Context, store *doma
 		TaxID:             &resTax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               row.Vpa,
+		QRCodeBase64:      row.QrCodeBase64,
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,
@@ -269,6 +280,8 @@ func (r *StoreRepo) UpdateStoreProfileByOwnerID(ctx context.Context, store *doma
 		TaxID:             &resTax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               row.Vpa,
+		QRCodeBase64:      row.QrCodeBase64,
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,

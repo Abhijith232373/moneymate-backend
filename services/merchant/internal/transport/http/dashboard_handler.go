@@ -68,6 +68,7 @@ func (h *DashboardHandler) GetDashboard(c fiber.Ctx) error {
 			Campaigns:    camps,
 			Balance:      out.Balance,
 			MerchantID:   out.MerchantID,
+			VPA:          out.VPA,
 			BusinessName: out.BusinessName,
 		},
 	})

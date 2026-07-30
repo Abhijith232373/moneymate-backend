@@ -19,8 +19,11 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	// Force the owner ID to be the authenticated user to prevent malicious cross-user store registration
+	ownerID, _ := c.Locals("user_id").(string)
+
 	input := usecases.RegisterStoreInput{
-		OwnerID:           req.OwnerID,
+		OwnerID:           ownerID,
 		OwnerName:         req.OwnerName,
 		ContactEmail:      req.ContactEmail,
 		MobileNumber:      req.MobileNumber,
@@ -46,9 +49,11 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(RegisterStoreResponse{
 		StoreID:   store.ID.String(),
-		DisplayID: store.DisplayID,
-		Status:    store.Status,
-		Plan:      store.Plan,
+		DisplayID:    store.DisplayID,
+		VPA:          store.VPA,
+		QRCodeBase64: store.QRCodeBase64,
+		Status:       store.Status,
+		Plan:         store.Plan,
 	})
 }
 
@@ -65,10 +70,12 @@ func (h *MerchantHandler) GetStore(c fiber.Ctx) error {
 
 	return c.JSON(GetStoreResponse{
 		StoreID:   store.ID.String(),
-		DisplayID: store.DisplayID,
-		Status:    store.Status,
-		Plan:      store.Plan,
-		LegalName: store.LegalName,
+		DisplayID:    store.DisplayID,
+		VPA:          store.VPA,
+		QRCodeBase64: store.QRCodeBase64,
+		Status:       store.Status,
+		Plan:         store.Plan,
+		LegalName:    store.LegalName,
 	})
 }
 
@@ -99,24 +106,8 @@ func (h *MerchantHandler) GetPendingStores(c fiber.Ctx) error {
 }
 
 func resolveMerchantID(c fiber.Ctx) string {
-	if id := c.Params("store_id"); id != "" {
-		return id
-	}
-	if id := c.Params("owner_id"); id != "" {
-		return id
-	}
-	if id := c.Query("store_id"); id != "" {
-		return id
-	}
-	if id := c.Query("owner_id"); id != "" {
-		return id
-	}
-	if id := c.Get("X-Store-ID"); id != "" {
-		return id
-	}
-	if id := c.Get("X-User-ID"); id != "" {
-		return id
-	}
+	// Secure fintech practice: For merchant routes, always resolve the store context strictly from the authenticated user's ID
+	// Do NOT trust store_id or owner_id from query params or URL params to prevent Insecure Direct Object Reference (IDOR).
 	if id, ok := c.Locals("user_id").(string); ok && id != "" {
 		return id
 	}
@@ -169,6 +160,8 @@ func (h *MerchantHandler) GetProfile(c fiber.Ctx) error {
 			ProfileImage: store.LogoURL,
 			Status:       status,
 			DisplayID:    store.DisplayID,
+			VPA:          store.VPA,
+			QRCodeBase64: store.QRCodeBase64,
 			Plan:         store.Plan,
 		},
 	})
@@ -236,6 +229,8 @@ func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
 			ProfileImage: store.LogoURL,
 			Status:       status,
 			DisplayID:    store.DisplayID,
+			VPA:          store.VPA,
+			QRCodeBase64: store.QRCodeBase64,
 			Plan:         store.Plan,
 		},
 	})
