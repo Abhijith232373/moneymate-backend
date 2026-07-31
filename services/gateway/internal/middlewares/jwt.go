@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -8,9 +9,6 @@ import (
 	jwtutil "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 )
 
-// RequireAuth creates a Fiber middleware that validates the JWT locally
-// using the shared secret. On success, it injects user_id, email, and role
-// into the Fiber context so downstream handlers can access them via c.Locals.
 func RequireAuth(jwtSecret string) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -31,6 +29,7 @@ func RequireAuth(jwtSecret string) fiber.Handler {
 
 		claims, err := jwtutil.ParseAccessToken(token, jwtSecret)
 		if err != nil {
+			log.Print(err)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid or expired token",
 			})
@@ -49,8 +48,6 @@ func RequireAuth(jwtSecret string) fiber.Handler {
 	}
 }
 
-// RequireTransactionAuth is similar but validates a short-lived transaction token.
-// Used on payment endpoints above the user's configured threshold (see doc.md §5.8).
 func RequireTransactionAuth(authClient proxy.AuthClient) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		transactionToken := c.Get("X-Transaction-Token")

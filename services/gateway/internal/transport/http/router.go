@@ -47,7 +47,6 @@ func RegisterRoutes(
 
 
 	// ── Admin ─────────────────────────────────────────────────
-	// ── Admin (authenticated + role=admin) ─────────────────────────
 	admin := api.Group("/admin")
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
@@ -64,7 +63,6 @@ func RegisterRoutes(
 			},
 		})
 	})
-
 	admin.Get("/merchants", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"success": true,
@@ -72,8 +70,6 @@ func RegisterRoutes(
 			"data":    []interface{}{},
 		})
 	})
-
-	 
 	admin.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 		// admin user management
@@ -84,7 +80,16 @@ func RegisterRoutes(
 			adminUser.Put("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
 			adminUser.Patch("/:id/status",proxy.AuthProxy(authAddr,"/admin/users/:id/status"))
 			adminUser.Delete("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
-
+		//admin role management
+		adminRole:=admin.Group("/roles")
+			adminRole.Post("/",proxy.AuthProxy(authAddr,"/admin/roles"))//create role
+			adminRole.Get("/",proxy.AuthProxy(authAddr,"/admin/roles"))//list roles
+			adminRole.Get("/:id",proxy.AuthProxy(authAddr,"/admin/roles/:id"))//get role
+			adminRole.Put("/:id",proxy.AuthProxy(authAddr,"/admin/roles/:id"))//edit role
+			adminRole.Delete("/:id",proxy.AuthProxy(authAddr,"/admin/roles/:id"))//delete role
+			adminRole.Post("/assign",proxy.AuthProxy(authAddr,"/admin/roles/assign"))//assign role
+			adminRole.Delete("/users/:userId/roles/:roleId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId/roles/:roleId"))//remove role
+			adminRole.Get("/users/:userId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId"))//get user role
 
 	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
