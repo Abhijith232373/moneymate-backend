@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,10 +26,10 @@ func NewCampaignRepo(db *pgxpool.Pool) domain.CampaignRepository {
 
 func (r *CampaignRepo) CreateCampaign(ctx context.Context, c *domain.Campaign) (*domain.Campaign, error) {
 	var rewardValue pgtype.Numeric
-	rewardValue.Scan(c.RewardValue) // Simplification for demo, typically needs precision parsing
+	rewardValue.Scan(strconv.FormatFloat(c.RewardValue, 'f', -1, 64))
 
 	var minBillAmount pgtype.Numeric
-	minBillAmount.Scan(c.MinBillAmount)
+	minBillAmount.Scan(strconv.FormatFloat(c.MinBillAmount, 'f', -1, 64))
 
 	params := generated.CreateCampaignParams{
 		StoreID:        c.StoreID,
