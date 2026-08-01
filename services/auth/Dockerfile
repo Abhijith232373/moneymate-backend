@@ -14,6 +14,12 @@ COPY services/merchant/go.mod services/merchant/go.mod
 
 RUN go work sync
 
+FROM base AS dev
+WORKDIR /moneymate-backend/services/auth
+RUN go install github.com/air-verse/air@latest
+CMD ["air", "-c", ".air.toml"]
+
+
 FROM base AS builder
 WORKDIR /moneymate-backend
 COPY shared/ shared/
