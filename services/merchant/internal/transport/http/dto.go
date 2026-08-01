@@ -13,6 +13,8 @@ type RegisterStoreRequest struct {
 	AadhaarNumber     string `json:"aadhaar_number"`
 	AadhaarDocURL     string `json:"aadhaar_doc_url"`
 	ShopLicenseURL    string `json:"shop_license_url"`
+	Password          string `json:"password"`
+	ConfirmPassword   string `json:"confirm_password"`
 }
 
 type RegisterStoreResponse struct {
@@ -21,7 +23,22 @@ type RegisterStoreResponse struct {
 	VPA          string `json:"vpa"`
 	QRCodeBase64 string `json:"qr_code_base64"`
 	Status       string `json:"status"`
-	Plan      string `json:"plan"`
+	Plan         string `json:"plan"`
+}
+
+type LoginStoreRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginStoreResponse struct {
+	StoreID      string `json:"store_id"`
+	OwnerID      string `json:"owner_id"`
+	DisplayID    string `json:"display_id"`
+	VPA          string `json:"vpa"`
+	LegalName    string `json:"legal_name"`
+	Status       string `json:"status"`
+	Plan         string `json:"plan"`
 }
 
 type GetStoreResponse struct {

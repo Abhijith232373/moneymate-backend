@@ -8,10 +8,12 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (CreateCampaignRow, error)
+	CreateQRTransaction(ctx context.Context, arg CreateQRTransactionParams) (QrTransaction, error)
 	// CreateRedemptionRequest logs a merchant's withdrawal request to their bank account.
 	CreateRedemptionRequest(ctx context.Context, arg CreateRedemptionRequestParams) (RedemptionRequest, error)
 	// CreateRewardBalance initializes the financial and scan stats record for a newly registered store.
@@ -31,10 +33,12 @@ type Querier interface {
 	// GetKYCStatusByStoreID retrieves the verification standing and document URLs for a merchant store joined with core store status.
 	GetKYCStatusByStoreID(ctx context.Context, storeID uuid.UUID) (GetKYCStatusByStoreIDRow, error)
 	GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, error)
+	GetQRTransactionsByStoreID(ctx context.Context, arg GetQRTransactionsByStoreIDParams) ([]QrTransaction, error)
 	// GetRewardBalanceByStoreID fetches the current rewards center summary metrics for a specific merchant store.
 	GetRewardBalanceByStoreID(ctx context.Context, storeID uuid.UUID) (RewardBalance, error)
 	// GetRewardTransactionsByStoreID retrieves paginated transaction history with optional time-range and keyword search filtering.
 	GetRewardTransactionsByStoreID(ctx context.Context, arg GetRewardTransactionsByStoreIDParams) ([]RewardTransaction, error)
+	GetStoreByEmail(ctx context.Context, contactEmail string) (GetStoreByEmailRow, error)
 	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreByOwnerIDRow, error)
 	// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner user ID.
 	GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreProfileByOwnerIDRow, error)
@@ -46,6 +50,8 @@ type Querier interface {
 	GetSubscriptionByStoreID(ctx context.Context, storeID uuid.UUID) (MerchantSubscription, error)
 	// GetSubscriptionPlans retrieves the full catalog of active pricing tiers ordered by cost.
 	GetSubscriptionPlans(ctx context.Context) ([]SubscriptionTier, error)
+	GetTodayQRScanCount(ctx context.Context, storeID uuid.UUID) (int64, error)
+	GetTodayQRScanVolume(ctx context.Context, storeID uuid.UUID) (pgtype.Numeric, error)
 	// InsertKYCDocuments inserts a new compliance documentation record during store onboarding or fallback initialization.
 	InsertKYCDocuments(ctx context.Context, arg InsertKYCDocumentsParams) (KycDocument, error)
 	SubmitKYC(ctx context.Context, arg SubmitKYCParams) error

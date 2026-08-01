@@ -1,9 +1,9 @@
 -- name: CreateStore :one
 INSERT INTO stores (
     owner_id, owner_name, contact_email, mobile_number, 
-    legal_name, dba_name, business_type, tax_id, registered_address, display_id, vpa, qr_code_base64
+    legal_name, dba_name, business_type, tax_id, registered_address, display_id, vpa, qr_code_base64, password_hash
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 ) RETURNING id, display_id, vpa, qr_code_base64, status, plan, created_at;
 
 -- name: SubmitKYC :exec
@@ -18,6 +18,12 @@ SELECT
     id, display_id, vpa, legal_name, status, plan 
 FROM stores 
 WHERE owner_id = $1 LIMIT 1;
+
+-- name: GetStoreByEmail :one
+SELECT 
+    id, owner_id, display_id, vpa, legal_name, status, plan, password_hash
+FROM stores
+WHERE contact_email = $1 LIMIT 1;
 
 -- name: UpdateStoreStatus :exec
 UPDATE stores 

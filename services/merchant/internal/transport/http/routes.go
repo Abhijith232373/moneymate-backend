@@ -14,6 +14,7 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 	}
 
 	merchant.Post("/register", h.RegisterStore)
+	merchant.Post("/login", h.LoginStore)
 	merchant.Get("/status/:owner_id", h.GetStore)
 	merchant.Get("/pending", h.GetPendingStores)
 

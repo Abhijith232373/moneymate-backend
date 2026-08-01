@@ -63,7 +63,9 @@ func Build(cfg *config.Config) (*App, error) {
 	kycRepo := repo.NewKYCRepo(pool)
 	kycUseCase := usecases.NewKYCUseCase(kycRepo)
 
-	dashboardUseCase := usecases.NewDashboardUseCase(storeRepo, rewardRepo, campaignRepo)
+	qrRepo := repo.NewQRRepo(pool)
+
+	dashboardUseCase := usecases.NewDashboardUseCase(storeRepo, rewardRepo, campaignRepo, qrRepo)
 
 	adminRepo := repo.NewAdminRepo(pool, storeRepo, campaignRepo, kycRepo)
 	adminUseCase := usecases.NewAdminUseCase(adminRepo)

@@ -34,8 +34,8 @@ type GetStoreProfileByOwnerIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
-	Vpa               string
-	QrCodeBase64      string
+	Vpa               *string
+	QrCodeBase64      *string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -92,8 +92,8 @@ type GetStoreProfileByStoreIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
-	Vpa               string
-	QrCodeBase64      string
+	Vpa               *string
+	QrCodeBase64      *string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -171,8 +171,8 @@ type UpdateStoreProfileByOwnerIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
-	Vpa               string
-	QrCodeBase64      string
+	Vpa               *string
+	QrCodeBase64      *string
 	Status            string
 	Plan              string
 	LogoUrl           string
@@ -261,8 +261,8 @@ type UpdateStoreProfileByStoreIDRow struct {
 	TaxID             string
 	RegisteredAddress string
 	DisplayID         string
-	Vpa               string
-	QrCodeBase64      string
+	Vpa               *string
+	QrCodeBase64      *string
 	Status            string
 	Plan              string
 	LogoUrl           string

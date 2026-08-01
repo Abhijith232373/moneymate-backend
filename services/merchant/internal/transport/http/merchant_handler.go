@@ -31,6 +31,10 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "owner_id is required"})
 	}
 
+	if req.Password == "" || req.Password != req.ConfirmPassword {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "passwords do not match or are empty"})
+	}
+
 	input := usecases.RegisterStoreInput{
 		OwnerID:           ownerID,
 		OwnerName:         req.OwnerName,
@@ -42,6 +46,7 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		AadhaarNumber:     req.AadhaarNumber,
 		AadhaarDocURL:     req.AadhaarDocURL,
 		ShopLicenseURL:    req.ShopLicenseURL,
+		Password:          req.Password,
 	}
 
 	if req.DBAName != "" {
@@ -63,6 +68,32 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		QRCodeBase64: store.QRCodeBase64,
 		Status:       store.Status,
 		Plan:         store.Plan,
+	})
+}
+
+func (h *MerchantHandler) LoginStore(c fiber.Ctx) error {
+	var req LoginStoreRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if req.Email == "" || req.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email and password are required"})
+	}
+
+	store, err := h.usecase.AuthenticateStore(c.Context(), req.Email, req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(LoginStoreResponse{
+		StoreID:   store.ID.String(),
+		OwnerID:   store.OwnerID.String(),
+		DisplayID: store.DisplayID,
+		VPA:       store.VPA,
+		LegalName: store.LegalName,
+		Status:    store.Status,
+		Plan:      store.Plan,
 	})
 }
 

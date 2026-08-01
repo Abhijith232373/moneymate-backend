@@ -97,6 +97,10 @@ func RegisterRoutes(
 		})
 	})
 
+	// ── Open Downstream Routes (bypass auth) ───────────────────────
+	api.Post("/merchant/register", proxy.ProxyToService(registry, "merchant"))
+	api.Post("/merchant/login", proxy.ProxyToService(registry, "merchant"))
+
 	// ── Downstream service proxies ─────────────────────────────────
 	downstreamServices := []string{"payment", "merchant", "campaign", "debt", "pod", "scheduler", "referral", "rewards", "routing", "notification"}
 	for _, svc := range downstreamServices {

@@ -21,6 +21,7 @@ CREATE TABLE stores (
     owner_name          VARCHAR(255) NOT NULL, 
     contact_email       VARCHAR(255) NOT NULL UNIQUE, 
     mobile_number       VARCHAR(20) NOT NULL UNIQUE,
+    password_hash       VARCHAR(255) NOT NULL,
     
     -- Business Details (Step 1)
     legal_name          VARCHAR(255) NOT NULL,

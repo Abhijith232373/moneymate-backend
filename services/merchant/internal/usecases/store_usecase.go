@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
 	"github.com/moneymate-2026/moneymate-backend/shared/pkg/qrcode"
+	hashpass "github.com/moneymate-2026/moneymate-backend/shared/pkg/hash"
 )
 
 // StoreUseCase orchestrates merchant workflows.
@@ -35,6 +36,7 @@ type RegisterStoreInput struct {
 	AadhaarNumber     string
 	AadhaarDocURL     string
 	ShopLicenseURL    string
+	Password          string
 }
 
 // ProcessRegistration applies validation and executes state persistence.
@@ -55,6 +57,11 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 		return nil, fmt.Errorf("failed to generate QR code: %w", err)
 	}
 
+	hashedPwd, err := hashpass.HashPassword(in.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
 	store := &domain.Store{
 		OwnerID:           ownerUUID,
 		OwnerName:         strings.TrimSpace(in.OwnerName),
@@ -68,6 +75,7 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 		DisplayID:         displayID,
 		VPA:               vpa,
 		QRCodeBase64:      qrCodeBase64,
+		PasswordHash:      hashedPwd,
 	}
 
 	createdStore, err := uc.repo.RegisterStore(ctx, store)
@@ -97,6 +105,21 @@ func (uc *StoreUseCase) GetStore(ctx context.Context, ownerID string) (*domain.S
 	}
 
 	return uc.repo.GetStoreByOwnerID(ctx, ownerUUID)
+}
+
+// AuthenticateStore checks if the email and password match a registered store.
+func (uc *StoreUseCase) AuthenticateStore(ctx context.Context, email, password string) (*domain.Store, error) {
+	store, err := uc.repo.GetStoreByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
+	if err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	match, err := hashpass.VerifyPassword(store.PasswordHash, password)
+	if err != nil || !match {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	return store, nil
 }
 
 // generateDisplayID yields a collision-resistant MM-XXXX-XX identifier.

@@ -282,12 +282,12 @@ type Campaign struct {
 	RewardValue    pgtype.Numeric
 	MinBillAmount  pgtype.Numeric
 	TargetAudience string
+	BannerUrl      *string
 	StartDate      time.Time
 	EndDate        time.Time
 	IsActive       bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	BannerUrl      *string
 }
 
 type KycDocument struct {
@@ -313,6 +313,15 @@ type MerchantSubscription struct {
 	AutoRenew          bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+}
+
+type QrTransaction struct {
+	ID                uuid.UUID
+	StoreID           uuid.UUID
+	CustomerDisplayID string
+	BillAmount        pgtype.Numeric
+	RewardIssued      pgtype.Numeric
+	CreatedAt         time.Time
 }
 
 type RedemptionRequest struct {
@@ -354,19 +363,20 @@ type Store struct {
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string
+	PasswordHash      string
 	LegalName         string
 	DbaName           *string
 	BusinessType      string
 	TaxID             *string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               *string
+	QrCodeBase64      *string
+	LogoUrl           *string
 	Status            MerchantStatus
 	Plan              SubscriptionPlan
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	LogoUrl           *string
-	Vpa               string
-	QrCodeBase64      string
 }
 
 type SubscriptionChangeLog struct {
