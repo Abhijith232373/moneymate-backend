@@ -37,6 +37,8 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 	merchant.Post("/:store_id/campaigns", ch.CreateCampaign)
 	merchant.Get("/campaigns", ch.GetCampaigns)
 	merchant.Get("/:store_id/campaigns", ch.GetCampaigns)
+	merchant.Put("/campaigns/:id/status", ch.UpdateCampaignStatus)
+	merchant.Put("/:store_id/campaigns/:id/status", ch.UpdateCampaignStatus)
 
 	// Rewards Center routes
 	if rh != nil {
@@ -56,8 +58,10 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 		merchant.Get("/:store_id/subscriptions/current", sh.GetCurrentSubscription)
 		merchant.Post("/subscriptions/change", sh.ChangeSubscriptionPlan)
 		merchant.Post("/:store_id/subscriptions/change", sh.ChangeSubscriptionPlan)
-		merchant.Post("/subscriptions/upgrade", sh.ChangeSubscriptionPlan)
-		merchant.Post("/:store_id/subscriptions/upgrade", sh.ChangeSubscriptionPlan)
+		merchant.Post("/subscriptions/upgrade/initiate", sh.InitiateUpgrade)
+		merchant.Post("/:store_id/subscriptions/upgrade/initiate", sh.InitiateUpgrade)
+		merchant.Post("/subscriptions/upgrade/verify", sh.VerifyUpgrade)
+		merchant.Post("/:store_id/subscriptions/upgrade/verify", sh.VerifyUpgrade)
 	}
 
 	// KYC Verification & Compliance routes

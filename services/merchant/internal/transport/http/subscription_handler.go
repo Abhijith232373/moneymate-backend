@@ -154,3 +154,63 @@ func (h *SubscriptionHandler) ChangeSubscriptionPlan(c fiber.Ctx) error {
 		Message:  msg,
 	})
 }
+
+// InitiateUpgrade handles POST /merchant/:store_id/subscriptions/upgrade/initiate
+func (h *SubscriptionHandler) InitiateUpgrade(c fiber.Ctx) error {
+	storeIDStr := c.Params("store_id")
+	if storeIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
+	}
+	storeID, err := uuid.Parse(storeIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid store_id UUID format"})
+	}
+
+	var req struct {
+		PlanCode string `json:"plan_code"`
+	}
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON request payload"})
+	}
+
+	orderID, err := h.usecase.CreateUpgradeOrder(c.Context(), storeID, req.PlanCode)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"order_id": orderID,
+	})
+}
+
+// VerifyUpgrade handles POST /merchant/:store_id/subscriptions/upgrade/verify
+func (h *SubscriptionHandler) VerifyUpgrade(c fiber.Ctx) error {
+	storeIDStr := c.Params("store_id")
+	if storeIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
+	}
+	storeID, err := uuid.Parse(storeIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid store_id UUID format"})
+	}
+
+	var req struct {
+		PlanCode  string `json:"plan_code"`
+		OrderID   string `json:"razorpay_order_id"`
+		PaymentID string `json:"razorpay_payment_id"`
+		Signature string `json:"razorpay_signature"`
+	}
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON request payload"})
+	}
+
+	sub, err := h.usecase.VerifyUpgrade(c.Context(), storeID, req.PlanCode, req.OrderID, req.PaymentID, req.Signature)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Subscription upgraded successfully",
+		"plan":    sub.PlanCode,
+	})
+}

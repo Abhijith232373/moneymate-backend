@@ -18,6 +18,7 @@ import (
 	transporthttp "github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http"
 	ws "github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/websocket"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/usecases"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/payment"
 )
 
 type App struct {
@@ -58,7 +59,8 @@ func Build(cfg *config.Config) (*App, error) {
 	rewardUseCase := usecases.NewRewardUseCase(rewardRepo, storeRepo)
 
 	subscriptionRepo := repo.NewSubscriptionRepo(pool)
-	subscriptionUseCase := usecases.NewSubscriptionUseCase(subscriptionRepo, storeRepo, campaignRepo)
+	razorpayClient := payment.NewRazorpayClient(cfg.Razorpay.KeyID, cfg.Razorpay.KeySecret)
+	subscriptionUseCase := usecases.NewSubscriptionUseCase(subscriptionRepo, storeRepo, campaignRepo, razorpayClient)
 
 	kycRepo := repo.NewKYCRepo(pool)
 	kycUseCase := usecases.NewKYCUseCase(kycRepo)

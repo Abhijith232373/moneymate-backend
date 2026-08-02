@@ -59,6 +59,9 @@ func (h *CampaignHandler) CreateCampaign(c fiber.Ctx) error {
 
 	created, err := h.usecase.CreateCampaign(c.Context(), campaign)
 	if err != nil {
+		if err.Error() == "active campaign limit reached for Growth plan (max 5)" || err.Error() == "active campaign limit reached for Essential plan (max 1)" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -110,6 +113,43 @@ func (h *CampaignHandler) GetCampaigns(c fiber.Ctx) error {
 	}
 
 	return c.JSON(response)
+}
+
+func (h *CampaignHandler) UpdateCampaignStatus(c fiber.Ctx) error {
+	storeIDStr := c.Params("store_id")
+	if storeIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
+	}
+	storeID, err := uuid.Parse(storeIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid store_id format"})
+	}
+
+	campaignIDStr := c.Params("id")
+	if campaignIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "campaign id is required"})
+	}
+	campaignID, err := uuid.Parse(campaignIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid campaign id format"})
+	}
+
+	var req struct {
+		IsActive bool `json:"is_active"`
+	}
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	err = h.usecase.UpdateCampaignStatus(c.Context(), campaignID, storeID, req.IsActive)
+	if err != nil {
+		if err.Error() == "active campaign limit reached for Growth plan (max 5)" || err.Error() == "active campaign limit reached for Essential plan (max 1)" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "Campaign status updated successfully"})
 }
 
 func getStringOrEmpty(s *string) string {
