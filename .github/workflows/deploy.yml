@@ -16,4 +16,4 @@ jobs:
           script: |
             cd /opt/moneymate
             git pull origin main
-            docker compose up -d --build
+            docker compose -f docker-compose.prod.yml up -d --build
