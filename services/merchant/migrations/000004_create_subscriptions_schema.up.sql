@@ -47,20 +47,8 @@ CREATE TABLE merchant_subscriptions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. Subscription Change Audit Logs Table
--- Immutable ledger recording every tier upgrade, downgrade, or cancellation across millions of merchants.
-CREATE TABLE subscription_change_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-    old_plan_code VARCHAR(50) NOT NULL,
-    new_plan_code VARCHAR(50) NOT NULL,
-    change_reason VARCHAR(255) NOT NULL DEFAULT 'user_requested', -- 'user_requested', 'admin_override', 'billing_default'
-    changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- 5. Performance Indices for high-volume billing queries and plan lookups
 CREATE INDEX idx_subscription_tiers_code_active ON subscription_tiers(plan_code) WHERE is_active = TRUE;
 
 CREATE INDEX idx_merchant_subscriptions_store_id ON merchant_subscriptions(store_id);
 CREATE INDEX idx_merchant_subscriptions_status_end ON merchant_subscriptions(status, current_period_end);
-CREATE INDEX idx_subscription_change_logs_store_id_time ON subscription_change_logs(store_id, changed_at DESC);

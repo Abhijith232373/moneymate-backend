@@ -20,7 +20,7 @@ type SubscriptionUseCase interface {
 	// GetCurrentSubscription fetches the active billing record and renewal timeline for a merchant store.
 	GetCurrentSubscription(ctx context.Context, storeID uuid.UUID) (*domain.MerchantSubscription, error)
 	// ChangePlan validates tier eligibility, checks active promotional limits, and atomically upgrades or downgrades the store's plan.
-	ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string, reason string) (*domain.MerchantSubscription, error)
+	ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string) (*domain.MerchantSubscription, error)
 
 	CreateUpgradeOrder(ctx context.Context, storeID uuid.UUID, newPlanCode string) (string, error)
 	VerifyUpgrade(ctx context.Context, storeID uuid.UUID, newPlanCode string, orderID, paymentID, signature string) (*domain.MerchantSubscription, error)
@@ -66,7 +66,7 @@ func (uc *subscriptionUseCase) GetCurrentSubscription(ctx context.Context, store
 
 // ChangePlan enforces business rules before upgrading or downgrading a merchant's subscription tier.
 // It verifies the target plan exists and prevents downgrades if active promotional offer counts exceed the target plan's allowance.
-func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string, reason string) (*domain.MerchantSubscription, error) {
+func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string) (*domain.MerchantSubscription, error) {
 	if storeID == uuid.Nil {
 		return nil, errors.New("invalid store ID")
 	}
@@ -106,7 +106,7 @@ func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID
 	}
 
 	// 3. Delegate atomic transition to repository layer
-	return uc.subRepo.UpdateStorePlan(ctx, storeID, newPlanCode, reason)
+	return uc.subRepo.UpdateStorePlan(ctx, storeID, newPlanCode)
 }
 
 // CreateUpgradeOrder creates a Razorpay order for the target plan upgrade
@@ -155,5 +155,5 @@ func (uc *subscriptionUseCase) VerifyUpgrade(ctx context.Context, storeID uuid.U
 	}
 
 	// If verified successfully, change the plan
-	return uc.ChangePlan(ctx, storeID, newPlanCode, "Razorpay Subscription Upgrade")
+	return uc.ChangePlan(ctx, storeID, newPlanCode)
 }

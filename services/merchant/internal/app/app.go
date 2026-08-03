@@ -16,6 +16,7 @@ import (
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/adapter/postgres/repo"
 	transporthttp "github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http"
+	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http/middleware"
 	ws "github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/websocket"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/usecases"
 	"github.com/moneymate-2026/moneymate-backend/shared/pkg/payment"
@@ -76,6 +77,12 @@ func Build(cfg *config.Config) (*App, error) {
 	hub := ws.NewHub()
 	hub.StartCleanupRoutine(5 * time.Minute)
 
+	walletRepo := repo.NewWalletRepo(pool)
+	walletUseCase := usecases.NewWalletUseCase(walletRepo)
+
+	earningsRepo := repo.NewEarningsRepo(pool)
+	earningsUseCase := usecases.NewEarningsUseCase(earningsRepo, walletRepo)
+
 	// HTTP Setup
 	httpHandler := transporthttp.NewMerchantHandler(storeUseCase)
 	campaignHandler := transporthttp.NewCampaignHandler(campaignUseCase)
@@ -83,8 +90,10 @@ func Build(cfg *config.Config) (*App, error) {
 	subscriptionHandler := transporthttp.NewSubscriptionHandler(subscriptionUseCase)
 	kycHandler := transporthttp.NewKYCHandler(kycUseCase)
 	dashboardHandler := transporthttp.NewDashboardHandler(dashboardUseCase)
+	walletHandler := transporthttp.NewWalletHandler(walletUseCase)
+	earningsHandler := transporthttp.NewEarningsHandler(earningsUseCase)
 	adminHandler := transporthttp.NewAdminHandler(adminUseCase)
-	httpServer := setupHTTPServer(httpHandler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, adminHandler, hub)
+	httpServer := setupHTTPServer(httpHandler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, walletHandler, earningsHandler, adminHandler, hub)
 
 	httpAddr := cfg.Server.HTTPAddr
 	if port := os.Getenv("PORT"); port != "" {
@@ -106,7 +115,7 @@ func Build(cfg *config.Config) (*App, error) {
 }
 
 // setupHTTPServer configures Fiber middleware, CORS policies, health check, and registers all REST routes.
-func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *transporthttp.CampaignHandler, rewardHandler *transporthttp.RewardHandler, subscriptionHandler *transporthttp.SubscriptionHandler, kycHandler *transporthttp.KYCHandler, dashboardHandler *transporthttp.DashboardHandler, adminHandler *transporthttp.AdminHandler, hub *ws.Hub) *fiber.App {
+func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *transporthttp.CampaignHandler, rewardHandler *transporthttp.RewardHandler, subscriptionHandler *transporthttp.SubscriptionHandler, kycHandler *transporthttp.KYCHandler, dashboardHandler *transporthttp.DashboardHandler, walletHandler *transporthttp.WalletHandler, earningsHandler *transporthttp.EarningsHandler, adminHandler *transporthttp.AdminHandler, hub *ws.Hub) *fiber.App {
 	server := fiber.New(fiber.Config{
 		AppName: "merchant-service",
 	})
@@ -122,9 +131,12 @@ func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *tr
 		return c.JSON(fiber.Map{"status": "ok", "service": "merchant"})
 	})
 
-	// No-op auth middleware for now, or use real one when JWT config is wired
+	// No-op auth middleware for admin for now
 	noopAuth := func(c fiber.Ctx) error { return c.Next() }
-	transporthttp.RegisterRoutes(server, handler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, noopAuth)
+
+	// Use real auth middleware for merchant routes
+	authMiddleware := middleware.RequireAuth()
+	transporthttp.RegisterRoutes(server, handler, campaignHandler, rewardHandler, subscriptionHandler, kycHandler, dashboardHandler, walletHandler, earningsHandler, authMiddleware)
 	transporthttp.RegisterAdminRoutes(server, adminHandler, noopAuth)
 	transporthttp.RegisterWebSocketRoutes(server, hub.HandleConnection())
 

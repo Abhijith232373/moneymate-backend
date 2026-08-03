@@ -4,17 +4,18 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// RegisterRoutes wires all HTTP endpoints for merchant registration, campaigns, rewards center, subscription plans, and KYC compliance.
-func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler, rh *RewardHandler, sh *SubscriptionHandler, kh *KYCHandler, dh *DashboardHandler, authMiddleware fiber.Handler) {
+// RegisterRoutes wires all HTTP endpoints for merchant registration, campaigns, rewards center, subscription plans, KYC compliance, and Wallet.
+func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler, rh *RewardHandler, sh *SubscriptionHandler, kh *KYCHandler, dh *DashboardHandler, wh *WalletHandler, eh *EarningsHandler, authMiddleware fiber.Handler) {
 	merchant := router.Group("/merchant")
+
+	merchant.Post("/register", h.RegisterStore)
+	merchant.Post("/login", h.LoginStore)
 
 	// Apply auth middleware if provided
 	if authMiddleware != nil {
 		merchant.Use(authMiddleware)
 	}
 
-	merchant.Post("/register", h.RegisterStore)
-	merchant.Post("/login", h.LoginStore)
 	merchant.Get("/status/:owner_id", h.GetStore)
 	merchant.Get("/pending", h.GetPendingStores)
 
@@ -62,6 +63,20 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 		merchant.Post("/:store_id/subscriptions/upgrade/initiate", sh.InitiateUpgrade)
 		merchant.Post("/subscriptions/upgrade/verify", sh.VerifyUpgrade)
 		merchant.Post("/:store_id/subscriptions/upgrade/verify", sh.VerifyUpgrade)
+	}
+
+	// Wallet routes
+	if wh != nil {
+		merchant.Get("/wallet", wh.GetWallet)
+		merchant.Get("/:store_id/wallet", wh.GetWallet)
+	}
+
+	// Earnings routes
+	if eh != nil {
+		merchant.Get("/earnings", eh.GetEarnings)
+		merchant.Get("/:store_id/earnings", eh.GetEarnings)
+		merchant.Post("/earnings/payouts", eh.RequestPayout)
+		merchant.Post("/:store_id/earnings/payouts", eh.RequestPayout)
 	}
 
 	// KYC Verification & Compliance routes

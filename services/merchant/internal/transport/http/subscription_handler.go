@@ -24,7 +24,7 @@ func NewSubscriptionHandler(uc usecases.SubscriptionUseCase) *SubscriptionHandle
 
 // GetSubscriptionPlans handles GET /merchant/:store_id/subscriptions/plans and returns the catalog of pricing tiers.
 func (h *SubscriptionHandler) GetSubscriptionPlans(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -86,7 +86,7 @@ func (h *SubscriptionHandler) GetSubscriptionPlans(c fiber.Ctx) error {
 
 // GetCurrentSubscription handles GET /merchant/:store_id/subscriptions/current and returns the store's active billing timeline.
 func (h *SubscriptionHandler) GetCurrentSubscription(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -119,7 +119,7 @@ func (h *SubscriptionHandler) GetCurrentSubscription(c fiber.Ctx) error {
 
 // ChangeSubscriptionPlan handles POST /merchant/:store_id/subscriptions/change to upgrade or downgrade a store's tier.
 func (h *SubscriptionHandler) ChangeSubscriptionPlan(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -136,7 +136,7 @@ func (h *SubscriptionHandler) ChangeSubscriptionPlan(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "plan_code is required"})
 	}
 
-	sub, err := h.usecase.ChangePlan(c.Context(), storeID, req.PlanCode, req.Reason)
+	sub, err := h.usecase.ChangePlan(c.Context(), storeID, req.PlanCode)
 	if err != nil {
 		// Return 400 Bad Request for business rule violations (e.g. campaign limits exceeded)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -157,7 +157,7 @@ func (h *SubscriptionHandler) ChangeSubscriptionPlan(c fiber.Ctx) error {
 
 // InitiateUpgrade handles POST /merchant/:store_id/subscriptions/upgrade/initiate
 func (h *SubscriptionHandler) InitiateUpgrade(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -185,7 +185,7 @@ func (h *SubscriptionHandler) InitiateUpgrade(c fiber.Ctx) error {
 
 // VerifyUpgrade handles POST /merchant/:store_id/subscriptions/upgrade/verify
 func (h *SubscriptionHandler) VerifyUpgrade(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}

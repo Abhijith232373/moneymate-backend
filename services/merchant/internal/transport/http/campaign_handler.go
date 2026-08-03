@@ -24,7 +24,7 @@ func (h *CampaignHandler) CreateCampaign(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
 	}
@@ -81,7 +81,7 @@ func (h *CampaignHandler) CreateCampaign(c fiber.Ctx) error {
 }
 
 func (h *CampaignHandler) GetCampaigns(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
 	}
@@ -116,7 +116,7 @@ func (h *CampaignHandler) GetCampaigns(c fiber.Ctx) error {
 }
 
 func (h *CampaignHandler) UpdateCampaignStatus(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
 	}

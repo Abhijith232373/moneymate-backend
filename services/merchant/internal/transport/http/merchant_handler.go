@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http/middleware"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/usecases"
 )
 
@@ -61,13 +62,19 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	token, err := middleware.GenerateToken(store.ID.String(), store.OwnerID.String())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(RegisterStoreResponse{
-		StoreID:   store.ID.String(),
+		StoreID:      store.ID.String(),
 		DisplayID:    store.DisplayID,
 		VPA:          store.VPA,
 		QRCodeBase64: store.QRCodeBase64,
 		Status:       store.Status,
 		Plan:         store.Plan,
+		Token:        token,
 	})
 }
 
@@ -86,6 +93,11 @@ func (h *MerchantHandler) LoginStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	token, err := middleware.GenerateToken(store.ID.String(), store.OwnerID.String())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
+	}
+
 	return c.JSON(LoginStoreResponse{
 		StoreID:   store.ID.String(),
 		OwnerID:   store.OwnerID.String(),
@@ -94,6 +106,7 @@ func (h *MerchantHandler) LoginStore(c fiber.Ctx) error {
 		LegalName: store.LegalName,
 		Status:    store.Status,
 		Plan:      store.Plan,
+		Token:     token,
 	})
 }
 
@@ -147,11 +160,14 @@ func (h *MerchantHandler) GetPendingStores(c fiber.Ctx) error {
 
 func resolveMerchantID(c fiber.Ctx) string {
 	// Secure fintech practice: For merchant routes, always resolve the store context strictly from the authenticated user's ID
-	// Do NOT trust store_id or owner_id from query params or URL params to prevent Insecure Direct Object Reference (IDOR).
-	if id, ok := c.Locals("user_id").(string); ok && id != "" {
+	// Do NOT trust store_id or owner_id from query params or URL params to prevent IDOR.
+	if id, ok := c.Locals("store_id").(string); ok && id != "" {
 		return id
 	}
-	if id, ok := c.Locals("sub").(string); ok && id != "" {
+	if id, ok := c.Locals("owner_id").(string); ok && id != "" {
+		return id
+	}
+	if id, ok := c.Locals("user_id").(string); ok && id != "" {
 		return id
 	}
 	

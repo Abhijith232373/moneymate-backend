@@ -18,12 +18,13 @@ type RegisterStoreRequest struct {
 }
 
 type RegisterStoreResponse struct {
-	StoreID   string `json:"store_id"`
-	DisplayID string `json:"display_id"`
+	StoreID      string `json:"store_id"`
+	DisplayID    string `json:"display_id"`
 	VPA          string `json:"vpa"`
 	QRCodeBase64 string `json:"qr_code_base64"`
 	Status       string `json:"status"`
 	Plan         string `json:"plan"`
+	Token        string `json:"token"`
 }
 
 type LoginStoreRequest struct {
@@ -39,6 +40,7 @@ type LoginStoreResponse struct {
 	LegalName    string `json:"legal_name"`
 	Status       string `json:"status"`
 	Plan         string `json:"plan"`
+	Token        string `json:"token"`
 }
 
 type GetStoreResponse struct {
@@ -158,7 +160,6 @@ type CurrentSubscriptionResponse struct {
 // ChangePlanRequest represents the incoming JSON body when upgrading or downgrading subscription tiers.
 type ChangePlanRequest struct {
 	PlanCode string `json:"plan_code"`
-	Reason   string `json:"reason,omitempty"`
 }
 
 // ChangePlanResponse represents the acknowledgment payload after successfully transitioning subscription tiers.
