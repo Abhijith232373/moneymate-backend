@@ -12,7 +12,7 @@ services:
       - .env
     environment:
       - CONFIG_PATH=/moneymate-backend/services/merchant/config/config.yaml
-      - POSTGRES_HOST=postgres
+      - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - ENVIRONMENT=dev
     expose:
@@ -72,7 +72,7 @@ services:
       - CONFIG_PATH=/moneymate-backend/services/auth/config/config.yaml
       - POSTGRES_USER=${AUTH_DB_USER}
       - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD}
-      - POSTGRES_HOST=postgres
+      - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - POSTGRES_USER=${AUTH_DB_USER}
       - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD}
