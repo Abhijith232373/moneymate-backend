@@ -13,6 +13,7 @@ type DatabaseConfig struct {
 	Host     string
 	Port     string
 	Name     string
+	sslMode string
 
 	MaxOpenConns    int
 	MinOpenConns    int
@@ -32,6 +33,7 @@ func LoadDatabaseConfig(v *viper.Viper, schema string) DatabaseConfig {
 		Host:     MustGet("POSTGRES_HOST"),
 		Port:     Get("POSTGRES_PORT", "5432"),
 		Name:     MustGet("POSTGRES_DB"),
+		sslMode: MustGet("POSTGRES_SSL"),
 
 		MaxOpenConns:    v.GetInt("database.max_open_conns"),
 		MinOpenConns:    v.GetInt("database.min_open_conns"),
@@ -41,9 +43,10 @@ func LoadDatabaseConfig(v *viper.Viper, schema string) DatabaseConfig {
 		MigrationsPath:  v.GetString("database.migrations_path"),
 	}
 
-	cfg.DSN = fmt.Sprintf(
-    "postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s&pool_max_conns=%d&pool_min_conns=%d&pool_max_conn_lifetime=%v&pool_max_conn_idle_time=%v",
-    cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, schema,
+
+cfg.DSN = fmt.Sprintf(
+    "postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=%s&pool_max_conns=%d&pool_min_conns=%d&pool_max_conn_lifetime=%v&pool_max_conn_idle_time=%v",
+    cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.sslMode, schema,
     cfg.MaxOpenConns, cfg.MinOpenConns, cfg.MaxConnLifetime, cfg.MaxIdleTime,
 )
 	return cfg	
