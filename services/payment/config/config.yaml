@@ -1,0 +1,19 @@
+server:
+  http_addr: "9094"
+
+database:
+  max_open_conns: 25
+  min_open_conns: 5
+  max_conn_lifetime: 15m
+  max_idle_time: 5m
+  migrations_path: "/app/migrations"
+
+# Same secrets/values as auth-svc's jwt config — payment-svc verifies tokens,
+# it never issues them. Populate from the same env vars auth-svc uses.
+jwt:
+  access_expiry_minutes: 15
+  refresh_expiry_hours: 720
+  tx_token_expiry_secs: 60
+
+log:
+  level: info

@@ -8,6 +8,7 @@ vars:
   PROD_COMPOSE: docker-compose.prod.yml
   AUTH_MIGRATIONS: /moneymate-backend/services/auth/migrations
   MERCHANT_MIGRATIONS: /moneymate-backend/services/merchant/migrations
+  PAYMENT_MIGRATIONS: /moneymate-backend/services/payment/migrations
 
 tasks:
 
@@ -40,6 +41,10 @@ tasks:
     desc: "Tail logs from merchant service only"
     cmd: docker compose -f {{.DEV_COMPOSE}} logs -f merchant
 
+  logs:payment:
+    desc: "Tail logs from payment service only"
+    cmd: docker compose -f {{.DEV_COMPOSE}} logs -f payment
+
   # ── Production ────────────────────────────────────────────────
   prod:
     desc: "Start all services in production mode"
@@ -70,6 +75,10 @@ tasks:
   db:shell:merchant:
     desc: "Open psql shell as merchant_user — confirms schema isolation"
     cmd: docker compose -f {{.DEV_COMPOSE}} exec postgres psql -U ${MERCHANT_DB_USER} -d ${POSTGRES_DB}
+
+  db:shell:payment:
+    desc: "Open psql shell as payment_user — confirms schema isolation"
+    cmd: docker compose -f {{.DEV_COMPOSE}} exec postgres psql -U ${PAYMENT_DB_USER} -d ${POSTGRES_DB}
 
   # ── Migrations ────────────────────────────────────────────────
   migrate:auth:
@@ -126,9 +135,36 @@ tasks:
       -database "${MERCHANT_DB_URL}"
       version
 
+  migrate:payment:
+    desc: "Run payment service migrations up"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm payment
+      migrate
+      -path {{.PAYMENT_MIGRATIONS}}
+      -database "${PAYMENT_DB_URL}"
+      up
+
+  migrate:payment:down:
+    desc: "Roll back last payment migration"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm payment
+      migrate
+      -path {{.PAYMENT_MIGRATIONS}}
+      -database "${PAYMENT_DB_URL}"
+      down 1
+
+  migrate:payment:status:
+    desc: "Show current payment migration version"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm payment
+      migrate
+      -path {{.PAYMENT_MIGRATIONS}}
+      -database "${PAYMENT_DB_URL}"
+      version
+
   migrate:all:
     desc: "Run migrations for all services"
-    deps: [migrate:auth]       # ← add migrate:core, migrate:merchant later
+    deps: [migrate:auth, migrate:merchant, migrate:payment]
 
   # ── Code Generation ───────────────────────────────────────────
   sqlc:auth:
@@ -144,6 +180,14 @@ tasks:
     cmd: >
       docker run --rm
       -v $(pwd)/services/merchant:/src
+      -w /src
+      sqlc/sqlc generate
+
+  sqlc:payment:
+    desc: "Generate SQLC code for payment service"
+    cmd: >
+      docker run --rm
+      -v $(pwd)/services/payment:/src
       -w /src
       sqlc/sqlc generate
 
@@ -169,11 +213,17 @@ tasks:
     dir: services/merchant
     cmd: go test ./...
 
+  test:payment:
+    desc: "Run payment service tests"
+    dir: services/payment
+    cmd: go test ./...
+
   test:all:
     desc: "Run all tests"
     cmds:
       - task: test:auth
       - task: test:merchant
+      - task: test:payment
 
   # ── Utilities ─────────────────────────────────────────────────
   tidy:auth:
@@ -184,6 +234,11 @@ tasks:
   tidy:merchant:
     desc: "Run go mod tidy for merchant service"
     dir: services/merchant
+    cmd: go mod tidy
+
+  tidy:payment:
+    desc: "Run go mod tidy for payment service"
+    dir: services/payment
     cmd: go mod tidy
 
   tidy:shared:
@@ -203,6 +258,7 @@ tasks:
       - task: tidy:merchant
       - task: tidy:gateway
       - task: tidy:shared
+      - task: tidy:payment
 
   help:
     desc: "List all available tasks"

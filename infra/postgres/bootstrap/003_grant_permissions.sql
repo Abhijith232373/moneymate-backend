@@ -4,6 +4,7 @@ REVOKE ALL ON SCHEMA core FROM PUBLIC;
 REVOKE ALL ON SCHEMA merchant FROM PUBLIC;
 REVOKE ALL ON SCHEMA rewards FROM PUBLIC;
 REVOKE ALL ON SCHEMA automation FROM PUBLIC;
+REVOKE ALL ON SCHEMA payment FROM PUBLIC;
 
 -- 2. Grant USAGE (the ability to see and access the schema) to the correct user
 GRANT USAGE ON SCHEMA auth TO auth_user;
@@ -11,6 +12,7 @@ GRANT USAGE ON SCHEMA core TO core_user;
 GRANT USAGE ON SCHEMA merchant TO merchant_user;
 GRANT USAGE ON SCHEMA rewards TO rewards_user;
 GRANT USAGE ON SCHEMA automation TO automation_user;
+GRANT USAGE ON SCHEMA payment TO payment_user;
 
 -- 3. Grant full CRUD rights on any EXISTING tables/sequences
 -- (Even though they are empty now, this is good for idempotency)
@@ -29,6 +31,9 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA rewards TO rewards_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA automation TO automation_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA automation TO automation_user;
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA payment TO payment_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA payment TO payment_user;
+
 
 
 
@@ -38,3 +43,4 @@ GRANT CREATE ON SCHEMA core TO core_user;
 GRANT CREATE ON SCHEMA merchant TO merchant_user;
 GRANT CREATE ON SCHEMA rewards TO rewards_user;
 GRANT CREATE ON SCHEMA automation TO automation_user;
+GRANT CREATE ON SCHEMA payment TO payment_user;

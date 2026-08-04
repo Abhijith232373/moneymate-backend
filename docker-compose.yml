@@ -26,6 +26,36 @@ services:
     networks:
       - moneymate-network
 
+  payment:
+    build:
+      context: .
+      dockerfile: ./services/payment/Dockerfile
+      target: dev
+    volumes:
+      - ./:/moneymate-backend
+      - ./shared:/moneymate-backend/shared
+    working_dir: /moneymate-backend/services/payment
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/moneymate-backend/services/payment/config/config.yaml
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - ENVIRONMENT=dev
+      # Must match auth-svc's signing secrets — payment-svc verifies, doesn't issue.
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+    ports:
+      - "9094:9094"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - moneymate-network
+
   gateway:
     build:
       context: .
