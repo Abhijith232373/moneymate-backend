@@ -76,26 +76,8 @@ func RegisterRoutes(
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
 
-	admin.Get("/dashboard", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": true,
-			"message": "admin dashboard data",
-			"data": fiber.Map{
-				"total_users":        0,
-				"total_merchants":    0,
-				"pending_reviews":    0,
-				"total_transactions": 0,
-			},
-		})
-	})
-
-	admin.Get("/merchants", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": true,
-			"message": "merchant list placeholder",
-			"data":    []interface{}{},
-		})
-	})
+	// Proxy admin routes to the merchant service since it holds the admin endpoints
+	admin.All("/*", proxy.ProxyToService(registry, "merchant"))
 
 	// ── Open Downstream Routes (bypass auth) ───────────────────────
 	api.Post("/merchant/register", proxy.ProxyToService(registry, "merchant"))
