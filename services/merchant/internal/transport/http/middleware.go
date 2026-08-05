@@ -26,6 +26,36 @@ func RequireAuth(jwtSecret string) fiber.Handler {
 		}
 
 		c.Locals("user_id", claims.Subject)
+		c.Locals("roles", claims.Roles)
+		return c.Next()
+	}
+}
+
+// RequireAdmin ensures the authenticated user has the 'admin' role.
+func RequireAdmin() fiber.Handler {
+	return func(c fiber.Ctx) error {
+		rolesObj := c.Locals("roles")
+		if rolesObj == nil {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied: insufficient permissions"})
+		}
+
+		roles, ok := rolesObj.([]string)
+		if !ok {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied: invalid role format"})
+		}
+
+		isAdmin := false
+		for _, role := range roles {
+			if strings.ToLower(role) == "admin" || strings.ToLower(role) == "superadmin" {
+				isAdmin = true
+				break
+			}
+		}
+
+		if !isAdmin {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied: admin privileges required"})
+		}
+
 		return c.Next()
 	}
 }

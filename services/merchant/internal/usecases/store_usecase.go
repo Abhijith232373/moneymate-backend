@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/qrcode"
+	hashpass "github.com/moneymate-2026/moneymate-backend/shared/pkg/hash"
 )
 
 // StoreUseCase orchestrates merchant workflows.
@@ -34,6 +36,7 @@ type RegisterStoreInput struct {
 	AadhaarNumber     string
 	AadhaarDocURL     string
 	ShopLicenseURL    string
+	Password          string
 }
 
 // ProcessRegistration applies validation and executes state persistence.
@@ -48,6 +51,17 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 		return nil, fmt.Errorf("failed to generate secure display ID: %w", err)
 	}
 
+	vpa := generateVPA(in.ContactEmail)
+	qrCodeBase64, err := qrcode.GenerateBase64(vpa)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate QR code: %w", err)
+	}
+
+	hashedPwd, err := hashpass.HashPassword(in.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
 	store := &domain.Store{
 		OwnerID:           ownerUUID,
 		OwnerName:         strings.TrimSpace(in.OwnerName),
@@ -59,6 +73,9 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 		TaxID:             in.TaxID,
 		RegisteredAddress: strings.TrimSpace(in.RegisteredAddress),
 		DisplayID:         displayID,
+		VPA:               vpa,
+		QRCodeBase64:      qrCodeBase64,
+		PasswordHash:      hashedPwd,
 	}
 
 	createdStore, err := uc.repo.RegisterStore(ctx, store)
@@ -90,6 +107,21 @@ func (uc *StoreUseCase) GetStore(ctx context.Context, ownerID string) (*domain.S
 	return uc.repo.GetStoreByOwnerID(ctx, ownerUUID)
 }
 
+// AuthenticateStore checks if the email and password match a registered store.
+func (uc *StoreUseCase) AuthenticateStore(ctx context.Context, email, password string) (*domain.Store, error) {
+	store, err := uc.repo.GetStoreByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
+	if err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	match, err := hashpass.VerifyPassword(store.PasswordHash, password)
+	if err != nil || !match {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	return store, nil
+}
+
 // generateDisplayID yields a collision-resistant MM-XXXX-XX identifier.
 func generateDisplayID() (string, error) {
 	b := make([]byte, 3)
@@ -98,6 +130,21 @@ func generateDisplayID() (string, error) {
 	}
 	hexStr := strings.ToUpper(hex.EncodeToString(b))
 	return fmt.Sprintf("MM-%s-%s", hexStr[:4], hexStr[4:]), nil
+}
+
+// generateVPA creates a unique VPA like emailprefix+random@moneymate
+func generateVPA(email string) string {
+	parts := strings.Split(email, "@")
+	prefix := parts[0]
+	if len(prefix) > 10 {
+		prefix = prefix[:10]
+	}
+	
+	b := make([]byte, 2)
+	rand.Read(b)
+	hexStr := strings.ToLower(hex.EncodeToString(b))
+	
+	return fmt.Sprintf("%s%s@moneymate", prefix, hexStr)
 }
 
 // GetPendingStores retrieves all merchants in the pending_kyc status.

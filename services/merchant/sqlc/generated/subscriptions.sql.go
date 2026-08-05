@@ -13,43 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createSubscriptionChangeLog = `-- name: CreateSubscriptionChangeLog :one
-INSERT INTO subscription_change_logs (
-    id, store_id, old_plan_code, new_plan_code, change_reason
-) VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING id, store_id, old_plan_code, new_plan_code, change_reason, changed_at
-`
-
-type CreateSubscriptionChangeLogParams struct {
-	ID           uuid.UUID
-	StoreID      uuid.UUID
-	OldPlanCode  string
-	NewPlanCode  string
-	ChangeReason string
-}
-
-// CreateSubscriptionChangeLog inserts an immutable audit ledger entry for tier upgrades and downgrades.
-func (q *Queries) CreateSubscriptionChangeLog(ctx context.Context, arg CreateSubscriptionChangeLogParams) (SubscriptionChangeLog, error) {
-	row := q.db.QueryRow(ctx, createSubscriptionChangeLog,
-		arg.ID,
-		arg.StoreID,
-		arg.OldPlanCode,
-		arg.NewPlanCode,
-		arg.ChangeReason,
-	)
-	var i SubscriptionChangeLog
-	err := row.Scan(
-		&i.ID,
-		&i.StoreID,
-		&i.OldPlanCode,
-		&i.NewPlanCode,
-		&i.ChangeReason,
-		&i.ChangedAt,
-	)
-	return i, err
-}
-
 const createSubscriptionPlan = `-- name: CreateSubscriptionPlan :one
 INSERT INTO subscription_tiers (
     plan_code, name, price, billing_cycle, description, max_active_campaigns, is_most_popular, features, is_active

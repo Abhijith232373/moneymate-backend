@@ -16,6 +16,7 @@ type Campaign struct {
 	RewardValue    float64
 	MinBillAmount  float64
 	TargetAudience string
+	BannerURL      *string
 	StartDate      time.Time
 	EndDate        time.Time
 	IsActive       bool
