@@ -81,7 +81,7 @@ func main() {
 		AllowMethods: strings.Split(cfg.CORS.AllowMethods, ","),
 		AllowHeaders: strings.Split(cfg.CORS.AllowHeaders, ","),
 	}))
-	http.RegisterRoutes(app, authMiddleware, authClient, serviceRegistry, hub, cfg.Services.AuthAddr)
+	http.RegisterRoutes(app, authMiddleware, authClient, serviceRegistry, hub, cfg.Services.AuthAddr,cfg.Services.MerchantAddr)
 
 	go func() {
 		addr := ":" + cfg.Server.Port

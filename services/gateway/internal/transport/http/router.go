@@ -17,6 +17,7 @@ func RegisterRoutes(
 	registry *proxy.ServiceRegistry,
 	hub *ws.Hub,
 	authAddr string,
+	merchantAddr string,
 ) {
 	api := app.Group("/api/v1")
 
