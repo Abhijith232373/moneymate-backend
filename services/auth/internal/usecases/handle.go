@@ -34,7 +34,7 @@ func generateHandle(ctx context.Context, repo domain.UserRepository, email, full
             return "", fmt.Errorf("generate handle suffix: %w", err)
         }
 
-        candidate := base + suffix
+        candidate := base + suffix + "@moneymate"
         exists, err := repo.HandleExists(ctx, candidate)
         if err != nil {
             return "", fmt.Errorf("check handle exists: %w", err)
