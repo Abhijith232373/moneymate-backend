@@ -38,3 +38,13 @@ GRANT CREATE ON SCHEMA core TO core_user;
 GRANT CREATE ON SCHEMA merchant TO merchant_user;
 GRANT CREATE ON SCHEMA rewards TO rewards_user;
 GRANT CREATE ON SCHEMA automation TO automation_user;
+
+
+-- 4. Grant CREATE on the database itself
+-- (needed so each service's migration tool can run "CREATE SCHEMA IF NOT EXISTS ..."
+--  even when the schema already exists — Postgres checks this permission regardless)
+GRANT CREATE ON DATABASE moneymate TO auth_user;
+GRANT CREATE ON DATABASE moneymate TO core_user;
+GRANT CREATE ON DATABASE moneymate TO merchant_user;
+GRANT CREATE ON DATABASE moneymate TO rewards_user;
+GRANT CREATE ON DATABASE moneymate TO automation_user;

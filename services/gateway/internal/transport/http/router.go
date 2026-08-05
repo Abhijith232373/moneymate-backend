@@ -43,10 +43,53 @@ func RegisterRoutes(
 	merchantAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
 	merchantAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
-	// ── Admin Auth ─────────────────────────────────────────────────
-	adminAuth := api.Group("/admin/auth")
-	adminAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
-	adminAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+
+
+
+	// ── Admin ─────────────────────────────────────────────────
+	admin := api.Group("/admin")
+	admin.Use(authMiddleware)
+	admin.Use(middlewares.RequireRole("admin"))
+
+	admin.Get("/dashboard", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"success": true,
+			"message": "admin dashboard data",
+			"data": fiber.Map{
+				"total_users":        0,
+				"total_merchants":    0,
+				"pending_reviews":    0,
+				"total_transactions": 0,
+			},
+		})
+	})
+	admin.Get("/merchants", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"success": true,
+			"message": "merchant list placeholder",
+			"data":    []interface{}{},
+		})
+	})
+	admin.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
+	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+		// admin user management
+		adminUser:=admin.Group("/users")
+			adminUser.Post("/",proxy.AuthProxy(authAddr,"/admin/users"))
+			adminUser.Get("/",proxy.AuthProxy(authAddr,"/admin/users"))
+			adminUser.Get("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+			adminUser.Put("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+			adminUser.Patch("/:id/status",proxy.AuthProxy(authAddr,"/admin/users/:id/status"))
+			adminUser.Delete("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+		//admin role management
+		adminRole:=admin.Group("/roles")
+			adminRole.Post("/",proxy.AuthProxy(authAddr,"/admin/roles"))//create role
+			adminRole.Get("/",proxy.AuthProxy(authAddr,"/admin/roles"))//list roles
+			adminRole.Get("/:id",proxy.AuthProxy(authAddr,"/admin/roles/:id"))//get role
+			adminRole.Put("/:id",proxy.AuthProxy(authAddr,"/admin/roles/:id"))//edit role
+			adminRole.Delete("/:id",proxy.AuthProxy(authAddr,"/admin/roles/:id"))//delete role
+			adminRole.Post("/assign",proxy.AuthProxy(authAddr,"/admin/roles/assign"))//assign role
+			adminRole.Delete("/users/:userId/roles/:roleId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId/roles/:roleId"))//remove role
+			adminRole.Get("/users/:userId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId"))//get user role
 
 	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
@@ -71,17 +114,6 @@ func RegisterRoutes(
 		})
 	})
 
-	// ── Admin (authenticated + role=admin) ─────────────────────────
-	admin := api.Group("/admin")
-	admin.Use(authMiddleware)
-	admin.Use(middlewares.RequireRole("admin"))
-
-	// Proxy admin routes to the merchant service since it holds the admin endpoints
-	admin.All("/*", proxy.ProxyToService(registry, "merchant"))
-
-	// ── Open Downstream Routes (bypass auth) ───────────────────────
-	api.Post("/merchant/register", proxy.ProxyToService(registry, "merchant"))
-	api.Post("/merchant/login", proxy.ProxyToService(registry, "merchant"))
 
 	// ── Downstream service proxies ─────────────────────────────────
 	downstreamServices := []string{"payment", "merchant", "campaign", "debt", "pod", "scheduler", "referral", "rewards", "routing", "notification"}

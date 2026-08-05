@@ -24,8 +24,9 @@ type Config struct {
 type AccessTokenParams struct {
 	UserID       string
 	Handle       string
+    Email string
 	Roles        []string
-	Permissions  []string
+	// Permissions  []string
 	TokenVersion int64
 }
 
@@ -64,6 +65,7 @@ func GenerateAccessToken(p AccessTokenParams, cfg Config) (string, error) {
         },
         UserID:       p.UserID,
         Handle:       p.Handle,
+        Email: p.Email,
         Roles:        p.Roles,
         TokenVersion: p.TokenVersion,
     }

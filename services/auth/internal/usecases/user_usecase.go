@@ -9,11 +9,13 @@ import (
 
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/domain"
 	apperrors "github.com/moneymate-2026/moneymate-backend/shared/pkg/errors"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/parallelrunners"
 )
 
 
 
 type AdminUserUsecase interface {
+	CreateUser(ctx context.Context, req CreateUserRequest) (*UserDetail, error)
 	ListUsers(ctx context.Context, req ListUsersRequest) (*ListUsersResponse, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (*UserDetail, error)
 	UpdateUser(ctx context.Context, userID uuid.UUID, req UpdateUserRequest) (*UserDetail, error)
@@ -24,11 +26,87 @@ type AdminUserUsecase interface {
 type adminUserUsecase struct {
 	userRepo domain.UserRepository
 	roleRepo domain.RoleRepository
+	idGen    IDGenerator
 	hasher   PasswordHasher
+	
 }
 
-func NewAdminUserUsecase(userRepo domain.UserRepository, roleRepo domain.RoleRepository, hasher PasswordHasher) AdminUserUsecase {
-	return &adminUserUsecase{userRepo: userRepo, roleRepo: roleRepo, hasher: hasher}
+func NewAdminUserUsecase(userRepo domain.UserRepository, roleRepo domain.RoleRepository, hasher PasswordHasher,idGen IDGenerator) AdminUserUsecase {
+	return &adminUserUsecase{userRepo: userRepo, roleRepo: roleRepo, hasher: hasher,idGen: idGen}
+}
+
+// ── Create ─────────────────────────────────────────────────────────
+
+func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest) (*UserDetail, error) {
+	email := normalizeEmail(req.Email)
+	if email == "" || !strings.Contains(email, "@") {
+		return nil, apperrors.ErrInvalidInput
+	}
+	if err := validatePassword(req.Password); err != nil {
+		return nil, err
+	}
+	phone := strings.TrimSpace(req.Phone)
+
+	_, passwordHash, handle, role, err := parallelrunners.Query4(ctx,
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, u.userRepo.CheckUniqueFields(ctx, email, "", phone)
+		},
+		func(ctx context.Context) (string, error) {
+			return u.hasher.Hash(req.Password)
+		},
+		func(ctx context.Context) (string, error) {
+			return generateHandle(ctx, u.userRepo, email,req.FullName)
+		},
+		func(ctx context.Context) (*domain.Role, error) {
+			return u.roleRepo.GetByName(ctx, req.Role)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("prepare user creation: %w", err)
+	}
+
+	userID, err := u.idGen.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate user id: %w", err)
+	}
+
+	var phonePtr *string
+	if phone != "" {
+		phonePtr = &phone
+	}
+
+	user := &domain.User{
+		ID:              userID,
+		Email:           email,
+		Phone:           phonePtr,
+		FullName:        strings.TrimSpace(req.FullName),
+		Handle:          handle,
+		PasswordHash:    &passwordHash,
+		Status:          domain.UserStatusActive,
+		IsEmailVerified: true,
+	}
+
+	if err := u.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("create user: %w", err)
+	}
+
+	// Phase 2: both only need user.ID — independent of each other
+	_, _, err = parallelrunners.Query2(ctx,
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, u.userRepo.VerifyEmail(ctx, user.ID)
+		},
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, u.roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("finalize user creation: %w", err)
+	}
+
+	return &UserDetail{
+		AdminUserSummary: toAdminUserSummary(*user),
+		Roles:            []string{req.Role},
+	}, nil
 }
 
 // ── List ─────────────────────────────────────────────────────────

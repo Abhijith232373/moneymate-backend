@@ -5,24 +5,31 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 var authHTTPClient = &http.Client{Timeout: 10 * time.Second}
+func withScheme(addr string) string {
+	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
+		return addr
+	}
+	return "http://" + addr
+}
 
-// AuthProxy returns a Fiber handler that transparently proxies requests
-// to the given auth-svc path. The request body, Content-Type, and
-// important headers (X-Device-Id, User-Agent, Authorization) are forwarded.
-// The auth-svc response (status + JSON body) is returned as-is.
 func AuthProxy(authAddr, targetPath string) fiber.Handler {
-	// baseURL := "http://" + authAddr
-	baseURL := authAddr
+	baseURL := withScheme(authAddr)
 	return func(c fiber.Ctx) error {
+		upstreamPath := targetPath
+		for _, p := range c.Route().Params {
+			upstreamPath = strings.ReplaceAll(upstreamPath, ":"+p, c.Params(p))
+		}
 		body := c.Body()
-
-		req, err := http.NewRequestWithContext(c.Context(), http.MethodPost, baseURL+targetPath, bytes.NewReader(body))
+		
+		
+		req, err := http.NewRequestWithContext(c.Context(), c.Method(), baseURL+upstreamPath, bytes.NewReader(body))
 		if err != nil {
 			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 				"success": false,
@@ -39,6 +46,9 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 		}
 		if v := c.Get("User-Agent"); v != "" {
 			req.Header.Set("User-Agent", v)
+		}
+		if uid, ok := c.Locals("user_id").(string); ok && uid != "" {
+			req.Header.Set("X-User-Id", uid)
 		}
 
 		resp, err := authHTTPClient.Do(req)
@@ -65,8 +75,8 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 
 // AuthProxyGET returns a Fiber handler that proxies GET requests to auth-svc.
 func AuthProxyGET(authAddr, targetPath string) fiber.Handler {
-	// baseURL := "http://" + authAddr
-	baseURL :=  authAddr
+	baseURL := withScheme(authAddr)
+	
 	return func(c fiber.Ctx) error {
 		req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseURL+targetPath, nil)
 		if err != nil {

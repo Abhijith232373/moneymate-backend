@@ -6,6 +6,7 @@ type AccesClaims struct {
 	jwt.RegisteredClaims
     UserID       string   `json:"uid"`
     Handle       string   `json:"handle"`
+    Email        string `json:"email"`
     Roles        []string `json:"roles"`
     TokenVersion int64    `json:"ver"`
 }
