@@ -13,6 +13,7 @@ CREATE TYPE subscription_plan AS ENUM (
 );
 
 -- 2. Core Stores Table (Step 1 & Step 2 of Registration)
+
 CREATE TABLE stores (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id            UUID NOT NULL, -- Foreign key referencing auth.users(id) across services

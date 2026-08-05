@@ -69,3 +69,18 @@ type createUserRequest struct {
 	Password string `json:"password" validate:"required,min=8"`
 	Role     string `json:"role" validate:"required"`
 }
+
+// user pins
+
+type setPINRequest struct {
+	PIN string `json:"pin" validate:"required,len=6,numeric"`
+}
+
+type updatePINRequest struct {
+	OldPIN string `json:"old_pin" validate:"required,len=6,numeric"`
+	NewPIN string `json:"new_pin" validate:"required,len=6,numeric"`
+}
+
+type verifyPINRequest struct {
+	PIN string `json:"pin" validate:"required,len=6,numeric"`
+}

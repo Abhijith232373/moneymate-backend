@@ -7,15 +7,17 @@ import (
 )
 
 type Handlers struct {
-	Auth  *AuthHandler
-	Role  *RoleHandler
-	User  *UserHandler
+	Auth    *AuthHandler
+	Role    *RoleHandler
+	User    *UserHandler
+	UserPin *UserPinHandler
 }
 
 func RegisterRoutes(router fiber.Router, h *Handlers, ) {
 	registerAuthRoutes(router, h.Auth, )
 	registerRoleRoutes(router, h.Role, )
 	registerUserRoutes(router, h.User, )
+	registerUserPinRoutes(router, h.UserPin, )
 }
 
 func registerAuthRoutes(router fiber.Router, h *AuthHandler) {
@@ -52,4 +54,11 @@ func registerUserRoutes(router fiber.Router, h *UserHandler ) {
 	users.Put("/:id", h.UpdateUser)
 	users.Patch("/:id/status", h.UpdateUserStatus)
 	users.Delete("/:id", h.DeleteUser)
+}
+
+func registerUserPinRoutes(router fiber.Router, h *UserPinHandler ) {
+	pins := router.Group("/user/pin", RequireUserID)
+	pins.Post("/", h.SetPIN)
+	pins.Put("/", h.UpdatePIN)
+	pins.Post("/verify", h.VerifyPIN)
 }
