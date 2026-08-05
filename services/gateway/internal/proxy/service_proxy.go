@@ -13,11 +13,9 @@ import (
 
 // ServiceRegistry maps service names to their HTTP addresses.
 type ServiceRegistry struct {
-	services map[string]string // name → "host:port"
+	services map[string]string 
 }
 
-// NewServiceRegistry creates a registry from config.
-// Example: {"payment": "localhost:9092", "merchant": "merchant:9092"}
 func NewServiceRegistry(services map[string]string) *ServiceRegistry {
 	return &ServiceRegistry{services: services}
 }
@@ -41,12 +39,7 @@ func ProxyToService(registry *ServiceRegistry, serviceName string) fiber.Handler
 			})
 		}
 
-		if strings.HasPrefix(addr, "localhost:") && serviceName == "merchant" {
-	
-			addr = "merchant:9092"
-		}
 
-		// Strip /api/v1 from the URL because downstream services are mounted at root
 		targetPath := strings.TrimPrefix(c.OriginalURL(), "/api/v1")
 		url := "http://" + addr + targetPath
 		
