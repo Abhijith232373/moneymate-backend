@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
 	"github.com/google/uuid"
-
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
 )
 
@@ -52,11 +50,11 @@ func (uc *kycUseCase) UpdateDocuments(ctx context.Context, storeID uuid.UUID, aa
 	if aadhaarNumber != "" && len(aadhaarNumber) != 12 {
 		return nil, fmt.Errorf("aadhaar number must be exactly 12 digits, got %d", len(aadhaarNumber))
 	}
-	if aadhaarURL != "" && (!strings.HasPrefix(aadhaarURL, "http://") && !strings.HasPrefix(aadhaarURL, "https://")) {
-		return nil, errors.New("aadhaar document url must be a valid HTTP/HTTPS URI")
+	if aadhaarURL != "" && (!strings.HasPrefix(aadhaarURL, "http://") && !strings.HasPrefix(aadhaarURL, "https://") && !strings.HasPrefix(aadhaarURL, "data:")) {
+		return nil, errors.New("aadhaar document url must be a valid HTTP/HTTPS or data URI")
 	}
-	if licenseURL != "" && (!strings.HasPrefix(licenseURL, "http://") && !strings.HasPrefix(licenseURL, "https://")) {
-		return nil, errors.New("shop license document url must be a valid HTTP/HTTPS URI")
+	if licenseURL != "" && (!strings.HasPrefix(licenseURL, "http://") && !strings.HasPrefix(licenseURL, "https://") && !strings.HasPrefix(licenseURL, "data:")) {
+		return nil, errors.New("shop license document url must be a valid HTTP/HTTPS or data URI")
 	}
 
 	return uc.kycRepo.UpdateKYCDocuments(ctx, storeID, aadhaarNumber, aadhaarURL, licenseURL)

@@ -8,10 +8,13 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
-	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
+	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (CreateCampaignRow, error)
+	CreatePayoutRequest(ctx context.Context, arg CreatePayoutRequestParams) (EarningsPayoutRequest, error)
+	CreateQRTransaction(ctx context.Context, arg CreateQRTransactionParams) (QrTransaction, error)
 	// CreateRedemptionRequest logs a merchant's withdrawal request to their bank account.
 	CreateRedemptionRequest(ctx context.Context, arg CreateRedemptionRequestParams) (RedemptionRequest, error)
 	// CreateRewardBalance initializes the financial and scan stats record for a newly registered store.
@@ -19,22 +22,25 @@ type Querier interface {
 	// CreateRewardTransaction inserts an immutable ledger entry for a reward earning or redemption event.
 	CreateRewardTransaction(ctx context.Context, arg CreateRewardTransactionParams) (RewardTransaction, error)
 	CreateStore(ctx context.Context, arg CreateStoreParams) (CreateStoreRow, error)
-	// CreateSubscriptionChangeLog inserts an immutable audit ledger entry for tier upgrades and downgrades.
-	CreateSubscriptionChangeLog(ctx context.Context, arg CreateSubscriptionChangeLogParams) (SubscriptionChangeLog, error)
 	// CreateSubscriptionPlan inserts or updates a pricing tier catalog entry with JSONB features and promotional limits.
 	CreateSubscriptionPlan(ctx context.Context, arg CreateSubscriptionPlanParams) (SubscriptionTier, error)
+	CreateWalletTransaction(ctx context.Context, arg CreateWalletTransactionParams) (WalletTransaction, error)
 	// DeductRewardBalance atomically subtracts redeemed funds from the available balance if sufficient funds exist.
 	DeductRewardBalance(ctx context.Context, arg DeductRewardBalanceParams) error
-	GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, error)
-	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]Campaign, error)
-	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]Campaign, error)
+	GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaignByIDRow, error)
+	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]GetCampaignsByOwnerIDRow, error)
+	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]GetCampaignsByStoreIDRow, error)
+	GetEarningsStats(ctx context.Context, storeID uuid.UUID) (EarningsStat, error)
 	// GetKYCStatusByStoreID retrieves the verification standing and document URLs for a merchant store joined with core store status.
 	GetKYCStatusByStoreID(ctx context.Context, storeID uuid.UUID) (GetKYCStatusByStoreIDRow, error)
 	GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, error)
+	GetQRTransactionsByStoreID(ctx context.Context, arg GetQRTransactionsByStoreIDParams) ([]QrTransaction, error)
+	GetRequestedMilestones(ctx context.Context, storeID uuid.UUID) ([]int32, error)
 	// GetRewardBalanceByStoreID fetches the current rewards center summary metrics for a specific merchant store.
 	GetRewardBalanceByStoreID(ctx context.Context, storeID uuid.UUID) (RewardBalance, error)
 	// GetRewardTransactionsByStoreID retrieves paginated transaction history with optional time-range and keyword search filtering.
 	GetRewardTransactionsByStoreID(ctx context.Context, arg GetRewardTransactionsByStoreIDParams) ([]RewardTransaction, error)
+	GetStoreByEmail(ctx context.Context, contactEmail string) (GetStoreByEmailRow, error)
 	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreByOwnerIDRow, error)
 	// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner user ID.
 	GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreProfileByOwnerIDRow, error)
@@ -46,6 +52,11 @@ type Querier interface {
 	GetSubscriptionByStoreID(ctx context.Context, storeID uuid.UUID) (MerchantSubscription, error)
 	// GetSubscriptionPlans retrieves the full catalog of active pricing tiers ordered by cost.
 	GetSubscriptionPlans(ctx context.Context) ([]SubscriptionTier, error)
+	GetTodayQRScanCount(ctx context.Context, storeID uuid.UUID) (int64, error)
+	GetTodayQRScanVolume(ctx context.Context, storeID uuid.UUID) (pgtype.Numeric, error)
+	GetWalletByStoreID(ctx context.Context, storeID uuid.UUID) (Wallet, error)
+	GetWalletTransactions(ctx context.Context, storeID uuid.UUID) ([]WalletTransaction, error)
+	GetWalletTransactionsByType(ctx context.Context, arg GetWalletTransactionsByTypeParams) ([]WalletTransaction, error)
 	// InsertKYCDocuments inserts a new compliance documentation record during store onboarding or fallback initialization.
 	InsertKYCDocuments(ctx context.Context, arg InsertKYCDocumentsParams) (KycDocument, error)
 	SubmitKYC(ctx context.Context, arg SubmitKYCParams) error
@@ -63,8 +74,10 @@ type Querier interface {
 	UpdateStoreStatus(ctx context.Context, arg UpdateStoreStatusParams) error
 	// UpdateStoreStatusByID transitions the store's overarching state machine status and returns the updated text.
 	UpdateStoreStatusByID(ctx context.Context, arg UpdateStoreStatusByIDParams) (string, error)
+	UpsertEarningsStats(ctx context.Context, arg UpsertEarningsStatsParams) (EarningsStat, error)
 	// UpsertMerchantSubscription atomically creates or updates a store's billing subscription record.
 	UpsertMerchantSubscription(ctx context.Context, arg UpsertMerchantSubscriptionParams) (MerchantSubscription, error)
+	UpsertWallet(ctx context.Context, arg UpsertWalletParams) (Wallet, error)
 }
 
 var _ Querier = (*Queries)(nil)

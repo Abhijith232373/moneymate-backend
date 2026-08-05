@@ -14,6 +14,7 @@ type DashboardOutput struct {
 	Campaigns    []DashboardCamp
 	Balance      float64
 	MerchantID   string
+	VPA          string
 	BusinessName string
 }
 
@@ -49,13 +50,15 @@ type DashboardUseCase struct {
 	storeRepo    domain.MerchantRepository
 	rewardRepo   domain.RewardRepository
 	campaignRepo domain.CampaignRepository
+	qrRepo       domain.QRRepository
 }
 
-func NewDashboardUseCase(sr domain.MerchantRepository, rr domain.RewardRepository, cr domain.CampaignRepository) *DashboardUseCase {
+func NewDashboardUseCase(sr domain.MerchantRepository, rr domain.RewardRepository, cr domain.CampaignRepository, qr domain.QRRepository) *DashboardUseCase {
 	return &DashboardUseCase{
 		storeRepo:    sr,
 		rewardRepo:   rr,
 		campaignRepo: cr,
+		qrRepo:       qr,
 	}
 }
 
@@ -63,6 +66,7 @@ func NewDashboardUseCase(sr domain.MerchantRepository, rr domain.RewardRepositor
 func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*DashboardOutput, error) {
 	var storeID uuid.UUID
 	var merchantIDStr string
+	var vpaStr string
 	var businessName string
 
 	if id != "" {
@@ -70,6 +74,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			if store, err := uc.storeRepo.GetStoreProfileByStoreID(ctx, parsedUUID); err == nil && store != nil && store.ID != uuid.Nil {
 				storeID = store.ID
 				merchantIDStr = store.DisplayID
+				vpaStr = store.VPA
 				businessName = store.LegalName
 				if store.DBAName != nil && *store.DBAName != "" {
 					businessName = *store.DBAName
@@ -77,6 +82,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			} else if storeByOwner, err := uc.storeRepo.GetStoreProfileByOwnerID(ctx, parsedUUID); err == nil && storeByOwner != nil && storeByOwner.ID != uuid.Nil {
 				storeID = storeByOwner.ID
 				merchantIDStr = storeByOwner.DisplayID
+				vpaStr = storeByOwner.VPA
 				businessName = storeByOwner.LegalName
 				if storeByOwner.DBAName != nil && *storeByOwner.DBAName != "" {
 					businessName = *storeByOwner.DBAName
@@ -84,6 +90,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			} else {
 				storeID = parsedUUID
 				merchantIDStr = "MM-8823-XA"
+				vpaStr = "guest@moneymate"
 				businessName = "Guest Merchant"
 			}
 		}
@@ -92,20 +99,21 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 	if storeID == uuid.Nil {
 		storeID = uuid.New()
 		merchantIDStr = "MM-9823-XA"
+		vpaStr = "guest@moneymate"
 		businessName = "Guest Merchant"
 	}
 
 	summary, err := uc.rewardRepo.GetSummaryByStoreID(ctx, storeID)
 	if err != nil || summary == nil {
 		summary = &domain.RewardSummary{
-			AvailableBalance:       4250.00,
-			TotalScans:             1150,
-			PremiumPoints:          850,
-			WeeklyGrowthPercentage: 12.00,
+			AvailableBalance:       0.00,
+			TotalScans:             0,
+			PremiumPoints:          0,
+			WeeklyGrowthPercentage: 0.00,
 		}
 	}
 
-	txs, err := uc.rewardRepo.GetTransactionsByStoreID(ctx, storeID, "all", "", 10, 0)
+	txs, err := uc.qrRepo.GetQRTransactionsByStoreID(ctx, storeID, 10, 0)
 	var dashTxs []DashboardTx
 	if err == nil && len(txs) > 0 {
 		for i, tx := range txs {
@@ -119,25 +127,18 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 				color = "bg-primary/20 text-primary"
 			}
 			initial := "C"
-			if len(tx.DisplayID) > 1 {
-				initial = tx.DisplayID[:2]
+			if len(tx.CustomerDisplayID) > 1 {
+				initial = tx.CustomerDisplayID[:2]
 			}
 			dashTxs = append(dashTxs, DashboardTx{
 				Time:     tx.CreatedAt.Format("Today, 15:04 PM"),
-				Customer: fmt.Sprintf("Customer %s", tx.DisplayID),
+				Customer: tx.CustomerDisplayID,
 				Initial:  initial,
 				Color:    color,
-				Amount:   fmt.Sprintf("$%.2f", tx.Amount),
-				Reward:   fmt.Sprintf("$%.2f", tx.Amount*0.02),
-				Status:   tx.Status,
+				Amount:   fmt.Sprintf("$%.2f", tx.BillAmount),
+				Reward:   fmt.Sprintf("$%.2f", tx.RewardIssued),
+				Status:   "Settled",
 			})
-		}
-	} else {
-		dashTxs = []DashboardTx{
-			{Time: "Today, 14:32 PM", Customer: "John D.", Initial: "JD", Color: "bg-primary/20 text-primary", Amount: "$45.00", Reward: "$0.90", Status: "Settled"},
-			{Time: "Today, 13:15 PM", Customer: "Sarah W.", Initial: "SW", Color: "bg-secondary/20 text-secondary-container", Amount: "$12.50", Reward: "$0.25", Status: "Settled"},
-			{Time: "Today, 11:05 AM", Customer: "Mike R.", Initial: "MR", Color: "bg-error/20 text-error", Amount: "$120.00", Reward: "$2.40", Status: "Settled"},
-			{Time: "Yesterday, 18:45 PM", Customer: "Anna L.", Initial: "AL", Color: "bg-primary/20 text-primary", Amount: "$8.75", Reward: "$0.17", Status: "Settled"},
 		}
 	}
 
@@ -158,32 +159,29 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 				Status: statusStr,
 			})
 		}
-	} else {
-		dashCamps = []DashboardCamp{
-			{ID: "c1", Name: "Weekend Special", Type: "Double Cashback (4%)", Status: "Active"},
-			{ID: "c2", Name: "Loyalty Tier 1", Type: "Flat Cashback Bonus ($2.00)", Status: "Active"},
-		}
-		activeCount = 2
 	}
+
+	todayCount, _ := uc.qrRepo.GetTodayQRScanCount(ctx, storeID)
+	todayVolume, _ := uc.qrRepo.GetTodayQRScanVolume(ctx, storeID)
 
 	stats := []DashboardStat{
 		{
 			Title:          "Total Rewards Issued",
-			Value:          fmt.Sprintf("$%.2f", summary.AvailableBalance*0.15+1246.72),
+			Value:          fmt.Sprintf("$%.2f", summary.AvailableBalance),
 			Icon:           "workspace_premium",
 			IconColorClass: "text-primary bg-primary/10",
 			BorderClass:    "border-l-primary",
 			TrendText:      fmt.Sprintf("+%.0f%% this week", summary.WeeklyGrowthPercentage),
-			TrendType:      "up",
+			TrendType:      "neutral",
 		},
 		{
 			Title:          "Total QR Scan Volume",
-			Value:          fmt.Sprintf("$%.2f", float64(summary.TotalScans)*18.50+24496.25),
+			Value:          fmt.Sprintf("$%.2f", todayVolume),
 			Icon:           "payments",
 			IconColorClass: "text-tertiary bg-tertiary/10",
 			BorderClass:    "border-l-tertiary",
-			TrendText:      "+8% vs last month",
-			TrendType:      "up",
+			TrendText:      "Today's scan volume",
+			TrendType:      "neutral",
 		},
 		{
 			Title:          "Active Campaigns",
@@ -191,17 +189,17 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 			Icon:           "local_offer",
 			IconColorClass: "text-secondary bg-secondary-fixed/35",
 			BorderClass:    "border-l-secondary",
-			TrendText:      "1 ending soon",
+			TrendText:      "Currently running",
 			TrendType:      "neutral",
 		},
 		{
 			Title:          "Customers Rewarded",
-			Value:          fmt.Sprintf("%d", summary.TotalScans+1150),
+			Value:          fmt.Sprintf("%d", todayCount),
 			Icon:           "person",
 			IconColorClass: "text-outline bg-outline/10",
 			BorderClass:    "border-l-outline",
-			TrendText:      "+45 new today",
-			TrendType:      "up",
+			TrendText:      "Today's total scans",
+			TrendType:      "neutral",
 		},
 	}
 
@@ -211,6 +209,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 		Campaigns:    dashCamps,
 		Balance:      summary.AvailableBalance,
 		MerchantID:   merchantIDStr,
+		VPA:          vpaStr,
 		BusinessName: businessName,
 	}, nil
 }

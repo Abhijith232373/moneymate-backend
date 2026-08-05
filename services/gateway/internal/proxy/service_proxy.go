@@ -8,23 +8,22 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/gofiber/fiber/v3/middleware/proxy"
 )
 
-// ServiceRegistry maps service names to their gRPC addresses.
-// Updated as new services come online.
+// ServiceRegistry maps service names to their HTTP addresses.
 type ServiceRegistry struct {
 	services map[string]string // name → "host:port"
 }
 
 // NewServiceRegistry creates a registry from config.
-// Example: {"payment": "payment-svc:9092", "merchant": "merchant-svc:9093"}
+// Example: {"payment": "localhost:9092", "merchant": "merchant:9092"}
 func NewServiceRegistry(services map[string]string) *ServiceRegistry {
 	return &ServiceRegistry{services: services}
 }
 
-func (r *ServiceRegistry) GetAddr(serviceName string) (string, error) {
+// GetAddress returns the HTTP address of the named service.
+func (r *ServiceRegistry) GetAddress(serviceName string) (string, error) {
 	addr, ok := r.services[serviceName]
 	if !ok {
 		return "", fmt.Errorf("unknown service: %s", serviceName)
@@ -32,46 +31,39 @@ func (r *ServiceRegistry) GetAddr(serviceName string) (string, error) {
 	return addr, nil
 }
 
-// GetConn returns a gRPC connection to the named service.
-// Connections are NOT pooled here — for production, use a connection pool
-// or let gRPC's built-in pooling handle it.
-func (r *ServiceRegistry) GetConn(serviceName string) (*grpc.ClientConn, error) {
-	addr, ok := r.services[serviceName]
-	if !ok {
-		return nil, fmt.Errorf("unknown service: %s", serviceName)
-	}
-
-	return grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-}
-
-// ProxyToService creates a Fiber handler that proxies the request to a downstream
-// gRPC service. For now, this is a placeholder that returns 503 for missing services.
-// As each service comes online, its handler will be registered directly (not via proxy)
-// until we implement full gRPC-gateway transcoding.
+// ProxyToService creates a Fiber handler that proxies the request to a downstream HTTP service.
 func ProxyToService(registry *ServiceRegistry, serviceName string) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		// Until downstream services are built, return a clear unavailable response.
-		// Once payment-svc exists, replace this with actual gRPC forwarding.
-		_, err := registry.GetConn(serviceName)
+		addr, err := registry.GetAddress(serviceName)
 		if err != nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 				"error": fmt.Sprintf("%s is not available yet", serviceName),
 			})
 		}
 
-		// TODO: Implement full gRPC transcoding here as each service comes online.
-		// For now, services will be wired directly in the router.
-		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
-			"error": fmt.Sprintf("%s proxy not yet implemented", serviceName),
-		})
+		// Adjust docker hostname resolution if we are local but config says localhost
+		// In a real prod setup, addr should be exactly what's in DNS
+		if strings.HasPrefix(addr, "localhost:") && serviceName == "merchant" {
+			// fallback in case they are running inside docker
+			addr = "merchant:9092"
+		}
+
+		// Strip /api/v1 from the URL because downstream services are mounted at root
+		targetPath := strings.TrimPrefix(c.OriginalURL(), "/api/v1")
+		url := "http://" + addr + targetPath
+		
+		if err := proxy.Do(c, url); err != nil {
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+				"error": fmt.Sprintf("Failed to proxy to %s: %v", serviceName, err),
+			})
+		}
+		
+		return nil
 	}
 }
 
 // ExtractServiceName parses the route path "/api/v1/payment/..." and returns "payment".
 func ExtractServiceName(path string) string {
-	// path format: /api/v1/{service}/...
 	parts := strings.Split(path, "/")
 	if len(parts) >= 4 {
 		return parts[3]
@@ -81,7 +73,7 @@ func ExtractServiceName(path string) string {
 
 func HTTPProxy(registry *ServiceRegistry, serviceName string, targetPath string) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		addr, err := registry.GetAddr(serviceName)
+		addr, err := registry.GetAddress(serviceName)
 		if err != nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": err.Error()})
 		}

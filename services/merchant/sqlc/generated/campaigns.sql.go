@@ -15,10 +15,10 @@ import (
 
 const createCampaign = `-- name: CreateCampaign :one
 INSERT INTO campaigns (
-    store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active
+    store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
-) RETURNING id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+) RETURNING id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at
 `
 
 type CreateCampaignParams struct {
@@ -31,9 +31,26 @@ type CreateCampaignParams struct {
 	StartDate      time.Time
 	EndDate        time.Time
 	IsActive       bool
+	BannerUrl      *string
 }
 
-func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error) {
+type CreateCampaignRow struct {
+	ID             uuid.UUID
+	StoreID        uuid.UUID
+	Name           string
+	OfferType      string
+	RewardValue    pgtype.Numeric
+	MinBillAmount  pgtype.Numeric
+	TargetAudience string
+	StartDate      time.Time
+	EndDate        time.Time
+	IsActive       bool
+	BannerUrl      *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) (CreateCampaignRow, error) {
 	row := q.db.QueryRow(ctx, createCampaign,
 		arg.StoreID,
 		arg.Name,
@@ -44,8 +61,9 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 		arg.StartDate,
 		arg.EndDate,
 		arg.IsActive,
+		arg.BannerUrl,
 	)
-	var i Campaign
+	var i CreateCampaignRow
 	err := row.Scan(
 		&i.ID,
 		&i.StoreID,
@@ -57,6 +75,7 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 		&i.StartDate,
 		&i.EndDate,
 		&i.IsActive,
+		&i.BannerUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -65,14 +84,30 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 
 const getCampaignByID = `-- name: GetCampaignByID :one
 SELECT 
-    id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, created_at, updated_at
+    id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at
 FROM campaigns
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, error) {
+type GetCampaignByIDRow struct {
+	ID             uuid.UUID
+	StoreID        uuid.UUID
+	Name           string
+	OfferType      string
+	RewardValue    pgtype.Numeric
+	MinBillAmount  pgtype.Numeric
+	TargetAudience string
+	StartDate      time.Time
+	EndDate        time.Time
+	IsActive       bool
+	BannerUrl      *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaignByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCampaignByID, id)
-	var i Campaign
+	var i GetCampaignByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.StoreID,
@@ -84,6 +119,7 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, 
 		&i.StartDate,
 		&i.EndDate,
 		&i.IsActive,
+		&i.BannerUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -92,22 +128,38 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (Campaign, 
 
 const getCampaignsByOwnerID = `-- name: GetCampaignsByOwnerID :many
 SELECT 
-    c.id, c.store_id, c.name, c.offer_type, c.reward_value, c.min_bill_amount, c.target_audience, c.start_date, c.end_date, c.is_active, c.created_at, c.updated_at
+    c.id, c.store_id, c.name, c.offer_type, c.reward_value, c.min_bill_amount, c.target_audience, c.start_date, c.end_date, c.is_active, c.banner_url, c.created_at, c.updated_at
 FROM campaigns c
 JOIN stores s ON c.store_id = s.id
 WHERE s.owner_id = $1
 ORDER BY c.created_at DESC
 `
 
-func (q *Queries) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]Campaign, error) {
+type GetCampaignsByOwnerIDRow struct {
+	ID             uuid.UUID
+	StoreID        uuid.UUID
+	Name           string
+	OfferType      string
+	RewardValue    pgtype.Numeric
+	MinBillAmount  pgtype.Numeric
+	TargetAudience string
+	StartDate      time.Time
+	EndDate        time.Time
+	IsActive       bool
+	BannerUrl      *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]GetCampaignsByOwnerIDRow, error) {
 	rows, err := q.db.Query(ctx, getCampaignsByOwnerID, ownerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Campaign{}
+	items := []GetCampaignsByOwnerIDRow{}
 	for rows.Next() {
-		var i Campaign
+		var i GetCampaignsByOwnerIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.StoreID,
@@ -119,6 +171,7 @@ func (q *Queries) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) 
 			&i.StartDate,
 			&i.EndDate,
 			&i.IsActive,
+			&i.BannerUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -134,21 +187,37 @@ func (q *Queries) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) 
 
 const getCampaignsByStoreID = `-- name: GetCampaignsByStoreID :many
 SELECT 
-    id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, created_at, updated_at
+    id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at
 FROM campaigns
 WHERE store_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]Campaign, error) {
+type GetCampaignsByStoreIDRow struct {
+	ID             uuid.UUID
+	StoreID        uuid.UUID
+	Name           string
+	OfferType      string
+	RewardValue    pgtype.Numeric
+	MinBillAmount  pgtype.Numeric
+	TargetAudience string
+	StartDate      time.Time
+	EndDate        time.Time
+	IsActive       bool
+	BannerUrl      *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]GetCampaignsByStoreIDRow, error) {
 	rows, err := q.db.Query(ctx, getCampaignsByStoreID, storeID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Campaign{}
+	items := []GetCampaignsByStoreIDRow{}
 	for rows.Next() {
-		var i Campaign
+		var i GetCampaignsByStoreIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.StoreID,
@@ -160,6 +229,7 @@ func (q *Queries) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) 
 			&i.StartDate,
 			&i.EndDate,
 			&i.IsActive,
+			&i.BannerUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

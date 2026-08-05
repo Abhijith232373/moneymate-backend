@@ -23,7 +23,7 @@ func NewKYCHandler(uc usecases.KYCUseCase) *KYCHandler {
 
 // GetKYCStatus handles GET /merchant/:store_id/kyc (and /status) and returns the full compliance verification dashboard data.
 func (h *KYCHandler) GetKYCStatus(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -105,7 +105,7 @@ func (h *KYCHandler) GetKYCStatus(c fiber.Ctx) error {
 
 // UpdateKYCDocuments handles PUT/POST /merchant/:store_id/kyc/update to submit new document URLs and trigger re-verification.
 func (h *KYCHandler) UpdateKYCDocuments(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}

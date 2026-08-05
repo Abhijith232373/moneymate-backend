@@ -37,7 +37,16 @@ func NewKYCRepo(db *pgxpool.Pool) domain.KYCRepository {
 func (r *KYCRepo) GetKYCStatusByStoreID(ctx context.Context, storeID uuid.UUID) (*domain.KYCStatusDetail, error) {
 	row, err := r.queries.GetKYCStatusByStoreID(ctx, storeID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return r.initializeDefaultKYC(ctx, storeID)
+		// Store exists but no KYC documents yet. Return skeleton state instead of dummy data.
+		storeStatus, _ := r.queries.GetStoreStatusByID(ctx, storeID)
+		if storeStatus == "" {
+			storeStatus = "pending_kyc"
+		}
+		return &domain.KYCStatusDetail{
+			StoreID:     storeID,
+			IsVerified:  false,
+			StoreStatus: storeStatus,
+		}, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("query kyc status by store id: %w", err)
@@ -62,84 +71,7 @@ func (r *KYCRepo) GetKYCStatusByStoreID(ctx context.Context, storeID uuid.UUID) 
 	}, nil
 }
 
-// initializeDefaultKYC creates a verified compliance record for stores missing KYC documentation in the database.
-func (r *KYCRepo) initializeDefaultKYC(ctx context.Context, storeID uuid.UUID) (*domain.KYCStatusDetail, error) {
-	storeStatus, err := r.queries.GetStoreStatusByID(ctx, storeID)
-	if errors.Is(err, pgx.ErrNoRows) || storeID == uuid.Nil {
-		// If store does not exist in DB yet (e.g. mock testing UI), return in-memory verified state matching screenshot
-		verifiedDate := time.Date(2023, 10, 12, 10, 0, 0, 0, time.UTC)
-		return &domain.KYCStatusDetail{
-			ID:             uuid.New(),
-			StoreID:        storeID,
-			AadhaarNumber:  "987654321012",
-			AadhaarDocURL:  "https://compliance.moneymate.com/docs/aadhaar-verified.pdf",
-			ShopLicenseURL: "https://compliance.moneymate.com/docs/shop-license-verified.pdf",
-			IsVerified:     true,
-			VerifiedAt:     &verifiedDate,
-			CreatedAt:      verifiedDate,
-			UpdatedAt:      time.Now().UTC(),
-			StoreStatus:    "active",
-		}, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("query store status for kyc fallback: %w", err)
-	}
 
-	id := uuid.New()
-	verifiedDate := time.Date(2023, 10, 12, 10, 0, 0, 0, time.UTC)
-	isVerified := storeStatus == "active" || storeStatus == "verified"
-
-	var verifiedAtPg pgtype.Timestamptz
-	var verifiedAtPtr *time.Time
-	if isVerified {
-		verifiedAtPg = pgtype.Timestamptz{Time: verifiedDate, Valid: true}
-		verifiedAtPtr = &verifiedDate
-	}
-
-	row, err := r.queries.InsertKYCDocuments(ctx, generated.InsertKYCDocumentsParams{
-		ID:             id,
-		StoreID:        storeID,
-		AadhaarNumber:  "987654321012",
-		AadhaarDocUrl:  "https://compliance.moneymate.com/docs/aadhaar-verified.pdf",
-		ShopLicenseUrl: "https://compliance.moneymate.com/docs/shop-license-verified.pdf",
-		IsVerified:     isVerified,
-		VerifiedAt:     verifiedAtPg,
-		CreatedAt:      verifiedDate,
-	})
-	if err != nil {
-		// In case of unique constraint or insertion failure, fallback to in-memory clean object
-		return &domain.KYCStatusDetail{
-			ID:             id,
-			StoreID:        storeID,
-			AadhaarNumber:  "987654321012",
-			AadhaarDocURL:  "https://compliance.moneymate.com/docs/aadhaar-verified.pdf",
-			ShopLicenseURL: "https://compliance.moneymate.com/docs/shop-license-verified.pdf",
-			IsVerified:     isVerified,
-			VerifiedAt:     verifiedAtPtr,
-			CreatedAt:      verifiedDate,
-			UpdatedAt:      time.Now().UTC(),
-			StoreStatus:    storeStatus,
-		}, nil
-	}
-
-	var rowVerifiedPtr *time.Time
-	if row.VerifiedAt.Valid {
-		rowVerifiedPtr = &row.VerifiedAt.Time
-	}
-
-	return &domain.KYCStatusDetail{
-		ID:             row.ID,
-		StoreID:        row.StoreID,
-		AadhaarNumber:  row.AadhaarNumber,
-		AadhaarDocURL:  row.AadhaarDocUrl,
-		ShopLicenseURL: row.ShopLicenseUrl,
-		IsVerified:     row.IsVerified,
-		VerifiedAt:     rowVerifiedPtr,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-		StoreStatus:    storeStatus,
-	}, nil
-}
 
 // UpdateKYCDocuments executes an atomic transaction to update compliance document URIs and transitions the store
 // state machine to 'pending_kyc', triggering automated or compliance officer re-review.

@@ -24,7 +24,7 @@ func NewRewardHandler(uc usecases.RewardUseCase) *RewardHandler {
 
 // GetRewardSummary handles GET /merchant/:store_id/rewards/summary and returns the current balance and scan counters.
 func (h *RewardHandler) GetRewardSummary(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -57,7 +57,7 @@ func (h *RewardHandler) GetRewardSummary(c fiber.Ctx) error {
 
 // GetRewardHistory handles GET /merchant/:store_id/rewards/history with query parameters for filtering and search.
 func (h *RewardHandler) GetRewardHistory(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}
@@ -115,7 +115,7 @@ func (h *RewardHandler) GetRewardHistory(c fiber.Ctx) error {
 
 // RedeemRewards handles POST /merchant/:store_id/rewards/redeem to initiate a bank transfer payout.
 func (h *RewardHandler) RedeemRewards(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id parameter is required"})
 	}

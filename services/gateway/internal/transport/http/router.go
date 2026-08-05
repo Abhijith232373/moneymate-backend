@@ -96,6 +96,26 @@ func RegisterRoutes(
 		adminMerchant.Put("/:store_id/kyc/verify", proxy.HTTPProxy(registry, "merchant", "/admin/merchants/:store_id/kyc/verify"))
 		adminMerchant.Put("/:store_id/subscription", proxy.HTTPProxy(registry, "merchant", "/admin/merchants/:store_id/subscription"))
 
+		// admin campaigns management
+		adminCampaign := admin.Group("/campaigns")
+		adminCampaign.Get("/", proxy.HTTPProxy(registry, "merchant", "/admin/campaigns"))
+		adminCampaign.Put("/:id/status", proxy.HTTPProxy(registry, "merchant", "/admin/campaigns/:id/status"))
+		adminCampaign.Delete("/:id", proxy.HTTPProxy(registry, "merchant", "/admin/campaigns/:id"))
+
+		// admin kyc management
+		adminKYC := admin.Group("/kyc")
+		adminKYC.Get("/", proxy.HTTPProxy(registry, "merchant", "/admin/kyc"))
+		adminKYC.Get("/:store_id", proxy.HTTPProxy(registry, "merchant", "/admin/kyc/:store_id"))
+		adminKYC.Put("/:store_id/verify", proxy.HTTPProxy(registry, "merchant", "/admin/kyc/:store_id/verify"))
+
+		// admin rewards management
+		adminRewards := admin.Group("/rewards")
+		adminRewards.Get("/history", proxy.HTTPProxy(registry, "merchant", "/admin/rewards/history"))
+		adminRewards.Get("/summary", proxy.HTTPProxy(registry, "merchant", "/admin/rewards/summary"))
+
+		// admin subscriptions management
+		adminSubscriptions := admin.Group("/subscriptions")
+		adminSubscriptions.Get("/", proxy.HTTPProxy(registry, "merchant", "/admin/subscriptions"))
 
 	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
@@ -114,6 +134,11 @@ func RegisterRoutes(
 	secure.Put("/pin", proxy.AuthProxy(authAddr, "/user/pin"))
 	secure.Post("/pin/verify", proxy.AuthProxy(authAddr, "/user/pin/verify"))
 
+	// ── Merchant (Unauthenticated) ─────────────────────────────────
+	merchantUnauth := api.Group("/merchant")
+	merchantUnauth.Post("/register", proxy.HTTPProxy(registry, "merchant", "/merchant/register"))
+	merchantUnauth.Post("/login", proxy.HTTPProxy(registry, "merchant", "/merchant/login"))
+
 	// ── Merchant (authenticated + role=merchant) ───────────────────
 	merchant := api.Group("/merchant")
 	merchant.Use(authMiddleware)
@@ -121,7 +146,6 @@ func RegisterRoutes(
 	merchant.Get("/dashboard", proxy.HTTPProxy(registry, "merchant", "/merchant/dashboard"))
 	merchant.Get("/:store_id/dashboard", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/dashboard"))
 
-	merchant.Post("/register", proxy.HTTPProxy(registry, "merchant", "/merchant/register"))
 	merchant.Get("/status/:owner_id", proxy.HTTPProxy(registry, "merchant", "/merchant/status/:owner_id"))
 	merchant.Get("/pending", proxy.HTTPProxy(registry, "merchant", "/merchant/pending"))
 
@@ -136,6 +160,8 @@ func RegisterRoutes(
 	merchant.Post("/:store_id/campaigns", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/campaigns"))
 	merchant.Get("/campaigns", proxy.HTTPProxy(registry, "merchant", "/merchant/campaigns"))
 	merchant.Get("/:store_id/campaigns", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/campaigns"))
+	merchant.Put("/campaigns/:id/status", proxy.HTTPProxy(registry, "merchant", "/merchant/campaigns/:id/status"))
+	merchant.Put("/:store_id/campaigns/:id/status", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/campaigns/:id/status"))
 
 	merchant.Get("/rewards/summary", proxy.HTTPProxy(registry, "merchant", "/merchant/rewards/summary"))
 	merchant.Get("/:store_id/rewards/summary", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/rewards/summary"))
@@ -150,8 +176,18 @@ func RegisterRoutes(
 	merchant.Get("/:store_id/subscriptions/current", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/subscriptions/current"))
 	merchant.Post("/subscriptions/change", proxy.HTTPProxy(registry, "merchant", "/merchant/subscriptions/change"))
 	merchant.Post("/:store_id/subscriptions/change", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/subscriptions/change"))
-	merchant.Post("/subscriptions/upgrade", proxy.HTTPProxy(registry, "merchant", "/merchant/subscriptions/upgrade"))
-	merchant.Post("/:store_id/subscriptions/upgrade", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/subscriptions/upgrade"))
+	merchant.Post("/subscriptions/upgrade/initiate", proxy.HTTPProxy(registry, "merchant", "/merchant/subscriptions/upgrade/initiate"))
+	merchant.Post("/:store_id/subscriptions/upgrade/initiate", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/subscriptions/upgrade/initiate"))
+	merchant.Post("/subscriptions/upgrade/verify", proxy.HTTPProxy(registry, "merchant", "/merchant/subscriptions/upgrade/verify"))
+	merchant.Post("/:store_id/subscriptions/upgrade/verify", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/subscriptions/upgrade/verify"))
+
+	merchant.Get("/wallet", proxy.HTTPProxy(registry, "merchant", "/merchant/wallet"))
+	merchant.Get("/:store_id/wallet", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/wallet"))
+
+	merchant.Get("/earnings", proxy.HTTPProxy(registry, "merchant", "/merchant/earnings"))
+	merchant.Get("/:store_id/earnings", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/earnings"))
+	merchant.Post("/earnings/payouts", proxy.HTTPProxy(registry, "merchant", "/merchant/earnings/payouts"))
+	merchant.Post("/:store_id/earnings/payouts", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/earnings/payouts"))
 
 	merchant.Get("/kyc", proxy.HTTPProxy(registry, "merchant", "/merchant/kyc"))
 	merchant.Get("/:store_id/kyc", proxy.HTTPProxy(registry, "merchant", "/merchant/:store_id/kyc"))

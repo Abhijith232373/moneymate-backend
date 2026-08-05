@@ -3,7 +3,7 @@
 SELECT 
     id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 FROM stores
 WHERE id = sqlc.arg('store_id')
 LIMIT 1;
@@ -13,7 +13,7 @@ LIMIT 1;
 SELECT 
     id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 FROM stores
 WHERE owner_id = sqlc.arg('owner_id')
 LIMIT 1;
@@ -34,7 +34,7 @@ SET legal_name = COALESCE(NULLIF(sqlc.arg('legal_name')::text, ''), legal_name),
 WHERE id = sqlc.arg('store_id')
 RETURNING id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at;
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at;
 
 -- name: UpdateStoreProfileByOwnerID :one
 -- UpdateStoreProfileByOwnerID modifies merchant business info, contact details, and logo using the owner user ID.
@@ -52,4 +52,4 @@ SET legal_name = COALESCE(NULLIF(sqlc.arg('legal_name')::text, ''), legal_name),
 WHERE owner_id = sqlc.arg('owner_id')
 RETURNING id, owner_id, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at;
+    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at;

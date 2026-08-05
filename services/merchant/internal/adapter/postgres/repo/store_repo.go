@@ -24,6 +24,13 @@ func NewStoreRepo(db *pgxpool.Pool) *StoreRepo {
 	}
 }
 
+func safeString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 // RegisterStore commits step 1 and 2 of the merchant onboarding flow.
 func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*domain.Store, error) {
 	arg := generated.CreateStoreParams{
@@ -37,6 +44,9 @@ func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*do
 		TaxID:             store.TaxID,
 		RegisteredAddress: store.RegisteredAddress,
 		DisplayID:         store.DisplayID,
+		Vpa:               &store.VPA,
+		QrCodeBase64:      &store.QRCodeBase64,
+		PasswordHash:      store.PasswordHash,
 	}
 
 	row, err := r.q.CreateStore(ctx, arg)
@@ -47,6 +57,8 @@ func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*do
 	store.ID = row.ID
 	store.Status = string(row.Status)
 	store.Plan = string(row.Plan)
+	store.VPA = safeString(row.Vpa)
+	store.QRCodeBase64 = safeString(row.QrCodeBase64)
 	store.CreatedAt = row.CreatedAt
 
 	return store, nil
@@ -77,9 +89,29 @@ func (r *StoreRepo) GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (*
 	return &domain.Store{
 		ID:        row.ID,
 		DisplayID: row.DisplayID,
+		VPA:       safeString(row.Vpa),
 		LegalName: row.LegalName,
 		Status:    string(row.Status),
 		Plan:      string(row.Plan),
+	}, nil
+}
+
+// GetStoreByEmail retrieves a store by its contact email.
+func (r *StoreRepo) GetStoreByEmail(ctx context.Context, email string) (*domain.Store, error) {
+	row, err := r.q.GetStoreByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("StoreRepo.GetStoreByEmail query failed: %w", err)
+	}
+
+	return &domain.Store{
+		ID:           row.ID,
+		OwnerID:      row.OwnerID,
+		DisplayID:    row.DisplayID,
+		VPA:          safeString(row.Vpa),
+		LegalName:    row.LegalName,
+		Status:       string(row.Status),
+		Plan:         string(row.Plan),
+		PasswordHash: row.PasswordHash,
 	}, nil
 }
 
@@ -140,6 +172,8 @@ func (r *StoreRepo) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.U
 		TaxID:             &tax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               safeString(row.Vpa),
+		QRCodeBase64:      safeString(row.QrCodeBase64),
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,
@@ -169,6 +203,8 @@ func (r *StoreRepo) GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.U
 		TaxID:             &tax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               safeString(row.Vpa),
+		QRCodeBase64:      safeString(row.QrCodeBase64),
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,
@@ -219,6 +255,8 @@ func (r *StoreRepo) UpdateStoreProfileByStoreID(ctx context.Context, store *doma
 		TaxID:             &resTax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               safeString(row.Vpa),
+		QRCodeBase64:      safeString(row.QrCodeBase64),
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,
@@ -269,6 +307,8 @@ func (r *StoreRepo) UpdateStoreProfileByOwnerID(ctx context.Context, store *doma
 		TaxID:             &resTax,
 		RegisteredAddress: row.RegisteredAddress,
 		DisplayID:         row.DisplayID,
+		VPA:               safeString(row.Vpa),
+		QRCodeBase64:      safeString(row.QrCodeBase64),
 		Status:            row.Status,
 		Plan:              row.Plan,
 		LogoURL:           row.LogoUrl,

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/payment"
 )
 
 // SubscriptionUseCase defines the business logic contract for managing pricing tiers and billing transitions.
@@ -19,7 +20,10 @@ type SubscriptionUseCase interface {
 	// GetCurrentSubscription fetches the active billing record and renewal timeline for a merchant store.
 	GetCurrentSubscription(ctx context.Context, storeID uuid.UUID) (*domain.MerchantSubscription, error)
 	// ChangePlan validates tier eligibility, checks active promotional limits, and atomically upgrades or downgrades the store's plan.
-	ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string, reason string) (*domain.MerchantSubscription, error)
+	ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string) (*domain.MerchantSubscription, error)
+
+	CreateUpgradeOrder(ctx context.Context, storeID uuid.UUID, newPlanCode string) (string, error)
+	VerifyUpgrade(ctx context.Context, storeID uuid.UUID, newPlanCode string, orderID, paymentID, signature string) (*domain.MerchantSubscription, error)
 }
 
 // subscriptionUseCase implements SubscriptionUseCase with injected repository dependencies.
@@ -30,14 +34,17 @@ type subscriptionUseCase struct {
 	storeRepo domain.MerchantRepository
 	// campaignRepo enables validation of promotional offer limits before allowing tier downgrades.
 	campaignRepo domain.CampaignRepository
+	// razorpayClient provides razorpay order creation and signature verification
+	razorpayClient payment.RazorpayClient
 }
 
 // NewSubscriptionUseCase constructs and returns a new subscriptionUseCase instance with required dependencies.
-func NewSubscriptionUseCase(sr domain.SubscriptionRepository, mr domain.MerchantRepository, cr domain.CampaignRepository) SubscriptionUseCase {
+func NewSubscriptionUseCase(sr domain.SubscriptionRepository, mr domain.MerchantRepository, cr domain.CampaignRepository, rzClient payment.RazorpayClient) SubscriptionUseCase {
 	return &subscriptionUseCase{
-		subRepo:      sr,
-		storeRepo:    mr,
-		campaignRepo: cr,
+		subRepo:        sr,
+		storeRepo:      mr,
+		campaignRepo:   cr,
+		razorpayClient: rzClient,
 	}
 }
 
@@ -59,7 +66,7 @@ func (uc *subscriptionUseCase) GetCurrentSubscription(ctx context.Context, store
 
 // ChangePlan enforces business rules before upgrading or downgrading a merchant's subscription tier.
 // It verifies the target plan exists and prevents downgrades if active promotional offer counts exceed the target plan's allowance.
-func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string, reason string) (*domain.MerchantSubscription, error) {
+func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string) (*domain.MerchantSubscription, error) {
 	if storeID == uuid.Nil {
 		return nil, errors.New("invalid store ID")
 	}
@@ -99,5 +106,54 @@ func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID
 	}
 
 	// 3. Delegate atomic transition to repository layer
-	return uc.subRepo.UpdateStorePlan(ctx, storeID, newPlanCode, reason)
+	return uc.subRepo.UpdateStorePlan(ctx, storeID, newPlanCode)
+}
+
+// CreateUpgradeOrder creates a Razorpay order for the target plan upgrade
+func (uc *subscriptionUseCase) CreateUpgradeOrder(ctx context.Context, storeID uuid.UUID, newPlanCode string) (string, error) {
+	if storeID == uuid.Nil {
+		return "", errors.New("invalid store ID")
+	}
+	newPlanCode = strings.ToLower(strings.TrimSpace(newPlanCode))
+	
+	plans, err := uc.subRepo.GetAvailablePlans(ctx, storeID)
+	if err != nil {
+		return "", fmt.Errorf("fetch available plans: %w", err)
+	}
+
+	var targetPlan *domain.SubscriptionPlanDetail
+	for _, p := range plans {
+		if strings.ToLower(p.PlanCode) == newPlanCode {
+			targetPlan = p
+			break
+		}
+	}
+
+	if targetPlan == nil {
+		return "", fmt.Errorf("invalid plan code %q", newPlanCode)
+	}
+
+	if targetPlan.Price <= 0 {
+		return "", errors.New("cannot create order for free plan")
+	}
+
+	// Create Razorpay order
+	receiptID := fmt.Sprintf("rcpt_%s_%s", storeID.String()[:8], newPlanCode)
+	orderID, err := uc.razorpayClient.CreateOrder(targetPlan.Price, "INR", receiptID)
+	if err != nil {
+		return "", fmt.Errorf("failed to create razorpay order: %w", err)
+	}
+
+	return orderID, nil
+}
+
+// VerifyUpgrade verifies the Razorpay signature and updates the plan
+func (uc *subscriptionUseCase) VerifyUpgrade(ctx context.Context, storeID uuid.UUID, newPlanCode string, orderID, paymentID, signature string) (*domain.MerchantSubscription, error) {
+	err := uc.razorpayClient.VerifySignature(orderID, paymentID, signature)
+	if err != nil {
+		return nil, fmt.Errorf("payment verification failed: %w", err)
+	}
+
+	// If verified successfully, change the plan
+	return uc.ChangePlan(ctx, storeID, newPlanCode)
 }

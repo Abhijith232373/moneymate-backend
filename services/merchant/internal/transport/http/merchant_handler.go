@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http/middleware"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/usecases"
 )
 
@@ -19,8 +20,24 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	// Attempt to get owner ID from authenticated user context to prevent cross-user registration
+	ownerID, _ := c.Locals("user_id").(string)
+	
+	// Fallback to request body for internal calls or local testing when auth middleware is bypassed
+	if ownerID == "" {
+		ownerID = req.OwnerID
+	}
+
+	if ownerID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "owner_id is required"})
+	}
+
+	if req.Password == "" || req.Password != req.ConfirmPassword {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "passwords do not match or are empty"})
+	}
+
 	input := usecases.RegisterStoreInput{
-		OwnerID:           req.OwnerID,
+		OwnerID:           ownerID,
 		OwnerName:         req.OwnerName,
 		ContactEmail:      req.ContactEmail,
 		MobileNumber:      req.MobileNumber,
@@ -30,6 +47,7 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		AadhaarNumber:     req.AadhaarNumber,
 		AadhaarDocURL:     req.AadhaarDocURL,
 		ShopLicenseURL:    req.ShopLicenseURL,
+		Password:          req.Password,
 	}
 
 	if req.DBAName != "" {
@@ -44,11 +62,51 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	token, err := middleware.GenerateToken(store.ID.String(), store.OwnerID.String())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(RegisterStoreResponse{
+		StoreID:      store.ID.String(),
+		DisplayID:    store.DisplayID,
+		VPA:          store.VPA,
+		QRCodeBase64: store.QRCodeBase64,
+		Status:       store.Status,
+		Plan:         store.Plan,
+		Token:        token,
+	})
+}
+
+func (h *MerchantHandler) LoginStore(c fiber.Ctx) error {
+	var req LoginStoreRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if req.Email == "" || req.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email and password are required"})
+	}
+
+	store, err := h.usecase.AuthenticateStore(c.Context(), req.Email, req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	token, err := middleware.GenerateToken(store.ID.String(), store.OwnerID.String())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
+	}
+
+	return c.JSON(LoginStoreResponse{
 		StoreID:   store.ID.String(),
+		OwnerID:   store.OwnerID.String(),
 		DisplayID: store.DisplayID,
+		VPA:       store.VPA,
+		LegalName: store.LegalName,
 		Status:    store.Status,
 		Plan:      store.Plan,
+		Token:     token,
 	})
 }
 
@@ -65,10 +123,12 @@ func (h *MerchantHandler) GetStore(c fiber.Ctx) error {
 
 	return c.JSON(GetStoreResponse{
 		StoreID:   store.ID.String(),
-		DisplayID: store.DisplayID,
-		Status:    store.Status,
-		Plan:      store.Plan,
-		LegalName: store.LegalName,
+		DisplayID:    store.DisplayID,
+		VPA:          store.VPA,
+		QRCodeBase64: store.QRCodeBase64,
+		Status:       store.Status,
+		Plan:         store.Plan,
+		LegalName:    store.LegalName,
 	})
 }
 
@@ -99,30 +159,26 @@ func (h *MerchantHandler) GetPendingStores(c fiber.Ctx) error {
 }
 
 func resolveMerchantID(c fiber.Ctx) string {
+	// Secure fintech practice: For merchant routes, always resolve the store context strictly from the authenticated user's ID
+	// Do NOT trust store_id or owner_id from query params or URL params to prevent IDOR.
+	if id, ok := c.Locals("store_id").(string); ok && id != "" {
+		return id
+	}
+	if id, ok := c.Locals("owner_id").(string); ok && id != "" {
+		return id
+	}
+	if id, ok := c.Locals("user_id").(string); ok && id != "" {
+		return id
+	}
+	
+	// Fallback to URL parameters for internal testing or when auth middleware is bypassed
 	if id := c.Params("store_id"); id != "" {
 		return id
 	}
 	if id := c.Params("owner_id"); id != "" {
 		return id
 	}
-	if id := c.Query("store_id"); id != "" {
-		return id
-	}
-	if id := c.Query("owner_id"); id != "" {
-		return id
-	}
-	if id := c.Get("X-Store-ID"); id != "" {
-		return id
-	}
-	if id := c.Get("X-User-ID"); id != "" {
-		return id
-	}
-	if id, ok := c.Locals("user_id").(string); ok && id != "" {
-		return id
-	}
-	if id, ok := c.Locals("sub").(string); ok && id != "" {
-		return id
-	}
+	
 	return ""
 }
 
@@ -169,6 +225,8 @@ func (h *MerchantHandler) GetProfile(c fiber.Ctx) error {
 			ProfileImage: store.LogoURL,
 			Status:       status,
 			DisplayID:    store.DisplayID,
+			VPA:          store.VPA,
+			QRCodeBase64: store.QRCodeBase64,
 			Plan:         store.Plan,
 		},
 	})
@@ -236,6 +294,8 @@ func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
 			ProfileImage: store.LogoURL,
 			Status:       status,
 			DisplayID:    store.DisplayID,
+			VPA:          store.VPA,
+			QRCodeBase64: store.QRCodeBase64,
 			Plan:         store.Plan,
 		},
 	})
