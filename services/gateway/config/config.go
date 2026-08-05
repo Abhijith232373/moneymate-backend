@@ -15,6 +15,7 @@ type ServerConfig struct {
 
 type ServicesConfig struct {
 	AuthAddr   string            `mapstructure:"auth_addr"`
+	MerchantAddr string			`mapstructure:"merch_addr"`
 	Downstream map[string]string `mapstructure:"downstream"`
 }
 

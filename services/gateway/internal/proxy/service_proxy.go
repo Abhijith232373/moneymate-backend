@@ -41,10 +41,8 @@ func ProxyToService(registry *ServiceRegistry, serviceName string) fiber.Handler
 			})
 		}
 
-		// Adjust docker hostname resolution if we are local but config says localhost
-		// In a real prod setup, addr should be exactly what's in DNS
 		if strings.HasPrefix(addr, "localhost:") && serviceName == "merchant" {
-			// fallback in case they are running inside docker
+	
 			addr = "merchant:9092"
 		}
 
@@ -62,7 +60,6 @@ func ProxyToService(registry *ServiceRegistry, serviceName string) fiber.Handler
 	}
 }
 
-// ExtractServiceName parses the route path "/api/v1/payment/..." and returns "payment".
 func ExtractServiceName(path string) string {
 	parts := strings.Split(path, "/")
 	if len(parts) >= 4 {
