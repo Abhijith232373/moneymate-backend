@@ -31,6 +31,7 @@ func RegisterRoutes(
 
 	// ── User Auth ──────────────────────────────────────────────────
 	userAuth := api.Group("/auth")
+	userAuth.Get("/health",  proxy.AuthProxy(authAddr, "/auth/health"))
 	userAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/user/register"))
 	userAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
 	userAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
@@ -143,6 +144,7 @@ func RegisterRoutes(
 
 	// ── Merchant (authenticated + role=merchant) ───────────────────
 	merchant := api.Group("/merchant")
+	merchant.Get("/health", proxy.MerchantProxy(merchantAddr, "/merchant/health"))
 	merchant.Use(authMiddleware)
 	merchant.Use(middlewares.RequireRole("merchant"))
 	merchant.Get("/dashboard", proxy.MerchantProxy(merchantAddr, "/merchant/dashboard"))
