@@ -126,65 +126,6 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaig
 	return i, err
 }
 
-const getCampaignsByOwnerID = `-- name: GetCampaignsByOwnerID :many
-SELECT 
-    c.id, c.store_id, c.name, c.offer_type, c.reward_value, c.min_bill_amount, c.target_audience, c.start_date, c.end_date, c.is_active, c.banner_url, c.created_at, c.updated_at
-FROM campaigns c
-JOIN stores s ON c.store_id = s.id
-WHERE s.owner_id = $1
-ORDER BY c.created_at DESC
-`
-
-type GetCampaignsByOwnerIDRow struct {
-	ID             uuid.UUID
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	BannerUrl      *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
-func (q *Queries) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]GetCampaignsByOwnerIDRow, error) {
-	rows, err := q.db.Query(ctx, getCampaignsByOwnerID, ownerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetCampaignsByOwnerIDRow{}
-	for rows.Next() {
-		var i GetCampaignsByOwnerIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.StoreID,
-			&i.Name,
-			&i.OfferType,
-			&i.RewardValue,
-			&i.MinBillAmount,
-			&i.TargetAudience,
-			&i.StartDate,
-			&i.EndDate,
-			&i.IsActive,
-			&i.BannerUrl,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getCampaignsByStoreID = `-- name: GetCampaignsByStoreID :many
 SELECT 
     id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at

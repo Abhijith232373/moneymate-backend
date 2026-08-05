@@ -12,7 +12,7 @@ import (
 type CampaignUseCase interface {
 	CreateCampaign(ctx context.Context, campaign *domain.Campaign) (*domain.Campaign, error)
 	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]*domain.Campaign, error)
-	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*domain.Campaign, error)
+
 	UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, isActive bool) error
 }
 
@@ -72,9 +72,6 @@ func (uc *campaignUseCase) GetCampaignsByStoreID(ctx context.Context, storeID uu
 	return uc.campaignRepo.GetCampaignsByStoreID(ctx, storeID)
 }
 
-func (uc *campaignUseCase) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*domain.Campaign, error) {
-	return uc.campaignRepo.GetCampaignsByOwnerID(ctx, ownerID)
-}
 
 func (uc *campaignUseCase) UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, isActive bool) error {
 	if isActive {

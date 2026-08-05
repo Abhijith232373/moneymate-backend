@@ -418,7 +418,7 @@ type RewardTransaction struct {
 
 type Store struct {
 	ID                uuid.UUID
-	OwnerID           uuid.UUID
+	Role              string
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string

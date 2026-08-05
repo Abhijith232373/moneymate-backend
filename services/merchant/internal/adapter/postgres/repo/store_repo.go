@@ -34,7 +34,8 @@ func safeString(s *string) string {
 // RegisterStore commits step 1 and 2 of the merchant onboarding flow.
 func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*domain.Store, error) {
 	arg := generated.CreateStoreParams{
-		OwnerID:           store.OwnerID,
+		ID:                store.ID,
+		Role:              store.Role,
 		OwnerName:         store.OwnerName,
 		ContactEmail:      store.ContactEmail,
 		MobileNumber:      store.MobileNumber,
@@ -79,11 +80,11 @@ func (r *StoreRepo) SubmitKYC(ctx context.Context, kyc *domain.KYCDocument) erro
 	return nil
 }
 
-// GetStoreByOwnerID retrieves the store state for gateway routing.
-func (r *StoreRepo) GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (*domain.Store, error) {
-	row, err := r.q.GetStoreByOwnerID(ctx, ownerID)
+// GetStoreByID retrieves the store state for gateway routing.
+func (r *StoreRepo) GetStoreByID(ctx context.Context, id uuid.UUID) (*domain.Store, error) {
+	row, err := r.q.GetStoreByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("StoreRepo.GetStoreByOwnerID query failed: %w", err)
+		return nil, fmt.Errorf("StoreRepo.GetStoreByID query failed: %w", err)
 	}
 
 	return &domain.Store{
@@ -105,7 +106,7 @@ func (r *StoreRepo) GetStoreByEmail(ctx context.Context, email string) (*domain.
 
 	return &domain.Store{
 		ID:           row.ID,
-		OwnerID:      row.OwnerID,
+		Role:         row.Role,
 		DisplayID:    row.DisplayID,
 		VPA:          safeString(row.Vpa),
 		LegalName:    row.LegalName,
@@ -162,7 +163,7 @@ func (r *StoreRepo) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.U
 	tax := row.TaxID
 	return &domain.Store{
 		ID:                row.ID,
-		OwnerID:           row.OwnerID,
+		Role:              row.Role,
 		OwnerName:         row.OwnerName,
 		ContactEmail:      row.ContactEmail,
 		MobileNumber:      row.MobileNumber,
@@ -182,36 +183,7 @@ func (r *StoreRepo) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.U
 	}, nil
 }
 
-// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner ID.
-func (r *StoreRepo) GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (*domain.Store, error) {
-	row, err := r.q.GetStoreProfileByOwnerID(ctx, ownerID)
-	if err != nil {
-		return nil, fmt.Errorf("StoreRepo.GetStoreProfileByOwnerID failed: %w", err)
-	}
 
-	dba := row.DbaName
-	tax := row.TaxID
-	return &domain.Store{
-		ID:                row.ID,
-		OwnerID:           row.OwnerID,
-		OwnerName:         row.OwnerName,
-		ContactEmail:      row.ContactEmail,
-		MobileNumber:      row.MobileNumber,
-		LegalName:         row.LegalName,
-		DBAName:           &dba,
-		Type:              row.BusinessType,
-		TaxID:             &tax,
-		RegisteredAddress: row.RegisteredAddress,
-		DisplayID:         row.DisplayID,
-		VPA:               safeString(row.Vpa),
-		QRCodeBase64:      safeString(row.QrCodeBase64),
-		Status:            row.Status,
-		Plan:              row.Plan,
-		LogoURL:           row.LogoUrl,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-	}, nil
-}
 
 // UpdateStoreProfileByStoreID updates the merchant profile using store ID.
 func (r *StoreRepo) UpdateStoreProfileByStoreID(ctx context.Context, store *domain.Store) (*domain.Store, error) {
@@ -245,59 +217,7 @@ func (r *StoreRepo) UpdateStoreProfileByStoreID(ctx context.Context, store *doma
 	resTax := row.TaxID
 	return &domain.Store{
 		ID:                row.ID,
-		OwnerID:           row.OwnerID,
-		OwnerName:         row.OwnerName,
-		ContactEmail:      row.ContactEmail,
-		MobileNumber:      row.MobileNumber,
-		LegalName:         row.LegalName,
-		DBAName:           &resDba,
-		Type:              row.BusinessType,
-		TaxID:             &resTax,
-		RegisteredAddress: row.RegisteredAddress,
-		DisplayID:         row.DisplayID,
-		VPA:               safeString(row.Vpa),
-		QRCodeBase64:      safeString(row.QrCodeBase64),
-		Status:            row.Status,
-		Plan:              row.Plan,
-		LogoURL:           row.LogoUrl,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-	}, nil
-}
-
-// UpdateStoreProfileByOwnerID updates the merchant profile using owner ID.
-func (r *StoreRepo) UpdateStoreProfileByOwnerID(ctx context.Context, store *domain.Store) (*domain.Store, error) {
-	var dba, tax string
-	if store.DBAName != nil {
-		dba = *store.DBAName
-	}
-	if store.TaxID != nil {
-		tax = *store.TaxID
-	}
-
-	arg := generated.UpdateStoreProfileByOwnerIDParams{
-		OwnerID:           store.OwnerID,
-		LegalName:         store.LegalName,
-		DbaName:           dba,
-		RegisteredAddress: store.RegisteredAddress,
-		BusinessType:      store.Type,
-		TaxID:             tax,
-		OwnerName:         store.OwnerName,
-		ContactEmail:      store.ContactEmail,
-		MobileNumber:      store.MobileNumber,
-		LogoUrl:           store.LogoURL,
-	}
-
-	row, err := r.q.UpdateStoreProfileByOwnerID(ctx, arg)
-	if err != nil {
-		return nil, fmt.Errorf("StoreRepo.UpdateStoreProfileByOwnerID failed: %w", err)
-	}
-
-	resDba := row.DbaName
-	resTax := row.TaxID
-	return &domain.Store{
-		ID:                row.ID,
-		OwnerID:           row.OwnerID,
+		Role:              row.Role,
 		OwnerName:         row.OwnerName,
 		ContactEmail:      row.ContactEmail,
 		MobileNumber:      row.MobileNumber,

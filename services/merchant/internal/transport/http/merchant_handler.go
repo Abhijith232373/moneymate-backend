@@ -20,24 +20,7 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	// Attempt to get owner ID from authenticated user context to prevent cross-user registration
-	ownerID, _ := c.Locals("user_id").(string)
-	
-	// Fallback to request body for internal calls or local testing when auth middleware is bypassed
-	if ownerID == "" {
-		ownerID = req.OwnerID
-	}
-
-	if ownerID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "owner_id is required"})
-	}
-
-	if req.Password == "" || req.Password != req.ConfirmPassword {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "passwords do not match or are empty"})
-	}
-
 	input := usecases.RegisterStoreInput{
-		OwnerID:           ownerID,
 		OwnerName:         req.OwnerName,
 		ContactEmail:      req.ContactEmail,
 		MobileNumber:      req.MobileNumber,
@@ -62,7 +45,7 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	token, err := middleware.GenerateToken(store.ID.String(), store.OwnerID.String())
+	token, err := middleware.GenerateToken(store.ID.String(), store.Role)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
@@ -93,14 +76,14 @@ func (h *MerchantHandler) LoginStore(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	token, err := middleware.GenerateToken(store.ID.String(), store.OwnerID.String())
+	token, err := middleware.GenerateToken(store.ID.String(), store.Role)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
 
 	return c.JSON(LoginStoreResponse{
 		StoreID:   store.ID.String(),
-		OwnerID:   store.OwnerID.String(),
+
 		DisplayID: store.DisplayID,
 		VPA:       store.VPA,
 		LegalName: store.LegalName,
@@ -111,12 +94,12 @@ func (h *MerchantHandler) LoginStore(c fiber.Ctx) error {
 }
 
 func (h *MerchantHandler) GetStore(c fiber.Ctx) error {
-	ownerID := c.Params("owner_id")
-	if ownerID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "owner_id is required"})
+	storeID := c.Params("store_id")
+	if storeID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
 	}
 
-	store, err := h.usecase.GetStore(c.Context(), ownerID)
+	store, err := h.usecase.GetStore(c.Context(), storeID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -164,18 +147,9 @@ func resolveMerchantID(c fiber.Ctx) string {
 	if id, ok := c.Locals("store_id").(string); ok && id != "" {
 		return id
 	}
-	if id, ok := c.Locals("owner_id").(string); ok && id != "" {
-		return id
-	}
-	if id, ok := c.Locals("user_id").(string); ok && id != "" {
-		return id
-	}
 	
 	// Fallback to URL parameters for internal testing or when auth middleware is bypassed
 	if id := c.Params("store_id"); id != "" {
-		return id
-	}
-	if id := c.Params("owner_id"); id != "" {
 		return id
 	}
 	
@@ -185,7 +159,7 @@ func resolveMerchantID(c fiber.Ctx) string {
 func (h *MerchantHandler) GetProfile(c fiber.Ctx) error {
 	id := resolveMerchantID(c)
 	if id == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "store_id or owner_id is required to fetch profile"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "store_id is required to fetch profile"})
 	}
 
 	store, err := h.usecase.GetProfile(c.Context(), id)
@@ -213,7 +187,7 @@ func (h *MerchantHandler) GetProfile(c fiber.Ctx) error {
 		"success": true,
 		"data": ProfileResponse{
 			StoreID:      store.ID.String(),
-			OwnerID:      store.OwnerID.String(),
+
 			BusinessName: store.LegalName,
 			DBAName:      dba,
 			Address:      store.RegisteredAddress,
@@ -253,7 +227,6 @@ func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
 
 	if id != "" {
 		input.StoreID = id
-		input.OwnerID = id
 	}
 
 	store, err := h.usecase.UpdateProfile(c.Context(), input)
@@ -282,7 +255,7 @@ func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
 		"message": "Business profile updated successfully!",
 		"data": ProfileResponse{
 			StoreID:      store.ID.String(),
-			OwnerID:      store.OwnerID.String(),
+
 			BusinessName: store.LegalName,
 			DBAName:      dba,
 			Address:      store.RegisteredAddress,

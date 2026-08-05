@@ -35,7 +35,7 @@ func (r *AdminRepo) GetAllStores(ctx context.Context, limit, offset int) ([]*dom
 	}
 	query := `
 		SELECT 
-			id, owner_id, owner_name, contact_email, mobile_number,
+			id, owner_name, contact_email, mobile_number,
 			legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
 			display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 		FROM stores
@@ -52,7 +52,7 @@ func (r *AdminRepo) GetAllStores(ctx context.Context, limit, offset int) ([]*dom
 		var s domain.Store
 		var dba, tax string
 		if err := rows.Scan(
-			&s.ID, &s.OwnerID, &s.OwnerName, &s.ContactEmail, &s.MobileNumber,
+			&s.ID, &s.OwnerName, &s.ContactEmail, &s.MobileNumber,
 			&s.LegalName, &dba, &s.Type, &tax, &s.RegisteredAddress,
 			&s.DisplayID, &s.Status, &s.Plan, &s.LogoURL, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {

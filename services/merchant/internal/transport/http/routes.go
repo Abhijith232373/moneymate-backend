@@ -16,7 +16,7 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 		merchant.Use(authMiddleware)
 	}
 
-	merchant.Get("/status/:owner_id", h.GetStore)
+	merchant.Get("/status/:store_id", h.GetStore)
 	merchant.Get("/pending", h.GetPendingStores)
 
 	// Profile & Settings routes

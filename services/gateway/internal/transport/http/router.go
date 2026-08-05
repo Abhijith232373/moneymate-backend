@@ -113,7 +113,7 @@ func RegisterRoutes(
 			"message": "merchant dashboard placeholder",
 		})
 	})
-
+	
 
 	// ── Downstream service proxies ─────────────────────────────────
 	downstreamServices := []string{"payment", "merchant", "campaign", "debt", "pod", "scheduler", "referral", "rewards", "routing", "notification"}

@@ -99,35 +99,7 @@ func (r *CampaignRepo) GetCampaignsByStoreID(ctx context.Context, storeID uuid.U
 	return campaigns, nil
 }
 
-func (r *CampaignRepo) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*domain.Campaign, error) {
-	res, err := r.queries.GetCampaignsByOwnerID(ctx, ownerID)
-	if err != nil {
-		return nil, err
-	}
 
-	var campaigns []*domain.Campaign
-	for _, c := range res {
-		rv, _ := c.RewardValue.Float64Value()
-		mb, _ := c.MinBillAmount.Float64Value()
-
-		campaigns = append(campaigns, &domain.Campaign{
-			ID:             c.ID,
-			StoreID:        c.StoreID,
-			Name:           c.Name,
-			OfferType:      c.OfferType,
-			RewardValue:    rv.Float64,
-			MinBillAmount:  mb.Float64,
-			TargetAudience: c.TargetAudience,
-			BannerURL:      c.BannerUrl,
-			StartDate:      c.StartDate,
-			EndDate:        c.EndDate,
-			IsActive:       c.IsActive,
-			CreatedAt:      c.CreatedAt,
-			UpdatedAt:      c.UpdatedAt,
-		})
-	}
-	return campaigns, nil
-}
 
 func (r *CampaignRepo) GetCampaignByID(ctx context.Context, id uuid.UUID) (*domain.Campaign, error) {
 	res, err := r.queries.GetCampaignByID(ctx, id)

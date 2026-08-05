@@ -1,7 +1,7 @@
 package http
 
 type RegisterStoreRequest struct {
-	OwnerID           string `json:"owner_id"`
+
 	OwnerName         string `json:"owner_name"`
 	ContactEmail      string `json:"contact_email"`
 	MobileNumber      string `json:"mobile_number"`
@@ -34,7 +34,7 @@ type LoginStoreRequest struct {
 
 type LoginStoreResponse struct {
 	StoreID      string `json:"store_id"`
-	OwnerID      string `json:"owner_id"`
+
 	DisplayID    string `json:"display_id"`
 	VPA          string `json:"vpa"`
 	LegalName    string `json:"legal_name"`
@@ -211,7 +211,7 @@ type UpdateKYCDocumentsResponse struct {
 // ProfileResponse represents the merchant business and primary contact profile data for the Settings/Profile page.
 type ProfileResponse struct {
 	StoreID      string `json:"storeId,omitempty"`
-	OwnerID      string `json:"ownerId,omitempty"`
+
 	BusinessName string `json:"businessName"`
 	DBAName      string `json:"dbaName"`
 	Address      string `json:"address"`

@@ -79,14 +79,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 				if store.DBAName != nil && *store.DBAName != "" {
 					businessName = *store.DBAName
 				}
-			} else if storeByOwner, err := uc.storeRepo.GetStoreProfileByOwnerID(ctx, parsedUUID); err == nil && storeByOwner != nil && storeByOwner.ID != uuid.Nil {
-				storeID = storeByOwner.ID
-				merchantIDStr = storeByOwner.DisplayID
-				vpaStr = storeByOwner.VPA
-				businessName = storeByOwner.LegalName
-				if storeByOwner.DBAName != nil && *storeByOwner.DBAName != "" {
-					businessName = *storeByOwner.DBAName
-				}
+
 			} else {
 				storeID = parsedUUID
 				merchantIDStr = "MM-8823-XA"

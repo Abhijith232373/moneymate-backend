@@ -28,7 +28,7 @@ type Campaign struct {
 type CampaignRepository interface {
 	CreateCampaign(ctx context.Context, campaign *Campaign) (*Campaign, error)
 	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]*Campaign, error)
-	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*Campaign, error)
+
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (*Campaign, error)
 	UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, isActive bool) error
 }

@@ -6,7 +6,7 @@ services:
   auth_addr: "localhost:8081"
   downstream:
     payment: "localhost:9092"
-    merchant: "localhost:9093"
+    merchant: "localhost:9092"
     campaign: "localhost:9094"
     debt: "localhost:9095"
     pod: "localhost:9096"
