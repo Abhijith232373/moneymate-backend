@@ -2,6 +2,7 @@ package sharedconfig
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -27,9 +28,12 @@ type DatabaseConfig struct {
 
 
 func LoadDatabaseConfig(v *viper.Viper, schema string) DatabaseConfig {
+	prefix := strings.ToUpper(schema)
+	userKey := fmt.Sprintf("%s_DB_USER", prefix)
+    passKey := fmt.Sprintf("%s_DB_PASSWORD", prefix)
 	cfg := DatabaseConfig{
-		User:     MustGet("POSTGRES_USER"),
-		Password: MustGet("POSTGRES_PASSWORD"),
+		User:     Get(userKey, MustGet("POSTGRES_USER")),
+		Password: Get(passKey, MustGet("POSTGRES_PASSWORD")),
 		Host:     MustGet("POSTGRES_HOST"),
 		Port:     Get("POSTGRES_PORT", "5432"),
 		Name:     MustGet("POSTGRES_DB"),
