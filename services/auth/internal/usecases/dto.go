@@ -163,3 +163,18 @@ type RefreshTokenResponse struct {
     RefreshToken    string    `json:"refresh_token"`
     AccessExpiresAt time.Time `json:"access_expires_at"`
 }
+
+// ── PIN Management ────────────────────────────────────────────────
+
+type SetPINRequest struct {
+	PIN string
+}
+
+type UpdatePINRequest struct {
+	OldPIN string
+	NewPIN string
+}
+
+type VerifyPINRequest struct {
+	PIN string
+}

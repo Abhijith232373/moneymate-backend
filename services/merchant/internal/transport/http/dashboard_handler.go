@@ -15,9 +15,12 @@ func NewDashboardHandler(uc *usecases.DashboardUseCase) *DashboardHandler {
 
 // GetDashboard serves the aggregated statistics, transactions, and promotional campaigns for the merchant dashboard.
 func (h *DashboardHandler) GetDashboard(c fiber.Ctx) error {
-	id := resolveMerchantID(c)
+	storeIDStr := resolveMerchantID(c)
+	if storeIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
+	}
 
-	out, err := h.usecase.GetDashboard(c.Context(), id)
+	out, err := h.usecase.GetDashboard(c.Context(), storeIDStr)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
 	}
@@ -68,6 +71,7 @@ func (h *DashboardHandler) GetDashboard(c fiber.Ctx) error {
 			Campaigns:    camps,
 			Balance:      out.Balance,
 			MerchantID:   out.MerchantID,
+			VPA:          out.VPA,
 			BusinessName: out.BusinessName,
 		},
 	})

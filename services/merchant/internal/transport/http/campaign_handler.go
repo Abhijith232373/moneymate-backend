@@ -24,7 +24,7 @@ func (h *CampaignHandler) CreateCampaign(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
 	}
@@ -53,8 +53,15 @@ func (h *CampaignHandler) CreateCampaign(c fiber.Ctx) error {
 		EndDate:        endDate,
 	}
 
+	if req.BannerURL != "" {
+		campaign.BannerURL = &req.BannerURL
+	}
+
 	created, err := h.usecase.CreateCampaign(c.Context(), campaign)
 	if err != nil {
+		if err.Error() == "active campaign limit reached for Growth plan (max 5)" || err.Error() == "active campaign limit reached for Essential plan (max 1)" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -67,13 +74,14 @@ func (h *CampaignHandler) CreateCampaign(c fiber.Ctx) error {
 		MinBillAmount: created.MinBillAmount,
 		StartDate:     created.StartDate.Format("2006-01-02"),
 		EndDate:       created.EndDate.Format("2006-01-02"),
+		BannerURL:     getStringOrEmpty(created.BannerURL),
 		IsActive:      created.IsActive,
 		CreatedAt:     created.CreatedAt.Format(time.RFC3339),
 	})
 }
 
 func (h *CampaignHandler) GetCampaigns(c fiber.Ctx) error {
-	storeIDStr := c.Params("store_id")
+	storeIDStr := resolveMerchantID(c)
 	if storeIDStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
 	}
@@ -98,10 +106,55 @@ func (h *CampaignHandler) GetCampaigns(c fiber.Ctx) error {
 			MinBillAmount: cam.MinBillAmount,
 			StartDate:     cam.StartDate.Format("2006-01-02"),
 			EndDate:       cam.EndDate.Format("2006-01-02"),
+			BannerURL:     getStringOrEmpty(cam.BannerURL),
 			IsActive:      cam.IsActive,
 			CreatedAt:     cam.CreatedAt.Format(time.RFC3339),
 		})
 	}
 
 	return c.JSON(response)
+}
+
+func (h *CampaignHandler) UpdateCampaignStatus(c fiber.Ctx) error {
+	storeIDStr := resolveMerchantID(c)
+	if storeIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required"})
+	}
+	storeID, err := uuid.Parse(storeIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid store_id format"})
+	}
+
+	campaignIDStr := c.Params("id")
+	if campaignIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "campaign id is required"})
+	}
+	campaignID, err := uuid.Parse(campaignIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid campaign id format"})
+	}
+
+	var req struct {
+		IsActive bool `json:"is_active"`
+	}
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	err = h.usecase.UpdateCampaignStatus(c.Context(), campaignID, storeID, req.IsActive)
+	if err != nil {
+		if err.Error() == "active campaign limit reached for Growth plan (max 5)" || err.Error() == "active campaign limit reached for Essential plan (max 1)" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "Campaign status updated successfully"})
+}
+
+func getStringOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

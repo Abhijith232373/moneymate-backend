@@ -13,6 +13,7 @@ CREATE TYPE subscription_plan AS ENUM (
 );
 
 -- 2. Core Stores Table (Step 1 & Step 2 of Registration)
+
 CREATE TABLE stores (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id            UUID NOT NULL, -- Foreign key referencing auth.users(id) across services
@@ -21,6 +22,7 @@ CREATE TABLE stores (
     owner_name          VARCHAR(255) NOT NULL, 
     contact_email       VARCHAR(255) NOT NULL UNIQUE, 
     mobile_number       VARCHAR(20) NOT NULL UNIQUE,
+    password_hash       VARCHAR(255) NOT NULL,
     
     -- Business Details (Step 1)
     legal_name          VARCHAR(255) NOT NULL,
@@ -31,6 +33,9 @@ CREATE TABLE stores (
     
     -- System Generated (QR & State)
     display_id          VARCHAR(20) NOT NULL UNIQUE, -- UI: ID: MM-9823-XA
+    vpa                 VARCHAR(50) UNIQUE,
+    qr_code_base64      TEXT,
+    logo_url            TEXT,
     status              merchant_status NOT NULL DEFAULT 'pending_kyc',
     plan                subscription_plan NOT NULL DEFAULT 'essential', --
     

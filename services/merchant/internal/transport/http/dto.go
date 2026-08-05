@@ -13,19 +13,42 @@ type RegisterStoreRequest struct {
 	AadhaarNumber     string `json:"aadhaar_number"`
 	AadhaarDocURL     string `json:"aadhaar_doc_url"`
 	ShopLicenseURL    string `json:"shop_license_url"`
+	Password          string `json:"password"`
+	ConfirmPassword   string `json:"confirm_password"`
 }
 
 type RegisterStoreResponse struct {
-	StoreID   string `json:"store_id"`
-	DisplayID string `json:"display_id"`
-	Status    string `json:"status"`
-	Plan      string `json:"plan"`
+	StoreID      string `json:"store_id"`
+	DisplayID    string `json:"display_id"`
+	VPA          string `json:"vpa"`
+	QRCodeBase64 string `json:"qr_code_base64"`
+	Status       string `json:"status"`
+	Plan         string `json:"plan"`
+	Token        string `json:"token"`
+}
+
+type LoginStoreRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginStoreResponse struct {
+	StoreID      string `json:"store_id"`
+	OwnerID      string `json:"owner_id"`
+	DisplayID    string `json:"display_id"`
+	VPA          string `json:"vpa"`
+	LegalName    string `json:"legal_name"`
+	Status       string `json:"status"`
+	Plan         string `json:"plan"`
+	Token        string `json:"token"`
 }
 
 type GetStoreResponse struct {
 	StoreID   string `json:"store_id"`
 	DisplayID string `json:"display_id"`
-	Status    string `json:"status"`
+	VPA          string `json:"vpa"`
+	QRCodeBase64 string `json:"qr_code_base64"`
+	Status       string `json:"status"`
 	Plan      string `json:"plan"`
 	LegalName string `json:"legal_name"`
 }
@@ -37,6 +60,7 @@ type CreateCampaignRequest struct {
 	MinBillAmount  float64 `json:"min_bill_amount"`
 	StartDate      string  `json:"start_date"` // YYYY-MM-DD
 	EndDate        string  `json:"end_date"`   // YYYY-MM-DD
+	BannerURL      string  `json:"banner_url,omitempty"`
 }
 
 type CampaignResponse struct {
@@ -48,6 +72,7 @@ type CampaignResponse struct {
 	MinBillAmount  float64 `json:"min_bill_amount"`
 	StartDate      string  `json:"start_date"`
 	EndDate        string  `json:"end_date"`
+	BannerURL      string  `json:"banner_url,omitempty"`
 	IsActive       bool    `json:"is_active"`
 	CreatedAt      string  `json:"created_at"`
 }
@@ -135,7 +160,6 @@ type CurrentSubscriptionResponse struct {
 // ChangePlanRequest represents the incoming JSON body when upgrading or downgrading subscription tiers.
 type ChangePlanRequest struct {
 	PlanCode string `json:"plan_code"`
-	Reason   string `json:"reason,omitempty"`
 }
 
 // ChangePlanResponse represents the acknowledgment payload after successfully transitioning subscription tiers.
@@ -199,6 +223,8 @@ type ProfileResponse struct {
 	ProfileImage string `json:"profileImage"`
 	Status       string `json:"status"`
 	DisplayID    string `json:"displayId"`
+	VPA          string `json:"vpa"`
+	QRCodeBase64 string `json:"qr_code_base64"`
 	Plan         string `json:"plan"`
 }
 
@@ -257,5 +283,6 @@ type DashboardResponse struct {
 	Campaigns    []DashboardCampaignResponse    `json:"campaigns"`
 	Balance      float64                        `json:"balance"`
 	MerchantID   string                         `json:"merchant_id"`
+	VPA          string                         `json:"vpa"`
 	BusinessName string                         `json:"business_name"`
 }

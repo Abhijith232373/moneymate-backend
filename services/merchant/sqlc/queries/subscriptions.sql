@@ -48,13 +48,6 @@ INSERT INTO merchant_subscriptions (
     updated_at = NOW()
 RETURNING id, store_id, plan_code, status, billing_cycle, current_period_start, current_period_end, auto_renew, created_at, updated_at;
 
--- name: CreateSubscriptionChangeLog :one
--- CreateSubscriptionChangeLog inserts an immutable audit ledger entry for tier upgrades and downgrades.
-INSERT INTO subscription_change_logs (
-    id, store_id, old_plan_code, new_plan_code, change_reason
-) VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING id, store_id, old_plan_code, new_plan_code, change_reason, changed_at;
 
 -- name: UpdateStorePlanEnum :exec
 -- UpdateStorePlanEnum synchronizes the core store record's plan enum column with the active subscription tier.

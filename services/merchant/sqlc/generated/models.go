@@ -274,6 +274,49 @@ func (ns NullSubscriptionPlan) Value() (driver.Value, error) {
 	return string(ns.SubscriptionPlan), nil
 }
 
+type WalletTxnType string
+
+const (
+	WalletTxnTypeQrScan     WalletTxnType = "qr_scan"
+	WalletTxnTypeRedeem     WalletTxnType = "redeem"
+	WalletTxnTypeAdjustment WalletTxnType = "adjustment"
+)
+
+func (e *WalletTxnType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WalletTxnType(s)
+	case string:
+		*e = WalletTxnType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WalletTxnType: %T", src)
+	}
+	return nil
+}
+
+type NullWalletTxnType struct {
+	WalletTxnType WalletTxnType
+	Valid         bool // Valid is true if WalletTxnType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWalletTxnType) Scan(value interface{}) error {
+	if value == nil {
+		ns.WalletTxnType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WalletTxnType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWalletTxnType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WalletTxnType), nil
+}
+
 type Campaign struct {
 	ID             uuid.UUID
 	StoreID        uuid.UUID
@@ -282,11 +325,28 @@ type Campaign struct {
 	RewardValue    pgtype.Numeric
 	MinBillAmount  pgtype.Numeric
 	TargetAudience string
+	BannerUrl      *string
 	StartDate      time.Time
 	EndDate        time.Time
 	IsActive       bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+type EarningsPayoutRequest struct {
+	ID             uuid.UUID
+	StoreID        uuid.UUID
+	MilestoneScans int32
+	RewardAmount   pgtype.Numeric
+	Status         string
+	CreatedAt      time.Time
+}
+
+type EarningsStat struct {
+	StoreID     uuid.UUID
+	TotalScans  int64
+	TotalEarned pgtype.Numeric
+	UpdatedAt   time.Time
 }
 
 type KycDocument struct {
@@ -312,6 +372,15 @@ type MerchantSubscription struct {
 	AutoRenew          bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+}
+
+type QrTransaction struct {
+	ID                uuid.UUID
+	StoreID           uuid.UUID
+	CustomerDisplayID string
+	BillAmount        pgtype.Numeric
+	RewardIssued      pgtype.Numeric
+	CreatedAt         time.Time
 }
 
 type RedemptionRequest struct {
@@ -353,26 +422,20 @@ type Store struct {
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string
+	PasswordHash      string
 	LegalName         string
 	DbaName           *string
 	BusinessType      string
 	TaxID             *string
 	RegisteredAddress string
 	DisplayID         string
+	Vpa               *string
+	QrCodeBase64      *string
+	LogoUrl           *string
 	Status            MerchantStatus
 	Plan              SubscriptionPlan
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	LogoUrl           *string
-}
-
-type SubscriptionChangeLog struct {
-	ID           uuid.UUID
-	StoreID      uuid.UUID
-	OldPlanCode  string
-	NewPlanCode  string
-	ChangeReason string
-	ChangedAt    time.Time
 }
 
 type SubscriptionTier struct {
@@ -388,4 +451,25 @@ type SubscriptionTier struct {
 	IsActive           bool
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+}
+
+type Wallet struct {
+	ID               uuid.UUID
+	StoreID          uuid.UUID
+	AvailableBalance pgtype.Numeric
+	TotalEarnings    pgtype.Numeric
+	TotalRedeemed    pgtype.Numeric
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type WalletTransaction struct {
+	ID            uuid.UUID
+	StoreID       uuid.UUID
+	TransactionID string
+	Title         string
+	Subtitle      string
+	Amount        pgtype.Numeric
+	TxnType       WalletTxnType
+	CreatedAt     time.Time
 }

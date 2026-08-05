@@ -41,22 +41,12 @@ type MerchantSubscription struct {
 	UpdatedAt          time.Time
 }
 
-// SubscriptionChangeLog represents an immutable audit ledger entry for tier upgrades and downgrades.
-type SubscriptionChangeLog struct {
-	ID           uuid.UUID
-	StoreID      uuid.UUID
-	OldPlanCode  string
-	NewPlanCode  string
-	ChangeReason string
-	ChangedAt    time.Time
-}
-
-// SubscriptionRepository defines the strict data access contract for subscription plans, billing states, and audit logs.
+// SubscriptionRepository defines the strict data access contract for subscription plans and billing states.
 type SubscriptionRepository interface {
 	// GetAvailablePlans retrieves all active subscription tiers from the catalog, marking the store's current plan dynamically.
 	GetAvailablePlans(ctx context.Context, storeID uuid.UUID) ([]*SubscriptionPlanDetail, error)
 	// GetStoreSubscription fetches the active subscription record for a specific merchant store, bootstrapping default Essential if missing.
 	GetStoreSubscription(ctx context.Context, storeID uuid.UUID) (*MerchantSubscription, error)
-	// UpdateStorePlan atomically upgrades or downgrades a store's subscription tier, updates core store records, and logs an immutable audit trail.
-	UpdateStorePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string, reason string) (*MerchantSubscription, error)
+	// UpdateStorePlan atomically upgrades or downgrades a store's subscription tier and updates core store records.
+	UpdateStorePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string) (*MerchantSubscription, error)
 }

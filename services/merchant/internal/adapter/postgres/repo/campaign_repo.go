@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,10 +26,10 @@ func NewCampaignRepo(db *pgxpool.Pool) domain.CampaignRepository {
 
 func (r *CampaignRepo) CreateCampaign(ctx context.Context, c *domain.Campaign) (*domain.Campaign, error) {
 	var rewardValue pgtype.Numeric
-	rewardValue.Scan(c.RewardValue) // Simplification for demo, typically needs precision parsing
+	rewardValue.Scan(strconv.FormatFloat(c.RewardValue, 'f', -1, 64))
 
 	var minBillAmount pgtype.Numeric
-	minBillAmount.Scan(c.MinBillAmount)
+	minBillAmount.Scan(strconv.FormatFloat(c.MinBillAmount, 'f', -1, 64))
 
 	params := generated.CreateCampaignParams{
 		StoreID:        c.StoreID,
@@ -37,6 +38,7 @@ func (r *CampaignRepo) CreateCampaign(ctx context.Context, c *domain.Campaign) (
 		RewardValue:    rewardValue,
 		MinBillAmount:  minBillAmount,
 		TargetAudience: c.TargetAudience,
+		BannerUrl:      c.BannerURL,
 		StartDate:      c.StartDate,
 		EndDate:        c.EndDate,
 		IsActive:       c.IsActive,
@@ -57,6 +59,7 @@ func (r *CampaignRepo) CreateCampaign(ctx context.Context, c *domain.Campaign) (
 	c.RewardValue = rv.Float64
 	c.MinBillAmount = mb.Float64
 	c.TargetAudience = res.TargetAudience
+	c.BannerURL = res.BannerUrl
 	c.StartDate = res.StartDate
 	c.EndDate = res.EndDate
 	c.IsActive = res.IsActive
@@ -85,6 +88,7 @@ func (r *CampaignRepo) GetCampaignsByStoreID(ctx context.Context, storeID uuid.U
 			RewardValue:    rv.Float64,
 			MinBillAmount:  mb.Float64,
 			TargetAudience: c.TargetAudience,
+			BannerURL:      c.BannerUrl,
 			StartDate:      c.StartDate,
 			EndDate:        c.EndDate,
 			IsActive:       c.IsActive,
@@ -114,6 +118,7 @@ func (r *CampaignRepo) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.U
 			RewardValue:    rv.Float64,
 			MinBillAmount:  mb.Float64,
 			TargetAudience: c.TargetAudience,
+			BannerURL:      c.BannerUrl,
 			StartDate:      c.StartDate,
 			EndDate:        c.EndDate,
 			IsActive:       c.IsActive,
@@ -141,6 +146,7 @@ func (r *CampaignRepo) GetCampaignByID(ctx context.Context, id uuid.UUID) (*doma
 		RewardValue:    rv.Float64,
 		MinBillAmount:  mb.Float64,
 		TargetAudience: res.TargetAudience,
+		BannerURL:      res.BannerUrl,
 		StartDate:      res.StartDate,
 		EndDate:        res.EndDate,
 		IsActive:       res.IsActive,

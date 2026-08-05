@@ -225,9 +225,9 @@ func (r *SubscriptionRepo) initializeStoreSubscription(ctx context.Context, stor
 	}, nil
 }
 
-// UpdateStorePlan executes an atomic database transaction that updates the merchant's subscription tier,
-// synchronizes the core store record, and logs an immutable audit trail entry for billing compliance.
-func (r *SubscriptionRepo) UpdateStorePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string, reason string) (*domain.MerchantSubscription, error) {
+// UpdateStorePlan executes an atomic database transaction that updates the merchant's subscription tier
+// and synchronizes the core store record.
+func (r *SubscriptionRepo) UpdateStorePlan(ctx context.Context, storeID uuid.UUID, newPlanCode string) (*domain.MerchantSubscription, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin subscription update tx: %w", err)
@@ -286,21 +286,6 @@ func (r *SubscriptionRepo) UpdateStorePlan(ctx context.Context, storeID uuid.UUI
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sync store plan enum: %w", err)
-	}
-
-	// 4. Record immutable audit log entry
-	if reason == "" {
-		reason = "user_requested"
-	}
-	_, err = qTx.CreateSubscriptionChangeLog(ctx, generated.CreateSubscriptionChangeLogParams{
-		ID:           uuid.New(),
-		StoreID:      storeID,
-		OldPlanCode:  oldPlanCode,
-		NewPlanCode:  newPlanCode,
-		ChangeReason: reason,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("insert subscription change log: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -13,10 +13,17 @@ type ServerConfig struct {
 	HTTPAddr string `mapstructure:"http_addr"`
 }
 
+type RazorpayConfig struct {
+	KeyID         string `mapstructure:"key_id"`
+	KeySecret     string `mapstructure:"key_secret"`
+	WebhookSecret string `mapstructure:"webhook_secret"`
+}
+
 type Config struct {
 	Env      string
 	Server   ServerConfig `mapstructure:"server"`
 	Database sharedconfig.DatabaseConfig
+	Razorpay RazorpayConfig
 }
 
 func LoadConfig() (*Config, error) {
@@ -44,6 +51,10 @@ func LoadConfig() (*Config, error) {
 
 	cfg.Database = sharedconfig.LoadDatabaseConfig(v, "merchant")
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
+
+	cfg.Razorpay.KeyID = sharedconfig.Get("RAZORPAY_KEY_ID", "")
+	cfg.Razorpay.KeySecret = sharedconfig.Get("RAZORPAY_KEY_SECRET", "")
+	cfg.Razorpay.WebhookSecret = sharedconfig.Get("RAZORPAY_WEBHOOK_SECRET", "")
 
 	return &cfg, nil
 }

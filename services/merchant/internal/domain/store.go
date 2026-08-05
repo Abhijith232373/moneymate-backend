@@ -22,6 +22,9 @@ type Store struct {
 	TaxID             *string
 	RegisteredAddress string
 	DisplayID         string
+	VPA               string
+	QRCodeBase64      string
+	PasswordHash      string
 	Status            string
 	Plan              string
 	LogoURL           string
@@ -45,6 +48,7 @@ type MerchantRepository interface {
 	RegisterStore(ctx context.Context, store *Store) (*Store, error)
 	SubmitKYC(ctx context.Context, kyc *KYCDocument) error
 	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (*Store, error)
+	GetStoreByEmail(ctx context.Context, email string) (*Store, error)
 	UpdateStoreStatus(ctx context.Context, storeID uuid.UUID, status string) error
 	GetPendingStores(ctx context.Context) ([]*Store, error)
 	GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUID) (*Store, error)
