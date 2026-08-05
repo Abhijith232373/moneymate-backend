@@ -3,9 +3,45 @@ on:
   push:
     branches: [main]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/moneymate
+
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, gateway, merchant]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./services/${{ matrix.service }}/Dockerfile
+          target: prod
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -16,4 +52,6 @@ jobs:
           script: |
             cd /opt/moneymate
             git pull origin main
-            docker compose -f docker-compose.prod.yml up -d --build
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
