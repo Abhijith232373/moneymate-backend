@@ -4,7 +4,7 @@ server:
 
 services:
   auth_addr: "localhost:8081"           
-  merch_addr: "localhost:9092"            
+  merch_addr: "merchant:9092"          
 
 redis:
   address: "localhost:6379"

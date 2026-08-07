@@ -39,12 +39,13 @@ func Build(cfg *config.Config) (*App, error) {
 	}
 
 	migrationDSN := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=merchant",
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=merchant",
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.Host,
 		cfg.Database.Port,
 		cfg.Database.Name,
+		cfg.Database.SslMode,
 	)
 	if err := postgres.RunMigrations(migrationDSN, cfg.Database.MigrationsPath); err != nil {
 		return nil, fmt.Errorf("run migrations: %w", err)
@@ -142,9 +143,6 @@ func setupHTTPServer(handler *transporthttp.MerchantHandler, campaignHandler *tr
 
 	return server
 }
-
-
-
 
 func (a *App) Run() error {
 	// Start HTTP server

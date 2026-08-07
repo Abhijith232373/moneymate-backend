@@ -8,6 +8,13 @@ import (
 func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler, rh *RewardHandler, sh *SubscriptionHandler, kh *KYCHandler, dh *DashboardHandler, wh *WalletHandler, eh *EarningsHandler, authMiddleware fiber.Handler) {
 	merchant := router.Group("/merchant")
 
+	merchant.Get("/health", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":  "ok",
+			"service": "merchant",
+		})
+	})
+
 	merchant.Post("/register", h.RegisterStore)
 	merchant.Post("/login", h.LoginStore)
 

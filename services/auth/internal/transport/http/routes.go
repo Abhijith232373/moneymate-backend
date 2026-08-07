@@ -24,6 +24,12 @@ func RegisterRoutes(router fiber.Router, h *Handlers, ) {
 
 func registerAuthRoutes(router fiber.Router, h *AuthHandler) {
 	auth := router.Group("/auth")
+	auth.Get("/health", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":  "ok",
+			"service": "auth",
+		})
+	})
 	auth.Post("/login", h.Login)
 	auth.Post("/logout", RequireUserID, h.Logout)
 	auth.Post("/otp/send", h.SendRegistrationOTP)
