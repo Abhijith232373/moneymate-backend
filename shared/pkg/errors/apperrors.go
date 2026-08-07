@@ -15,7 +15,7 @@ var (
 	ErrAlreadyExists     = errors.New("already exists")
 	ErrInvalidInput      = errors.New("invalid input")
 	ErrUnauthorized      = errors.New("you are unauthorized, please login")
-	ErrForbidden         = errors.New("forbidden")
+	ErrForbidden         = errors.New("you do not own this account")
 	ErrInternal          = errors.New("internal server error")
 	ErrDependencyFailure = errors.New("dependency failure")
 	ErrBadRequest        = errors.New("bad request")
@@ -31,7 +31,7 @@ var (
 	ErrOTPInvalid        = errors.New("otp invalid")
 	ErrOTPTimout         = errors.New("otp max tries reached")
 	ErrOAuthFailure      = errors.New("oauth authentication failed")
-	 ErrEmailNotVerified = errors.New("email not verified")
+	ErrEmailNotVerified = errors.New("email not verified")
 )
 
 // Financial & Transaction Specific

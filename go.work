@@ -4,5 +4,6 @@ use (
 	./services/auth
 	./services/gateway
 	./services/merchant
+	./services/payment
 	./shared
 )
