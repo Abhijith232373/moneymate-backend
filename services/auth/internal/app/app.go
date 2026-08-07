@@ -271,6 +271,7 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 		RefreshSecret:    cfg.JWT.RefreshSecret,
 		AccessExpiryMins: cfg.JWT.AccessExpiryMinutes,
 		RefreshExpiryHrs: cfg.JWT.RefreshExpiryHours,
+		TxTokenExpirySecs: cfg.JWT.TxTokenExpirySecs,
 	}
 
 	emailCfg := sharedmailer.Config{
@@ -290,6 +291,7 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	userRepo := repo.NewUserRepo(pool)
 	roleRepo := repo.NewRoleRepo(pool)
 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
+	userPinRepo := repo.NewUserPinRepo(pool)
 	store := rediscard.NewStore(redisClient)
 	txMgr := sharedpgxtx.New(pool)
 
@@ -305,11 +307,13 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 	adminRoleUC := usecase.NewAdminRoleUsecase(roleRepo, userRepo, g)
 	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
+	pinUC := usecase.NewPinUsecase(userPinRepo, h)
 
 	return &transporthttp.Handlers{
 		Auth: transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret),
 		Role: transporthttp.NewRoleHandler(adminRoleUC),
 		User: transporthttp.NewUserHandler(adminUserUC),
+		Pin:  transporthttp.NewPinHandler(pinUC, issuer),
 	}
 }
 

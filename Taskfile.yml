@@ -173,7 +173,7 @@ tasks:
       docker run --rm
       -v $(pwd)/services/auth:/src
       -w /src
-      sqlc/sqlc generate
+      sqlc/sqlc generate -f sqlc/sqlc.yaml
 
   sqlc:merchant:
     desc: "Generate SQLC code for merchant service"
@@ -181,7 +181,7 @@ tasks:
       docker run --rm
       -v $(pwd)/services/merchant:/src
       -w /src
-      sqlc/sqlc generate
+      sqlc/sqlc generate -f sqlc/sqlc.yml
 
   sqlc:payment:
     desc: "Generate SQLC code for payment service"
@@ -189,7 +189,7 @@ tasks:
       docker run --rm
       -v $(pwd)/services/payment:/src
       -w /src
-      sqlc/sqlc generate
+      sqlc/sqlc generate -f sqlc/sqlc.yml
 
   proto:gen:
     desc: "Generate gRPC code from proto files for all services"
