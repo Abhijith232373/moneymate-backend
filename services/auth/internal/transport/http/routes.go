@@ -38,6 +38,7 @@ func registerAuthRoutes(router fiber.Router, h *AuthHandler) {
 	internal := router.Group("/internal")
 	internal.Post("/auth/verify-access-token", h.VerifyAccessToken)
 	internal.Post("/auth/verify-transaction-token", h.VerifyTransactionToken)
+	// internal.Post("/auth/verify-pin", h.VerifyPINInternal)
 	internal.Get("/auth/users/:id", h.GetUserByID)
 }
 

@@ -42,10 +42,26 @@ type TokenIssuer interface {
 	IssueRefreshToken(userID uuid.UUID) (token, tokenHash string, expiresAt time.Time, err error)
 }
 
+// type authUsecase struct {
+// 	userRepo         domain.UserRepository
+// 	roleRepo         domain.RoleRepository
+// 	refreshTokenRepo domain.RefreshTokenRepository
+// 	pinRepo          domain.UserPinRepository
+// 	pinUsecase       UserPinUsecase
+// 	store            domain.Store
+// 	tx               domain.TxManager
+// 	hasher           PasswordHasher
+// 	idGen            IDGenerator
+// 	issuer           TokenIssuer
+// 	jwtCfg           jwtutil.Config
+// }
+
 type authUsecase struct {
 	userRepo         domain.UserRepository
 	roleRepo         domain.RoleRepository
 	refreshTokenRepo domain.RefreshTokenRepository
+	pinRepo          domain.UserPinRepository
+	pinUsecase       UserPinUsecase
 	store            domain.Store
 	tx               domain.TxManager
 	hasher           PasswordHasher
@@ -58,6 +74,8 @@ func NewAuthUsecase(
 	userRepo domain.UserRepository,
 	roleRepo domain.RoleRepository,
 	refreshTokenRepo domain.RefreshTokenRepository,
+	pinRepo domain.UserPinRepository,
+	pinUsecase UserPinUsecase,
 	store domain.Store,
 	tx domain.TxManager,
 	hasher PasswordHasher,
@@ -66,15 +84,9 @@ func NewAuthUsecase(
 	jwtCfg jwtutil.Config,
 ) AuthUsecase {
 	return &authUsecase{
-		userRepo:         userRepo,
-		roleRepo:         roleRepo,
-		refreshTokenRepo: refreshTokenRepo,
-		store:            store,
-		tx:               tx,
-		hasher:           hasher,
-		idGen:            idGen,
-		issuer:           issuer,
-		jwtCfg:           jwtCfg,
+		userRepo: userRepo, roleRepo: roleRepo, refreshTokenRepo: refreshTokenRepo,
+		pinRepo: pinRepo, pinUsecase: pinUsecase, store: store, tx: tx,
+		hasher: hasher, idGen: idGen, issuer: issuer, jwtCfg: jwtCfg,
 	}
 }
 
@@ -85,8 +97,11 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 	if email == "" || !strings.Contains(email, "@") {
 		return nil, apperrors.ErrInvalidInput
 	}
-	if err:=validatePassword(req.Password);err!=nil{
-		return nil,err
+	if err := validatePassword(req.Password); err != nil {
+		return nil, err
+	}
+	if len(req.PIN) != 6 {
+		return nil, apperrors.ErrInvalidInput
 	}
 	if req.AccountType != domain.AccountTypeUser && req.AccountType != domain.AccountTypeMerchant &&
 		req.AccountType != domain.AccountTypeAdmin {
@@ -125,10 +140,18 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
+	pinHash, err := u.hasher.Hash(req.PIN)
+	if err != nil {
+		return nil, fmt.Errorf("hash pin: %w", err)
+	}
 
 	userID, err := u.idGen.NewV7()
 	if err != nil {
 		return nil, fmt.Errorf("generate user id: %w", err)
+	}
+	pinID, err := u.idGen.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate pin id: %w", err)
 	}
 
 	handle, err := u.generateHandle(ctx, email)
@@ -147,13 +170,8 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 	}
 
 	user := &domain.User{
-		ID:           userID,
-		Email:        email,
-		Phone:        phonePtr,
-		FullName:     strings.TrimSpace(req.FullName),
-		Handle:       handle,
-		PasswordHash: &passwordHash,
-		Status:       domain.UserStatusActive,
+		ID: userID, Email: email, Phone: phonePtr, FullName: strings.TrimSpace(req.FullName),
+		Handle: handle, PasswordHash: &passwordHash, Status: domain.UserStatusActive,
 	}
 
 	err = u.tx.WithTx(ctx, func(ctx context.Context) error {
@@ -166,25 +184,37 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 		if err := u.roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil); err != nil {
 			return fmt.Errorf("assign role: %w", err)
 		}
+		if err := u.pinRepo.Create(ctx, &domain.UserPin{
+			ID: pinID, UserID: user.ID, PinHash: pinHash,
+		}); err != nil {
+			return fmt.Errorf("create pin: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
 	return &RegisterResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Handle: user.Handle,
-		Status: string(domain.UserStatusActive),
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
+		User: UserSummary{
+			ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
+			Status: string(user.Status), IsEmailVerified: true,
+		},
 	}, nil
 }
 
-// ── Login ─────────────────────────────────────────────────────────
 
+// ── Login ─────────────────────────────────────────────────────────
 func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	email := normalizeEmail(req.Identifier)
-	if email == "" || req.Password == ""  {
+	if email == "" || req.Password == "" || len(req.PIN) != 6 {
 		return nil, apperrors.ErrInvalidInput
 	}
 
@@ -210,52 +240,26 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		return nil, apperrors.ErrForbidden
 	}
 
-	roles, tokenVersion, err := parallelrunners.Query2(ctx,
-		func(ctx context.Context) ([]domain.Role, error) { return u.roleRepo.GetUserRoles(ctx, user.ID) },
-		func(ctx context.Context) (int64, error) { return u.userRepo.GetTokenVersion(ctx, user.ID) },
-	)
-	if err != nil {
-		return nil, fmt.Errorf("load login context: %w", err)
+	if err := u.pinUsecase.VerifyPIN(ctx, user.ID, VerifyPINRequest{PIN: req.PIN}); err != nil {
+		return nil, err // propagates ErrInvalidInput / ErrForbidden (locked) as-is
 	}
 
-	roleNames := make([]string, len(roles))
-	for i, r := range roles {
-		roleNames[i] = r.Name
-	}
-
-	accessToken, accessExp, err := u.issuer.IssueAccessToken(user.ID, user.Handle, roleNames, tokenVersion)
+	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
 	if err != nil {
-		return nil, fmt.Errorf("issue access token: %w", err)
-	}
-	refreshToken, refreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID)
-	if err != nil {
-		return nil, fmt.Errorf("issue refresh token: %w", err)
-	}
-
-	refreshID, err := u.idGen.NewV7()
-	if err != nil {
-		return nil, fmt.Errorf("generate refresh token id: %w", err)
-	}
-	if err := u.refreshTokenRepo.Create(ctx, &domain.RefreshToken{
-		ID:        refreshID,
-		UserID:    user.ID,
-		TokenHash: refreshHash,
-		ExpiresAt: refreshExp,
-	}); err != nil {
-		return nil, fmt.Errorf("persist refresh token: %w", err)
+		return nil, err
 	}
 
 	return &LoginResponse{
-		AccessToken:      accessToken,
-		RefreshToken:     refreshToken,
-		AccessExpiresAt:  accessExp,
+		AccessToken: accessToken,
+		RefreshToken: refreshToken,
+		AccessExpiresAt: accessExp,
 		RefreshExpiresAt: refreshExp,
 		User: UserSummary{
-			ID:              user.ID,
-			Email:           user.Email,
-			Handle:          user.Handle,
-			FullName:        user.FullName,
-			Status:          string(user.Status),
+			ID: user.ID,
+			Email: user.Email,
+			Handle: user.Handle, 
+			FullName: user.FullName,
+			Status: string(user.Status), 
 			IsEmailVerified: user.IsEmailVerified,
 		},
 	}, nil
@@ -498,4 +502,39 @@ func constantTimeEqual(a, b string) bool {
 
 func hashTokenForLookup(raw string) string {
     return jwtutil.HashToken(raw)
+}
+
+func (u *authUsecase) issueAndPersistTokens(ctx context.Context, user *domain.User) (accessToken, refreshToken string, accessExp, refreshExp time.Time, err error) {
+	roles, tokenVersion, err := parallelrunners.Query2(ctx,
+		func(ctx context.Context) ([]domain.Role, error) { return u.roleRepo.GetUserRoles(ctx, user.ID) },
+		func(ctx context.Context) (int64, error) { return u.userRepo.GetTokenVersion(ctx, user.ID) },
+	)
+	if err != nil {
+		return "", "", time.Time{}, time.Time{}, fmt.Errorf("load token context: %w", err)
+	}
+	roleNames := make([]string, len(roles))
+	for i, r := range roles {
+		roleNames[i] = r.Name
+	}
+
+	accessToken, accessExp, err = u.issuer.IssueAccessToken(user.ID, user.Handle, roleNames, tokenVersion)
+	if err != nil {
+		return "", "", time.Time{}, time.Time{}, fmt.Errorf("issue access token: %w", err)
+	}
+	var refreshHash string
+	refreshToken, refreshHash, refreshExp, err = u.issuer.IssueRefreshToken(user.ID)
+	if err != nil {
+		return "", "", time.Time{}, time.Time{}, fmt.Errorf("issue refresh token: %w", err)
+	}
+
+	refreshID, err := u.idGen.NewV7()
+	if err != nil {
+		return "", "", time.Time{}, time.Time{}, fmt.Errorf("generate refresh token id: %w", err)
+	}
+	if err := u.refreshTokenRepo.Create(ctx, &domain.RefreshToken{
+		ID: refreshID, UserID: user.ID, TokenHash: refreshHash, ExpiresAt: refreshExp,
+	}); err != nil {
+		return "", "", time.Time{}, time.Time{}, fmt.Errorf("persist refresh token: %w", err)
+	}
+	return accessToken, refreshToken, accessExp, refreshExp, nil
 }

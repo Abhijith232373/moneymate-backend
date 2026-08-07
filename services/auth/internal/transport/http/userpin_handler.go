@@ -93,3 +93,25 @@ func (h *UserPinHandler) VerifyPIN(c fiber.Ctx) error {
 		"message": "PIN verified successfully",
 	})
 }
+
+func (h *UserPinHandler) VerifyPINInternal(c fiber.Ctx) error {
+	var req verifyPINRequest // {UserID string, PIN string}
+	if err := c.Bind().Body(&req); err != nil {
+		appErr := apperrors.NewAppError(fiber.StatusBadRequest, "INVALID_INPUT", "Invalid request body", err)
+		return c.Status(appErr.StatusCode).JSON(appErr)
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		appErr := apperrors.NewAppError(fiber.StatusBadRequest, "INVALID_INPUT", "Invalid user ID", err)
+		return c.Status(appErr.StatusCode).JSON(appErr)
+	}
+
+	ucReq := usecase.VerifyPINRequest{PIN: req.PIN}
+	if err := h.usecase.VerifyPIN(c.Context(), userID, ucReq); err != nil {
+		appErr := apperrors.ParseError(err)
+		return c.Status(appErr.StatusCode).JSON(appErr)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"valid": true})
+}

@@ -1,154 +1,4 @@
-// package app
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"log"
-
-// 	"github.com/gofiber/fiber/v3"
-// 	"github.com/gofiber/fiber/v3/middleware/cors"
-// 	"github.com/gofiber/fiber/v3/middleware/recover"
-// 	"github.com/jackc/pgx/v5/pgxpool"
-// 	"github.com/redis/go-redis/v9"
-
-// 	"github.com/moneymate-2026/moneymate-backend/auth/config"
-// 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres"
-// 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres/repo"
-// 	rediscard "github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/redis"
-// 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/hasher"
-// 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/idgen"
-// 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/mailer"
-// 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/tokenissuer"
-// 	transporthttp "github.com/moneymate-2026/moneymate-backend/auth/internal/transport/http"
-// 	usecase "github.com/moneymate-2026/moneymate-backend/auth/internal/usecases"
-// 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
-// 	sharedmailer "github.com/moneymate-2026/moneymate-backend/shared/pkg/mailer"
-// 	sharedpgxtx "github.com/moneymate-2026/moneymate-backend/shared/pkg/pgxtx"
-// )
-
-// type App struct {
-// 	Server      *fiber.App
-// 	DB          *pgxpool.Pool
-// 	RedisClient *redis.Client
-// 	Config      *config.Config
-// }
-
-// func Build(cfg *config.Config) (*App, error) {
-
-// 	pool, err := postgres.ConnectDB(context.Background(), cfg.Database.DSN)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	dsn := fmt.Sprintf(
-// 		"postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=auth",
-// 		cfg.Database.User,
-// 		cfg.Database.Password,
-// 		cfg.Database.Host,
-// 		cfg.Database.Port,
-// 		cfg.Database.Name,
-// 	)
-// 	err = postgres.RunMigrations(dsn, cfg.Database.MigrationsPath)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("run migrations: %w", err)
-// 	}
-
-// 	redisClient, err := setupRedis(cfg)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	authHandler := setupDependencies(pool, redisClient, cfg)
-
-// 	server := setupServer(cfg, authHandler)
-
-// 	return &App{
-// 		Server:      server,
-// 		DB:          pool,
-// 		RedisClient: redisClient,
-// 		Config:      cfg,
-// 	}, nil
-// }
-
-// func (a *App) Close() {
-// 	if a.DB != nil {
-// 		a.DB.Close()
-// 	}
-// 	if a.RedisClient != nil {
-// 		a.RedisClient.Close()
-// 	}
-// }
-
-// func setupRedis(cfg *config.Config) (*redis.Client, error) {
-// 	return rediscard.NewClient(rediscard.Config{
-// 		Addr:     cfg.Redis.Addr,
-// 		Password: cfg.Redis.Password,
-// 		DB:       0,
-// 	})
-// }
-
-// func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config) *transporthttp.AuthHandler {
-// 	jwtCfg := sharedjwt.Config{
-// 		AccessSecret:     cfg.JWT.AccessSecret,
-// 		RefreshSecret:    cfg.JWT.RefreshSecret,
-// 		AccessExpiryMins: cfg.JWT.AccessExpiryMinutes,
-// 		RefreshExpiryHrs: cfg.JWT.RefreshExpiryHours,
-// 	}
-
-// 	smtpCfg := sharedmailer.Config{
-// 		Host:        cfg.SMTP.Host,
-// 		Port:        cfg.SMTP.Port,
-// 		Username:    cfg.SMTP.Username,
-// 		Password:    cfg.SMTP.Password,
-// 		FromAddress: cfg.SMTP.FromAddress,
-// 		FromName:    cfg.SMTP.FromName,
-// 	}
-
-// 	h := hasher.New()
-// 	g := idgen.New()
-// 	issuer := tokenissuer.New(jwtCfg)
-// 	mailerClient := sharedmailer.New(smtpCfg)
-// 	otpMailer := mailer.NewOtpMail(mailerClient)
-
-// 	userRepo := repo.NewUserRepo(pool)
-// 	roleRepo := repo.NewRoleRepo(pool)
-// 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
-// 	store := rediscard.NewStore(redisClient)
-// 	txMgr := sharedpgxtx.New(pool)
-
-// 	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, store, txMgr, h, g, issuer, jwtCfg)
-
-// 	otpMailerIface := usecase.EmailSender(otpMailer)
-// 	if cfg.Env == "dev" {
-// 		otpMailerIface = mailer.NewDevOtpMail()
-// 		log.Println("[DEV MODE] OTP codes will be logged to console instead of sent via email")
-// 	}
-// 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
-
-// 	return transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret)
-// }
-
-// func setupServer(cfg *config.Config, authHandler *transporthttp.AuthHandler) *fiber.App {
-// 	server := fiber.New(fiber.Config{
-// 		ReadTimeout:  cfg.Server.ReadTimeout,
-// 		WriteTimeout: cfg.Server.WriteTimeout,
-// 		AppName:      "auth-service",
-// 	})
-
-// 	server.Use(recover.New())
-// 	server.Use(cors.New(cors.Config{
-// 		AllowOrigins: []string{"*"},
-// 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-// 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Device-Id"},
-// 	}))
-
-// 	server.Get("/health", func(c fiber.Ctx) error {
-// 		return c.JSON(fiber.Map{"status": "ok", "service": "auth"})
-// 	})
-
-// 	noopAuth := func(c fiber.Ctx) error { return c.Next() }
-// 	transporthttp.RegisterRoutes(server, authHandler, noopAuth)
-
-//		return server
-//	}
 package app
 
 import (
@@ -264,7 +114,6 @@ func setupRedis(cfg *config.Config) (*redis.Client, error) {
 		DB:       0,
 	})
 }
-
 func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config) *transporthttp.Handlers {
 	jwtCfg := sharedjwt.Config{
 		AccessSecret:     cfg.JWT.AccessSecret,
@@ -290,11 +139,13 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	userRepo := repo.NewUserRepo(pool)
 	roleRepo := repo.NewRoleRepo(pool)
 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
+	pinRepo := repo.NewUserPinRepo(pool) // NEW
 	store := rediscard.NewStore(redisClient)
 	txMgr := sharedpgxtx.New(pool)
 
 	// Usecases
-	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, store, txMgr, h, g, issuer, jwtCfg)
+	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g) // NEW — built first, Login/Register need it
+	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg) // CHANGED — two new args
 
 	otpMailerIface := usecase.EmailSender(otpMailer)
 	if cfg.Env == "dev" {
@@ -307,9 +158,10 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
 
 	return &transporthttp.Handlers{
-		Auth: transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret),
-		Role: transporthttp.NewRoleHandler(adminRoleUC),
-		User: transporthttp.NewUserHandler(adminUserUC),
+		Auth:    transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret),
+		Role:    transporthttp.NewRoleHandler(adminRoleUC),
+		User:    transporthttp.NewUserHandler(adminUserUC),
+		UserPin: transporthttp.NewUserPinHandler(pinUC), // NEW
 	}
 }
 

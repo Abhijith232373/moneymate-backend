@@ -45,6 +45,7 @@ func (h *AuthHandler) Register(accountType domain.AccountType) fiber.Handler {
 			Phone:       req.Phone,
 			FullName:    req.FullName,
 			Password:    req.Password,
+			PIN: req.PIN,
 			AccountType: accountType,
 		}
 
@@ -69,6 +70,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	ucReq := usecase.LoginRequest{
 		Identifier: req.Email,
 		Password:   req.Password,
+		PIN: req.PIN,
 		UserAgent:  c.Get("User-Agent"),
 		IPAddress:  c.IP(),
 	}
