@@ -48,6 +48,13 @@ var(
     ErrInvalidToken = errors.New("invalid token")
 )
 
+// PIN & transaction auth
+var (
+	ErrPinNotSet  = errors.New("no transaction pin set")
+	ErrInvalidPIN = errors.New("invalid transaction pin")
+	ErrPinLocked  = errors.New("transaction pin is temporarily locked")
+)
+
 // AppError represents a structured HTTP error safely returned to the frontend.
 type AppError struct {
 	StatusCode int    `json:"-"`      
@@ -153,6 +160,15 @@ func ParseError(err error) *AppError {
 		return NewAppError(http.StatusUnauthorized, "UNAUTHORIZED", "Please log in to continue.", err)
 	case errors.Is(err, ErrEmailNotVerified):
     return NewAppError(http.StatusForbidden, "EMAIL_NOT_VERIFIED", "Please verify your email before completing registration.", err)
+
+	case errors.Is(err, ErrPinLocked):
+		return NewAppError(http.StatusTooManyRequests, "PIN_LOCKED", "Too many failed attempts. Try again in 15 minutes.", err)
+	case errors.Is(err, ErrPinNotSet):
+		return NewAppError(http.StatusBadRequest, "PIN_NOT_SET", "Set a transaction PIN first.", err)
+	case errors.Is(err, ErrInvalidPIN):
+		return NewAppError(http.StatusBadRequest, "INVALID_PIN", "Incorrect transaction PIN.", err)
+	case errors.Is(err, ErrForbidden):
+		return NewAppError(http.StatusForbidden, "FORBIDDEN", "You do not have access to this resource.", err)
 
 	default:
 		return NewAppError(http.StatusInternalServerError, "INTERNAL_ERROR", "Something went wrong on our end. Please try again later.", err)

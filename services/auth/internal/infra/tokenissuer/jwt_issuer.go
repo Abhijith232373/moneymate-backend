@@ -42,3 +42,20 @@ func (i *Issuer) IssueRefreshToken(userID uuid.UUID) (token, tokenHash string, e
     }
     return token, tokenHash, expiresAt, nil
 }
+
+// IssueTransactionToken mints a short-lived token (default 60s) usable for
+// a single high-value payment call. It is signed with the access secret so
+// payment-svc can verify it with the same key it uses for access tokens.
+func (i *Issuer) IssueTransactionToken(userID uuid.UUID) (string, time.Time, error) {
+    expiry := i.cfg.TxTokenExpirySecs
+    if expiry == 0 {
+        expiry = 60
+    }
+    token, err := jwtutil.GenerateTransactionToken(jwtutil.TransactionTokenParams{
+        UserID: userID.String(),
+    }, i.cfg)
+    if err != nil {
+        return "", time.Time{}, err
+    }
+    return token, time.Now().Add(time.Duration(expiry) * time.Second), nil
+}
