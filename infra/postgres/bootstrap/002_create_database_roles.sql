@@ -22,3 +22,8 @@ PASSWORD 'rewards_password';
 CREATE ROLE automation_user
 LOGIN
 PASSWORD 'automation_password';
+
+-- Payment Service
+CREATE ROLE payment_user
+LOGIN
+PASSWORD 'payment_password';
