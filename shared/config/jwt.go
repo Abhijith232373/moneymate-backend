@@ -7,6 +7,7 @@ type JWTConfig struct {
 	RefreshExpiryHours  int
 	AccessSecret        string
 	RefreshSecret       string
+	TxTokenExpirySecs   int
 }
 
 func LoadJWTConfig(v *viper.Viper) JWTConfig {
@@ -15,6 +16,7 @@ func LoadJWTConfig(v *viper.Viper) JWTConfig {
 		RefreshExpiryHours:  v.GetInt("jwt.refresh_expiry_hours"),
 		AccessSecret:        MustGet("JWT_ACCESS_SECRET"),
 		RefreshSecret:       MustGet("JWT_REFRESH_SECRET"),
+		TxTokenExpirySecs:   v.GetInt("jwt.tx_token_expiry_secs"),
 	}
 }
 

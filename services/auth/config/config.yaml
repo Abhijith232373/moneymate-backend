@@ -25,6 +25,7 @@ otp:
 jwt:
   access_expiry_minutes: 15
   refresh_expiry_hours: 720
+  tx_token_expiry_secs: 60
 
 smtp:
   host: "smtp.resend.com"   
