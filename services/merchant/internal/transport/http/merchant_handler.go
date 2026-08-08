@@ -202,6 +202,7 @@ func (h *MerchantHandler) GetProfile(c fiber.Ctx) error {
 			VPA:          store.VPA,
 			QRCodeBase64: store.QRCodeBase64,
 			Plan:         store.Plan,
+			CreatedAt:    store.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		},
 	})
 }
@@ -270,6 +271,7 @@ func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
 			VPA:          store.VPA,
 			QRCodeBase64: store.QRCodeBase64,
 			Plan:         store.Plan,
+			CreatedAt:    store.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		},
 	})
 }

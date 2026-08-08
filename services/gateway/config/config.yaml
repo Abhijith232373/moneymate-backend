@@ -3,18 +3,8 @@ server:
   environment: "development"
 
 services:
-  auth_addr: "localhost:8081"
-  downstream:
-    payment: "localhost:9092"
-    merchant: "localhost:9092"
-    campaign: "localhost:9094"
-    debt: "localhost:9095"
-    pod: "localhost:9096"
-    scheduler: "localhost:9097"
-    referral: "localhost:9098"
-    rewards: "localhost:9099"
-    routing: "localhost:9100"
-    notification: "localhost:9101"
+  auth_addr: "localhost:8081"           
+  merch_addr: "merchant:9092"          
 
 redis:
   address: "localhost:6379"

@@ -15,6 +15,7 @@ type ServerConfig struct {
 
 type ServicesConfig struct {
 	AuthAddr   string            `mapstructure:"auth_addr"`
+	MerchantAddr string			`mapstructure:"merch_addr"`
 	Downstream map[string]string `mapstructure:"downstream"`
 }
 
@@ -68,6 +69,7 @@ func LoadConfig() (*Config, error) {
 	v.BindEnv("redis.address", "REDIS_ADDRESS")
 	v.BindEnv("redis.password", "REDIS_PASSWORD")
 	v.BindEnv("services.auth_addr", "SERVICES_AUTH_ADDR")
+	v.BindEnv("services.merch_addr", "SERVICES_MERCH_ADDR")
 	v.BindEnv("server.port", "SERVER_PORT")
 
 	if err := v.ReadInConfig(); err != nil {

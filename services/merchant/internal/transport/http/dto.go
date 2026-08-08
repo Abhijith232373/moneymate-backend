@@ -226,6 +226,7 @@ type ProfileResponse struct {
 	VPA          string `json:"vpa"`
 	QRCodeBase64 string `json:"qr_code_base64"`
 	Plan         string `json:"plan"`
+	CreatedAt    string `json:"createdAt"`
 }
 
 // UpdateProfileRequest represents the incoming payload from the merchant Settings/Profile page form.

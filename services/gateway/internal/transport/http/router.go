@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
-
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/middlewares"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
 	ws "github.com/moneymate-2026/moneymate-backend/gateway/internal/websocket"
@@ -17,6 +16,7 @@ func RegisterRoutes(
 	registry *proxy.ServiceRegistry,
 	hub *ws.Hub,
 	authAddr string,
+	merchantAddr string,
 ) {
 	api := app.Group("/api/v1")
 
@@ -26,9 +26,11 @@ func RegisterRoutes(
 			"service": "gateway",
 		})
 	})
+	
 
 	// ── User Auth ──────────────────────────────────────────────────
 	userAuth := api.Group("/auth")
+	userAuth.Get("/health",  proxy.AuthProxy(authAddr, "/auth/health"))
 	userAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/user/register"))
 	userAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
 	userAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
@@ -47,6 +49,7 @@ func RegisterRoutes(
 
 
 	// ── Admin ─────────────────────────────────────────────────
+	// api.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
 	admin := api.Group("/admin")
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
@@ -63,14 +66,6 @@ func RegisterRoutes(
 			},
 		})
 	})
-	admin.Get("/merchants", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": true,
-			"message": "merchant list placeholder",
-			"data":    []interface{}{},
-		})
-	})
-	admin.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 		// admin user management
 		adminUser:=admin.Group("/users")
@@ -91,6 +86,39 @@ func RegisterRoutes(
 			adminRole.Delete("/users/:userId/roles/:roleId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId/roles/:roleId"))//remove role
 			adminRole.Get("/users/:userId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId"))//get user role
 
+		// admin merchant management
+		adminMerchant := admin.Group("/merchants")
+		adminMerchant.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
+		adminMerchant.Get("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
+		adminMerchant.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id/status"))
+		adminMerchant.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
+
+		adminMerchant.Get("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/campaigns"))
+		adminMerchant.Get("/:store_id/kyc", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc"))
+		adminMerchant.Put("/:store_id/kyc/verify", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc/verify"))
+		adminMerchant.Put("/:store_id/subscription", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/subscription"))
+
+		// admin campaigns management
+		adminCampaign := admin.Group("/campaigns")
+		adminCampaign.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/campaigns"))
+		adminCampaign.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id/status"))
+		adminCampaign.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id"))
+
+		// admin kyc management
+		adminKYC := admin.Group("/kyc")
+		adminKYC.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/kyc"))
+		adminKYC.Get("/:store_id", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id"))
+		adminKYC.Put("/:store_id/verify", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id/verify"))
+
+		// admin rewards management
+		adminRewards := admin.Group("/rewards")
+		adminRewards.Get("/history", proxy.MerchantProxy(merchantAddr, "/admin/rewards/history"))
+		adminRewards.Get("/summary", proxy.MerchantProxy(merchantAddr, "/admin/rewards/summary"))
+
+		// admin subscriptions management
+		adminSubscriptions := admin.Group("/subscriptions")
+		adminSubscriptions.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/subscriptions"))
+
 	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
 	secure.Use(authMiddleware)
@@ -104,19 +132,80 @@ func RegisterRoutes(
 		})
 	})
 
-	// ── Merchant (authenticated + role=merchant) ───────────────────
+	secure.Post("/pin", proxy.AuthProxy(authAddr, "/user/pin"))
+	secure.Put("/pin", proxy.AuthProxy(authAddr, "/user/pin"))
+	secure.Post("/pin/verify", proxy.AuthProxy(authAddr, "/user/pin/verify"))
+
+	// ── Merchant (Unauthenticated) ─────────────────────────────────
+	merchantUnauth := api.Group("/merchant")
+	merchantUnauth.Post("/register", proxy.MerchantProxy(merchantAddr, "/merchant/register"))
+	merchantUnauth.Post("/login", proxy.MerchantProxy(merchantAddr, "/merchant/login"))
+
+	// ── Merchant (authenticated + role=merchant/admin) ───────────────────
 	merchant := api.Group("/merchant")
 	merchant.Use(authMiddleware)
-	merchant.Use(middlewares.RequireRole("merchant"))
-	merchant.Get("/dashboard", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"message": "merchant dashboard placeholder",
-		})
-	})
-	
+	merchant.Use(middlewares.RequireRole("merchant", "admin"))
+	merchant.Get("/health", proxy.MerchantProxy(merchantAddr, "/merchant/health"))
+	// The merchant service has its own auth middleware for these routes
+	// so we bypass the gateway's auth middleware here.
+	merchant.Get("/dashboard", proxy.MerchantProxy(merchantAddr, "/merchant/dashboard"))
+	merchant.Get("/:store_id/dashboard", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/dashboard"))
+
+	merchant.Get("/status/:owner_id", proxy.MerchantProxy(merchantAddr, "/merchant/status/:owner_id"))
+	merchant.Get("/pending", proxy.MerchantProxy(merchantAddr, "/merchant/pending"))
+
+	merchant.Get("/profile", proxy.MerchantProxy(merchantAddr, "/merchant/profile"))
+	merchant.Get("/:store_id/profile", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/profile"))
+	merchant.Put("/profile", proxy.MerchantProxy(merchantAddr, "/merchant/profile"))
+	merchant.Put("/:store_id/profile", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/profile"))
+	merchant.Post("/profile", proxy.MerchantProxy(merchantAddr, "/merchant/profile"))
+	merchant.Post("/:store_id/profile", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/profile"))
+
+	merchant.Post("/campaigns", proxy.MerchantProxy(merchantAddr, "/merchant/campaigns"))
+	merchant.Post("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/campaigns"))
+	merchant.Get("/campaigns", proxy.MerchantProxy(merchantAddr, "/merchant/campaigns"))
+	merchant.Get("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/campaigns"))
+	merchant.Put("/campaigns/:id/status", proxy.MerchantProxy(merchantAddr, "/merchant/campaigns/:id/status"))
+	merchant.Put("/:store_id/campaigns/:id/status", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/campaigns/:id/status"))
+
+	merchant.Get("/rewards/summary", proxy.MerchantProxy(merchantAddr, "/merchant/rewards/summary"))
+	merchant.Get("/:store_id/rewards/summary", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/rewards/summary"))
+	merchant.Get("/rewards/history", proxy.MerchantProxy(merchantAddr, "/merchant/rewards/history"))
+	merchant.Get("/:store_id/rewards/history", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/rewards/history"))
+	merchant.Post("/rewards/redeem", proxy.MerchantProxy(merchantAddr, "/merchant/rewards/redeem"))
+	merchant.Post("/:store_id/rewards/redeem", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/rewards/redeem"))
+
+	merchant.Get("/subscriptions/plans", proxy.MerchantProxy(merchantAddr, "/merchant/subscriptions/plans"))
+	merchant.Get("/:store_id/subscriptions/plans", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/subscriptions/plans"))
+	merchant.Get("/subscriptions/current", proxy.MerchantProxy(merchantAddr, "/merchant/subscriptions/current"))
+	merchant.Get("/:store_id/subscriptions/current", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/subscriptions/current"))
+	merchant.Post("/subscriptions/change", proxy.MerchantProxy(merchantAddr, "/merchant/subscriptions/change"))
+	merchant.Post("/:store_id/subscriptions/change", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/subscriptions/change"))
+	merchant.Post("/subscriptions/upgrade/initiate", proxy.MerchantProxy(merchantAddr, "/merchant/subscriptions/upgrade/initiate"))
+	merchant.Post("/:store_id/subscriptions/upgrade/initiate", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/subscriptions/upgrade/initiate"))
+	merchant.Post("/subscriptions/upgrade/verify", proxy.MerchantProxy(merchantAddr, "/merchant/subscriptions/upgrade/verify"))
+	merchant.Post("/:store_id/subscriptions/upgrade/verify", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/subscriptions/upgrade/verify"))
+
+	merchant.Get("/wallet", proxy.MerchantProxy(merchantAddr, "/merchant/wallet"))
+	merchant.Get("/:store_id/wallet", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/wallet"))
+
+	merchant.Get("/earnings", proxy.MerchantProxy(merchantAddr, "/merchant/earnings"))
+	merchant.Get("/:store_id/earnings", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/earnings"))
+	merchant.Post("/earnings/payouts", proxy.MerchantProxy(merchantAddr, "/merchant/earnings/payouts"))
+	merchant.Post("/:store_id/earnings/payouts", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/earnings/payouts"))
+
+	merchant.Get("/kyc", proxy.MerchantProxy(merchantAddr, "/merchant/kyc"))
+	merchant.Get("/:store_id/kyc", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/kyc"))
+	merchant.Get("/kyc/status", proxy.MerchantProxy(merchantAddr, "/merchant/kyc/status"))
+	merchant.Get("/:store_id/kyc/status", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/kyc/status"))
+	merchant.Put("/kyc", proxy.MerchantProxy(merchantAddr, "/merchant/kyc"))
+	merchant.Put("/:store_id/kyc", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/kyc"))
+	merchant.Post("/kyc/update", proxy.MerchantProxy(merchantAddr, "/merchant/kyc/update"))
+	merchant.Post("/:store_id/kyc/update", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/kyc/update"))
+
 
 	// ── Downstream service proxies ─────────────────────────────────
-	downstreamServices := []string{"payment", "merchant", "campaign", "debt", "pod", "scheduler", "referral", "rewards", "routing", "notification"}
+	downstreamServices := []string{"payment", "campaign", "debt", "pod", "scheduler", "referral", "rewards", "routing", "notification"}
 	for _, svc := range downstreamServices {
 		svcName := svc
 		api.All(fmt.Sprintf("/%s/*", svcName), authMiddleware, proxy.ProxyToService(registry, svcName))
