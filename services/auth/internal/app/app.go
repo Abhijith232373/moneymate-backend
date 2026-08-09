@@ -145,8 +145,8 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	txMgr := sharedpgxtx.New(pool)
 
 	// Usecases
-	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g) // NEW — built first, Login/Register need it
-	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg) // CHANGED — two new args
+	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g) 
+	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg) 
 
 	otpMailerIface := usecase.EmailSender(otpMailer)
 	if cfg.Env == "dev" {
@@ -160,10 +160,10 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	// pinUC := usecase.NewPinUsecase(userPinRepo, h)
 
 	return &transporthttp.Handlers{
-		Auth:    transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret),
+		Auth:    transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
 		Role:    transporthttp.NewRoleHandler(adminRoleUC),
 		User:    transporthttp.NewUserHandler(adminUserUC),
-		UserPin: transporthttp.NewUserPinHandler(pinUC), 
+		UserPin: transporthttp.NewUserPinHandler(pinUC, issuer),
 	}
 }
 
@@ -180,12 +180,13 @@ func setupServer(cfg *config.Config, handlers *transporthttp.Handlers, pool *pgx
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Device-Id"},
-	}))
+	}))  
 
 	registerHealthRoutes(server, pool, redisClient)
 
 	// noopAuth := func(c fiber.Ctx) error { return c.Next() }
-	transporthttp.RegisterRoutes(server, handlers)
+	// app.go
+transporthttp.RegisterRoutes(server, handlers, cfg.InternalServiceSecret)
 
 	return server
 }

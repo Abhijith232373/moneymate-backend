@@ -210,7 +210,6 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 	}, nil
 }
 
-
 // ── Login ─────────────────────────────────────────────────────────
 func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	email := normalizeEmail(req.Identifier)
@@ -241,7 +240,7 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	}
 
 	if err := u.pinUsecase.VerifyPIN(ctx, user.ID, VerifyPINRequest{PIN: req.PIN}); err != nil {
-		return nil, err // propagates ErrInvalidInput / ErrForbidden (locked) as-is
+		return nil, err 
 	}
 
 	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
@@ -250,16 +249,16 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	}
 
 	return &LoginResponse{
-		AccessToken: accessToken,
-		RefreshToken: refreshToken,
-		AccessExpiresAt: accessExp,
+		AccessToken:      accessToken,
+		RefreshToken:     refreshToken,
+		AccessExpiresAt:  accessExp,
 		RefreshExpiresAt: refreshExp,
 		User: UserSummary{
-			ID: user.ID,
-			Email: user.Email,
-			Handle: user.Handle, 
-			FullName: user.FullName,
-			Status: string(user.Status), 
+			ID:              user.ID,
+			Email:           user.Email,
+			Handle:          user.Handle,
+			FullName:        user.FullName,
+			Status:          string(user.Status),
 			IsEmailVerified: user.IsEmailVerified,
 		},
 	}, nil
@@ -319,104 +318,104 @@ func (u *authUsecase) Logout(ctx context.Context, req LogoutRequest) error {
 // ── Refresh Token ──────────────────────────────────────────────────
 
 func (u *authUsecase) RefreshToken(ctx context.Context, req RefreshTokenRequest) (*RefreshTokenResponse, error) {
-    if req.RefreshToken == "" {
-        return nil, apperrors.ErrInvalidInput
-    }
+	if req.RefreshToken == "" {
+		return nil, apperrors.ErrInvalidInput
+	}
 
-    // 1. Parse the refresh token JWT
-    claims, err := jwtutil.ParseRefreshToken(req.RefreshToken, u.jwtCfg.RefreshSecret)
-    if err != nil {
-        if err == apperrors.ErrTokenExpired {
-            return nil, apperrors.ErrTokenExpired
-        }
-        return nil, apperrors.ErrInvalidToken
-    }
+	// 1. Parse the refresh token JWT
+	claims, err := jwtutil.ParseRefreshToken(req.RefreshToken, u.jwtCfg.RefreshSecret)
+	if err != nil {
+		if err == apperrors.ErrTokenExpired {
+			return nil, apperrors.ErrTokenExpired
+		}
+		return nil, apperrors.ErrInvalidToken
+	}
 
-    // 2. Look up the token hash in DB
-    hash := jwtutil.HashToken(req.RefreshToken)
-    stored, err := u.refreshTokenRepo.GetByTokenHash(ctx, hash)
-    if err != nil {
-        if err == apperrors.ErrNotFound {
-            return nil, apperrors.ErrInvalidToken
-        }
-        return nil, fmt.Errorf("lookup refresh token: %w", err)
-    }
+	// 2. Look up the token hash in DB
+	hash := jwtutil.HashToken(req.RefreshToken)
+	stored, err := u.refreshTokenRepo.GetByTokenHash(ctx, hash)
+	if err != nil {
+		if err == apperrors.ErrNotFound {
+			return nil, apperrors.ErrInvalidToken
+		}
+		return nil, fmt.Errorf("lookup refresh token: %w", err)
+	}
 
-    // 3. Check if revoked
-    if stored.RevokedAt != nil {
-        return nil, apperrors.ErrInvalidToken
-    }
+	// 3. Check if revoked
+	if stored.RevokedAt != nil {
+		return nil, apperrors.ErrInvalidToken
+	}
 
-    // 4. Check if expired
-    if time.Now().After(stored.ExpiresAt) {
-        return nil, apperrors.ErrTokenExpired
-    }
+	// 4. Check if expired
+	if time.Now().After(stored.ExpiresAt) {
+		return nil, apperrors.ErrTokenExpired
+	}
 
-    // 5. Parse user ID from claims
-    userID, err := uuid.Parse(claims.UserID)
-    if err != nil {
-        return nil, apperrors.ErrInvalidToken
-    }
+	// 5. Parse user ID from claims
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return nil, apperrors.ErrInvalidToken
+	}
 
-    // 6. Fetch user + roles + token version
-    user, err := u.userRepo.GetByID(ctx, userID)
-    if err != nil {
-        return nil, apperrors.ErrInvalidToken
-    }
+	// 6. Fetch user + roles + token version
+	user, err := u.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, apperrors.ErrInvalidToken
+	}
 
-    if user.Status != domain.UserStatusActive {
-        return nil, apperrors.ErrForbidden
-    }
+	if user.Status != domain.UserStatusActive {
+		return nil, apperrors.ErrForbidden
+	}
 
-    roles, tokenVersion, err := parallelrunners.Query2(ctx,
-        func(ctx context.Context) ([]domain.Role, error) { return u.roleRepo.GetUserRoles(ctx, userID) },
-        func(ctx context.Context) (int64, error) { return u.userRepo.GetTokenVersion(ctx, userID) },
-    )
-    if err != nil {
-        return nil, fmt.Errorf("load refresh context: %w", err)
-    }
+	roles, tokenVersion, err := parallelrunners.Query2(ctx,
+		func(ctx context.Context) ([]domain.Role, error) { return u.roleRepo.GetUserRoles(ctx, userID) },
+		func(ctx context.Context) (int64, error) { return u.userRepo.GetTokenVersion(ctx, userID) },
+	)
+	if err != nil {
+		return nil, fmt.Errorf("load refresh context: %w", err)
+	}
 
-    roleNames := make([]string, len(roles))
-    for i, r := range roles {
-        roleNames[i] = r.Name
-    }
+	roleNames := make([]string, len(roles))
+	for i, r := range roles {
+		roleNames[i] = r.Name
+	}
 
-    // 7. Issue new access token
-    accessToken, accessExp, err := u.issuer.IssueAccessToken(user.ID, user.Handle, roleNames, tokenVersion)
-    if err != nil {
-        return nil, fmt.Errorf("issue access token: %w", err)
-    }
+	// 7. Issue new access token
+	accessToken, accessExp, err := u.issuer.IssueAccessToken(user.ID, user.Handle, roleNames, tokenVersion)
+	if err != nil {
+		return nil, fmt.Errorf("issue access token: %w", err)
+	}
 
-    // 8. Issue new refresh token (rotation)
-    newRefreshToken, newRefreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID)
-    if err != nil {
-        return nil, fmt.Errorf("issue refresh token: %w", err)
-    }
+	// 8. Issue new refresh token (rotation)
+	newRefreshToken, newRefreshHash, refreshExp, err := u.issuer.IssueRefreshToken(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("issue refresh token: %w", err)
+	}
 
-    // 9. Revoke old refresh token
-    if err := u.refreshTokenRepo.Revoke(ctx, hash); err != nil {
-        return nil, fmt.Errorf("revoke old refresh token: %w", err)
-    }
+	// 9. Revoke old refresh token
+	if err := u.refreshTokenRepo.Revoke(ctx, hash); err != nil {
+		return nil, fmt.Errorf("revoke old refresh token: %w", err)
+	}
 
-    // 10. Persist new refresh token
-    refreshID, err := u.idGen.NewV7()
-    if err != nil {
-        return nil, fmt.Errorf("generate refresh token id: %w", err)
-    }
-    if err := u.refreshTokenRepo.Create(ctx, &domain.RefreshToken{
-        ID:        refreshID,
-        UserID:    user.ID,
-        TokenHash: newRefreshHash,
-        ExpiresAt: refreshExp,
-    }); err != nil {
-        return nil, fmt.Errorf("persist refresh token: %w", err)
-    }
+	// 10. Persist new refresh token
+	refreshID, err := u.idGen.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate refresh token id: %w", err)
+	}
+	if err := u.refreshTokenRepo.Create(ctx, &domain.RefreshToken{
+		ID:        refreshID,
+		UserID:    user.ID,
+		TokenHash: newRefreshHash,
+		ExpiresAt: refreshExp,
+	}); err != nil {
+		return nil, fmt.Errorf("persist refresh token: %w", err)
+	}
 
-    return &RefreshTokenResponse{
-        AccessToken:     accessToken,
-        RefreshToken:    newRefreshToken,
-        AccessExpiresAt: accessExp,
-    }, nil
+	return &RefreshTokenResponse{
+		AccessToken:     accessToken,
+		RefreshToken:    newRefreshToken,
+		AccessExpiresAt: accessExp,
+	}, nil
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -438,7 +437,7 @@ func (u *authUsecase) generateHandle(ctx context.Context, email string) (string,
 		}
 
 		candidate := local + suffix + "@moneymate"
-		
+
 		exists, err := u.userRepo.HandleExists(ctx, candidate)
 		if err != nil {
 			return "", err
@@ -472,20 +471,21 @@ func randomAlnum(n int) (string, error) {
 	}
 	return string(b), nil
 }
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 func normalizeEmail(email string) string {
-    return strings.ToLower(strings.TrimSpace(email))
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func validatePassword(pw string) error {
-    if len(pw) < 8 {
-        return apperrors.ErrInvalidPassword
-    }
-    if len(pw) > 256 {
-        return apperrors.ErrInvalidPassword
-    }
-    return nil
+	if len(pw) < 8 {
+		return apperrors.ErrInvalidPassword
+	}
+	if len(pw) > 256 {
+		return apperrors.ErrInvalidPassword
+	}
+	return nil
 }
 
 // func (u *authUsecase) getDummyHash() string {
@@ -496,12 +496,11 @@ func validatePassword(pw string) error {
 // }
 
 func constantTimeEqual(a, b string) bool {
-    return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
-
 func hashTokenForLookup(raw string) string {
-    return jwtutil.HashToken(raw)
+	return jwtutil.HashToken(raw)
 }
 
 func (u *authUsecase) issueAndPersistTokens(ctx context.Context, user *domain.User) (accessToken, refreshToken string, accessExp, refreshExp time.Time, err error) {

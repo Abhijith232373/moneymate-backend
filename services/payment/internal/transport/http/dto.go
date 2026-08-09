@@ -10,7 +10,7 @@ type createWalletRequest struct {
 type transferRequest struct {
 	FromAccountID  string `json:"from_account_id" validate:"required"`
 	ToAccountID    string `json:"to_account_id" validate:"required"`
-	Amount         string `json:"amount" validate:"required"` // rupees, e.g. "250.50"
+	Amount         string `json:"amount" validate:"required"`
 	IdempotencyKey string `json:"idempotency_key" validate:"required"`
 	Description    string `json:"description"`
 }
@@ -20,7 +20,7 @@ type walletResponse struct {
 	UserID   string `json:"user_id"`
 	Type     string `json:"type"`
 	Currency string `json:"currency"`
-	Balance  string `json:"balance"` // rupees, e.g. "1250.50"
+	Balance  string `json:"balance"` 
 }
 
 type transactionResponse struct {

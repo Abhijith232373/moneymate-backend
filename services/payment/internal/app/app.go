@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/moneymate-2026/moneymate-backend/services/payment/config"
+	authclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/authClient"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/postgres/repo"
 	transporthttp "github.com/moneymate-2026/moneymate-backend/services/payment/internal/transport/http"
@@ -25,13 +26,25 @@ type App struct {
 	DB         *pgxpool.Pool
 	HTTPAddr   string
 }
-
 func Build(cfg *config.Config) (*App, error) {
 	ctx := context.Background()
 
 	pool, err := postgres.ConnectDB(ctx, *cfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect db: %w", err)
+	}
+
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=payment",
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.Name,
+		cfg.Database.SslMode,
+	)
+	if err := postgres.RunMigrations(dsn, cfg.Database.MigrationsPath); err != nil {
+		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
 	accountRepo := repo.NewAccountRepo(pool)
@@ -51,7 +64,8 @@ func Build(cfg *config.Config) (*App, error) {
 		RefreshExpiryHrs: cfg.JWT.RefreshExpiryHours,
 	}
 
-	server := setupHTTPServer(walletHandler, transferHandler, jwtCfg)
+	authClient := authclient.New(cfg.AuthServiceURL, cfg.InternalServiceSecret)
+	server := setupHTTPServer(walletHandler, transferHandler, jwtCfg, authClient)
 
 	httpAddr := cfg.Server.HTTPAddr
 	if port := os.Getenv("PORT"); port != "" {
@@ -67,7 +81,8 @@ func Build(cfg *config.Config) (*App, error) {
 	return &App{HTTPServer: server, DB: pool, HTTPAddr: httpAddr}, nil
 }
 
-func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, jwtCfg sharedjwt.Config) *fiber.App {
+
+func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client) *fiber.App {
 	server := fiber.New(fiber.Config{AppName: "payment-service"})
 	server.Use(recover.New())
 	server.Use(cors.New(cors.Config{
@@ -79,8 +94,9 @@ func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.Transfer
 	server.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "service": "payment"})
 	})
+	
 
-	transporthttp.RegisterRoutes(server, wh, th, jwtCfg)
+	transporthttp.RegisterRoutes(server, wh, th, jwtCfg,authClient)
 	return server
 }
 

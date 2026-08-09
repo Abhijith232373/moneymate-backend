@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
+	authclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/authClient"
 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 	response "github.com/moneymate-2026/moneymate-backend/shared/pkg/responses"
 )
@@ -38,22 +39,19 @@ func RequireUserID(cfg sharedjwt.Config) fiber.Handler {
 	}
 }
 
-// RequireTransactionToken verifies the short-lived transaction_token minted
-// by POST /auth/pin/verify. It must be present, valid, unexpired, and its
-// subject must match the already-authenticated user_id from RequireUserID.
-// Apply this ONLY on top of RequireUserID, and ONLY on /payment/transfers.
-func RequireTransactionToken(cfg sharedjwt.Config) fiber.Handler {
+func RequireTransactionToken(authClient *authclient.Client) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		token := c.Get("X-Transaction-Token")
 		if token == "" {
 			return response.Unauthorized(c, "transaction token required")
 		}
-		claims, err := sharedjwt.ParseTransactionToken(token, cfg.AccessSecret)
+		verifiedUserID, err := authClient.VerifyTransactionToken(c.Context(), token, "")
 		if err != nil {
-			return response.Unauthorized(c, "invalid or expired transaction token")
+			return response.Unauthorized(c, "invalid, expired, or already-used transaction token")
 		}
-		userID, _ := c.Locals(localsUserID).(string)
-		if claims.UserID != userID {
+
+		authUserID, _ := c.Locals(localsUserID).(string)
+		if verifiedUserID != authUserID {
 			return response.Forbidden(c, nil, "transaction token does not match authenticated user")
 		}
 		return c.Next()
