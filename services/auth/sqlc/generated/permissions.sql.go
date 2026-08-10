@@ -119,3 +119,28 @@ func (q *Queries) ListPermissions(ctx context.Context) ([]AuthPermission, error)
 	}
 	return items, nil
 }
+
+const updatePermission = `-- name: UpdatePermission :one
+UPDATE auth.permissions
+SET name = $2, description = $3, updated_at = now()
+WHERE id = $1
+RETURNING id, name, description, created_at
+`
+
+type UpdatePermissionParams struct {
+	ID          pgtype.UUID `json:"id"`
+	Name        string      `json:"name"`
+	Description pgtype.Text `json:"description"`
+}
+
+func (q *Queries) UpdatePermission(ctx context.Context, arg UpdatePermissionParams) (AuthPermission, error) {
+	row := q.db.QueryRow(ctx, updatePermission, arg.ID, arg.Name, arg.Description)
+	var i AuthPermission
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
+}

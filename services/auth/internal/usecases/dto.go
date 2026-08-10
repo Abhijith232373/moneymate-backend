@@ -49,6 +49,10 @@ type UserSummary struct {
 	Status          string
 	IsEmailVerified bool
 }
+type AdminLoginRequest struct {
+	Email    string
+	Password string
+}
 
 // ── Logout ────────────────────────────────────────────────────────
 

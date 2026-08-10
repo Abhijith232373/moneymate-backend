@@ -15,6 +15,10 @@ type loginRequest struct {
 	Password string `json:"password" validate:"required"`
 	PIN      string `json:"pin" validate:"required,len=6,numeric"`
 }
+type adminLoginRequest struct{
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
 
 type logoutRequest struct {
 	RefreshToken string `json:"refresh_token"`
@@ -59,6 +63,23 @@ type updateRoleRequest struct {
 type assignRoleRequest struct {
 	UserID string `json:"user_id" validate:"required,uuid"`
 	RoleID string `json:"role_id" validate:"required,uuid"`
+}
+
+//permissions
+
+type createPermissionRequest struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+}
+
+type updatePermissionRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type assignPermissionRequest struct {
+	RoleID       string `json:"role_id" validate:"required"`
+	PermissionID string `json:"permission_id" validate:"required"`
 }
 
 //admin

@@ -7,10 +7,11 @@ import (
 )
 
 type Handlers struct {
-	Auth    *AuthHandler
-	Role    *RoleHandler
-	User    *UserHandler
-	UserPin *UserPinHandler
+	Auth       *AuthHandler
+	Role       *RoleHandler
+	User       *UserHandler
+	UserPin    *UserPinHandler
+	Permission *PermissionHandler
 }
 
 func RegisterRoutes(router fiber.Router, h *Handlers, internalSecret string) {
@@ -18,6 +19,7 @@ func RegisterRoutes(router fiber.Router, h *Handlers, internalSecret string) {
 	registerRoleRoutes(router, h.Role)
 	registerUserRoutes(router, h.User)
 	registerUserPinRoutes(router, h.UserPin)
+	registerPermissionRoutes(router, h.Permission) // NEW
 }
 
 func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret string) {
@@ -28,6 +30,7 @@ func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret stri
 			"service": "auth",
 		})
 	})
+	auth.Post("/admin/login", h.AdminLogin)
 	auth.Post("/login", h.Login)
 	auth.Post("/logout", RequireUserID, h.Logout)
 	auth.Post("/otp/send", h.SendRegistrationOTP)
@@ -68,4 +71,15 @@ func registerUserPinRoutes(router fiber.Router, h *UserPinHandler) {
 	pins.Post("/", h.SetPIN)
 	pins.Put("/", h.UpdatePIN)
 	pins.Post("/verify", h.VerifyPIN)
-}	
+}
+
+func registerPermissionRoutes(router fiber.Router, h *PermissionHandler) {
+	permissions := router.Group("/admin/permissions")
+	permissions.Post("/", h.Create)
+	permissions.Get("/", h.List)
+	permissions.Get("/:id", h.Get)
+	permissions.Delete("/:id", h.Delete)
+	permissions.Post("/assign", h.AssignToRole)
+	permissions.Delete("/roles/:roleId/permissions/:permissionId", h.RemoveFromRole)
+	permissions.Get("/roles/:roleId", h.GetRolePermissions)
+}

@@ -22,6 +22,7 @@ type PermissionRepository interface {
 	GetByName(ctx context.Context, name string) (*Permission, error)
 	List(ctx context.Context) ([]Permission, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	Update(ctx context.Context, permission *Permission) error
 
 	// ── Role-Permission Relationships ─────────────────────────────
 	AssignPermissionToRole(ctx context.Context, roleID, permissionID uuid.UUID) error

@@ -34,10 +34,17 @@ func RegisterRoutes(
 	userAuth.Get("/health",  proxy.AuthProxy(authAddr, "/auth/health"))
 	userAuth.Post("/register", proxy.AuthProxy(authAddr, "/auth/user/register"))
 	userAuth.Post("/login", proxy.AuthProxy(authAddr, "/auth/login"))
+	userAuth.Post("/admin/login", proxy.AuthProxy(authAddr, "/auth/admin/login"))
 	userAuth.Post("/logout", authMiddleware, proxy.AuthProxy(authAddr, "/auth/logout"))
 	userAuth.Post("/otp/send", proxy.AuthProxy(authAddr, "/auth/otp/send"))
 	userAuth.Post("/otp/verify", proxy.AuthProxy(authAddr, "/auth/otp/verify"))
 	userAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+
+	// ── User PIN ──────────────────────────────────────────────────
+	userPin:=api.Group("/pin")
+		userPin.Post("/",  proxy.AuthProxy(authAddr, "/user/pin"))
+		userPin.Put("/",  proxy.AuthProxy(authAddr, "/user/pin"))
+		userPin.Post("/verify",  proxy.AuthProxy(authAddr, "/user/pin"))
 
 	// ── Merchant Auth ──────────────────────────────────────────────
 	merchantAuth := api.Group("/merchant/auth")
@@ -69,6 +76,7 @@ func RegisterRoutes(
 	})
 	admin.Get("/merchants", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
+
 		// admin user management
 		adminUser:=admin.Group("/users")
 			adminUser.Post("/",proxy.AuthProxy(authAddr,"/admin/users"))
@@ -77,6 +85,7 @@ func RegisterRoutes(
 			adminUser.Put("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
 			adminUser.Patch("/:id/status",proxy.AuthProxy(authAddr,"/admin/users/:id/status"))
 			adminUser.Delete("/:id",proxy.AuthProxy(authAddr,"/admin/users/:id"))
+			
 		//admin role management
 		adminRole:=admin.Group("/roles")
 			adminRole.Post("/",proxy.AuthProxy(authAddr,"/admin/roles"))//create role
@@ -87,38 +96,51 @@ func RegisterRoutes(
 			adminRole.Post("/assign",proxy.AuthProxy(authAddr,"/admin/roles/assign"))//assign role
 			adminRole.Delete("/users/:userId/roles/:roleId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId/roles/:roleId"))//remove role
 			adminRole.Get("/users/:userId",proxy.AuthProxy(authAddr,"/admin/roles/users/:userId"))//get user role
-
+		
+			
+		// admin permission management
+		adminPermission := admin.Group("/permissions")
+			adminPermission.Post("/", proxy.AuthProxy(authAddr, "/admin/permissions"))                                          
+			adminPermission.Get("/", proxy.AuthProxy(authAddr, "/admin/permissions"))                                           
+			adminPermission.Get("/:id", proxy.AuthProxy(authAddr, "/admin/permissions/:id"))                                   
+			adminPermission.Delete("/:id", proxy.AuthProxy(authAddr, "/admin/permissions/:id"))                                 
+			adminPermission.Post("/assign", proxy.AuthProxy(authAddr, "/admin/permissions/assign"))                              
+			adminPermission.Delete("/roles/:roleId/permissions/:permissionId", proxy.AuthProxy(authAddr, "/admin/permissions/roles/:roleId/permissions/:permissionId"))
+			adminPermission.Get("/roles/:roleId", proxy.AuthProxy(authAddr, "/admin/permissions/roles/:roleId"))                  
+	
+			
 		// admin merchant management
 		adminMerchant := admin.Group("/merchants")
-		adminMerchant.Get("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
-		adminMerchant.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id/status"))
-		adminMerchant.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
+			adminMerchant.Get("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
+			adminMerchant.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id/status"))
+			adminMerchant.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
 
-		adminMerchant.Get("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/campaigns"))
-		adminMerchant.Get("/:store_id/kyc", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc"))
-		adminMerchant.Put("/:store_id/kyc/verify", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc/verify"))
-		adminMerchant.Put("/:store_id/subscription", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/subscription"))
+			adminMerchant.Get("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/campaigns"))
+			adminMerchant.Get("/:store_id/kyc", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc"))
+			adminMerchant.Put("/:store_id/kyc/verify", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc/verify"))
+			adminMerchant.Put("/:store_id/subscription", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/subscription"))
 
+		
 		// admin campaigns management
 		adminCampaign := admin.Group("/campaigns")
-		adminCampaign.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/campaigns"))
-		adminCampaign.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id/status"))
-		adminCampaign.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id"))
+			adminCampaign.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/campaigns"))
+			adminCampaign.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id/status"))
+			adminCampaign.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id"))
 
 		// admin kyc management
 		adminKYC := admin.Group("/kyc")
-		adminKYC.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/kyc"))
-		adminKYC.Get("/:store_id", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id"))
-		adminKYC.Put("/:store_id/verify", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id/verify"))
+			adminKYC.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/kyc"))
+			adminKYC.Get("/:store_id", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id"))
+			adminKYC.Put("/:store_id/verify", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id/verify"))
 
 		// admin rewards management
 		adminRewards := admin.Group("/rewards")
-		adminRewards.Get("/history", proxy.MerchantProxy(merchantAddr, "/admin/rewards/history"))
-		adminRewards.Get("/summary", proxy.MerchantProxy(merchantAddr, "/admin/rewards/summary"))
+			adminRewards.Get("/history", proxy.MerchantProxy(merchantAddr, "/admin/rewards/history"))
+			adminRewards.Get("/summary", proxy.MerchantProxy(merchantAddr, "/admin/rewards/summary"))
 
 		// admin subscriptions management
 		adminSubscriptions := admin.Group("/subscriptions")
-		adminSubscriptions.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/subscriptions"))
+			adminSubscriptions.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/subscriptions"))
 
 	// ── Secure (authenticated user) ────────────────────────────────
 	secure := api.Group("/secure")
