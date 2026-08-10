@@ -8,11 +8,12 @@ type registerRequest struct {
 	Phone    string `json:"phone" validate:"omitempty,e164"`
 	FullName string `json:"full_name" validate:"required,min=2,max=100"`
 	Password string `json:"password" validate:"required,min=8,max=72"`
+	PIN      string `json:"pin" validate:"required,len=6,numeric"`
 }
-
 type loginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
+	PIN      string `json:"pin" validate:"required,len=6,numeric"`
 }
 
 type logoutRequest struct {
@@ -94,4 +95,4 @@ type pinRequest struct {
 type pinVerifyResponse struct {
 	TransactionToken string `json:"transaction_token"`
 	ExpiresIn        int    `json:"expires_in"`
-}
+}

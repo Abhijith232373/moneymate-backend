@@ -51,6 +51,7 @@ type Config struct {
 	Log      LogConfig                `mapstructure:"log"`
 	Admin    sharedconfig.AdminConfig
 	Email    sharedconfig.EmailConfig 
+	InternalServiceSecret string
 }
 
 func LoadConfig() (*Config, error) {
@@ -78,6 +79,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Redis = sharedconfig.LoadRedisConfig(v)
 	cfg.JWT = sharedconfig.LoadJWTConfig(v)
 	cfg.Admin    = sharedconfig.LoadAdminConfig(v) 
+	cfg.InternalServiceSecret = sharedconfig.MustGet("INTERNAL_SERVICE_SECRET")
 
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
 

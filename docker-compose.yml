@@ -36,15 +36,16 @@ services:
     volumes:
       - ./:/moneymate-backend
       - ./shared:/moneymate-backend/shared
+      - ./services/payment/migrations:/app/migrations
     working_dir: /moneymate-backend/services/payment
     env_file:
       - .env
     environment:
       - CONFIG_PATH=/moneymate-backend/services/payment/config/config.yaml
+      - AUTH_SERVICE_URL=http://auth:808
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - ENVIRONMENT=dev
-      # Must match auth-svc's signing secrets — payment-svc verifies, doesn't issue.
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
     ports:

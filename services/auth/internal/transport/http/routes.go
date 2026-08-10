@@ -11,18 +11,16 @@ type Handlers struct {
 	Role    *RoleHandler
 	User    *UserHandler
 	UserPin *UserPinHandler
-	Pin     *PinHandler
 }
 
-func RegisterRoutes(router fiber.Router, h *Handlers, ) {
-	registerAuthRoutes(router, h.Auth, )
-	registerRoleRoutes(router, h.Role, )
-	registerUserRoutes(router, h.User, )
-	registerUserPinRoutes(router, h.UserPin, )
-	registerPinRoutes(router, h.Pin, )
+func RegisterRoutes(router fiber.Router, h *Handlers, internalSecret string) {
+	registerAuthRoutes(router, h.Auth, internalSecret)
+	registerRoleRoutes(router, h.Role)
+	registerUserRoutes(router, h.User)
+	registerUserPinRoutes(router, h.UserPin)
 }
 
-func registerAuthRoutes(router fiber.Router, h *AuthHandler) {
+func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret string) {
 	auth := router.Group("/auth")
 	auth.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -37,14 +35,14 @@ func registerAuthRoutes(router fiber.Router, h *AuthHandler) {
 	auth.Post("/user/register", h.Register(domain.AccountTypeUser))
 	auth.Post("/merchant/register", h.Register(domain.AccountTypeMerchant))
 
-	internal := router.Group("/internal")
+	internal := router.Group("/internal", RequireInternalSecret(internalSecret))
 	internal.Post("/auth/verify-access-token", h.VerifyAccessToken)
 	internal.Post("/auth/verify-transaction-token", h.VerifyTransactionToken)
 	internal.Get("/auth/users/:id", h.GetUserByID)
 }
 
-func registerRoleRoutes(router fiber.Router, h *RoleHandler ) {
-	roles := router.Group("/admin/roles", )
+func registerRoleRoutes(router fiber.Router, h *RoleHandler) {
+	roles := router.Group("/admin/roles")
 	roles.Post("/", h.CreateRole)
 	roles.Get("/", h.ListRoles)
 	roles.Get("/:id", h.GetRole)
@@ -53,10 +51,11 @@ func registerRoleRoutes(router fiber.Router, h *RoleHandler ) {
 	roles.Post("/assign", h.AssignRoleToUser)
 	roles.Delete("/users/:userId/roles/:roleId", h.RemoveRoleFromUser)
 	roles.Get("/users/:userId", h.GetUserRoles)
-} 
-func registerUserRoutes(router fiber.Router, h *UserHandler ) {
-	users := router.Group("/admin/users", )
-	users.Post("/",h.CreateUser)
+}
+
+func registerUserRoutes(router fiber.Router, h *UserHandler) {
+	users := router.Group("/admin/users")
+	users.Post("/", h.CreateUser)
 	users.Get("/", h.ListUsers)
 	users.Get("/:id", h.GetUser)
 	users.Put("/:id", h.UpdateUser)
@@ -64,15 +63,9 @@ func registerUserRoutes(router fiber.Router, h *UserHandler ) {
 	users.Delete("/:id", h.DeleteUser)
 }
 
-func registerUserPinRoutes(router fiber.Router, h *UserPinHandler ) {
+func registerUserPinRoutes(router fiber.Router, h *UserPinHandler) {
 	pins := router.Group("/user/pin", RequireUserID)
 	pins.Post("/", h.SetPIN)
 	pins.Put("/", h.UpdatePIN)
 	pins.Post("/verify", h.VerifyPIN)
-}
-
-func registerPinRoutes(router fiber.Router, h *PinHandler) {
-	pin := router.Group("/auth/pin", RequireUserID)
-	pin.Post("/setup", h.Setup)
-	pin.Post("/verify", h.Verify)
 }
