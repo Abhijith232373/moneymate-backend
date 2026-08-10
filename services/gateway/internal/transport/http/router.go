@@ -143,8 +143,6 @@ func RegisterRoutes(
 
 	// ── Merchant (authenticated + role=merchant/admin) ───────────────────
 	merchant := api.Group("/merchant")
-	merchant.Use(authMiddleware)
-	merchant.Use(middlewares.RequireRole("merchant", "admin"))
 	merchant.Get("/health", proxy.MerchantProxy(merchantAddr, "/merchant/health"))
 	// The merchant service has its own auth middleware for these routes
 	// so we bypass the gateway's auth middleware here.
