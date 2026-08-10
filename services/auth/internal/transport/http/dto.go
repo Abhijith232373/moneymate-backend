@@ -84,9 +84,7 @@ type updatePINRequest struct {
 
 type verifyPINRequest struct {
 	PIN string `json:"pin" validate:"required,len=6,numeric"`
-	UserID string `json:"user_id" validate:"required"`
 }
-
 
 // transaction pin (payment flow)
 
