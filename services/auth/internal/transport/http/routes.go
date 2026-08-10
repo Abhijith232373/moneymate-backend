@@ -68,4 +68,4 @@ func registerUserPinRoutes(router fiber.Router, h *UserPinHandler) {
 	pins.Post("/", h.SetPIN)
 	pins.Put("/", h.UpdatePIN)
 	pins.Post("/verify", h.VerifyPIN)
-}
+}	

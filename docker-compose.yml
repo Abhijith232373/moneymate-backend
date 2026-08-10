@@ -42,7 +42,7 @@ services:
       - .env
     environment:
       - CONFIG_PATH=/moneymate-backend/services/payment/config/config.yaml
-      - AUTH_SERVICE_URL=http://auth:808
+      - AUTH_SERVICE_URL=http://auth:8081
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - ENVIRONMENT=dev
