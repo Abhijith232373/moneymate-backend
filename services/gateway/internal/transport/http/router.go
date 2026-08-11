@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v3"
-
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/middlewares"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
 	ws "github.com/moneymate-2026/moneymate-backend/gateway/internal/websocket"
@@ -74,7 +73,6 @@ func RegisterRoutes(
 			},
 		})
 	})
-	admin.Get("/merchants", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
 		// admin user management
@@ -116,6 +114,7 @@ func RegisterRoutes(
 			adminMerchant.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
 
 			adminMerchant.Get("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/campaigns"))
+			adminMerchant.Post("/:store_id/campaigns", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/campaigns"))
 			adminMerchant.Get("/:store_id/kyc", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc"))
 			adminMerchant.Put("/:store_id/kyc/verify", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/kyc/verify"))
 			adminMerchant.Put("/:store_id/subscription", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:store_id/subscription"))
@@ -163,12 +162,13 @@ func RegisterRoutes(
 	merchantUnauth := api.Group("/merchant")
 	merchantUnauth.Post("/register", proxy.MerchantProxy(merchantAddr, "/merchant/register"))
 	merchantUnauth.Post("/login", proxy.MerchantProxy(merchantAddr, "/merchant/login"))
+	merchantUnauth.Get("/public/campaigns", proxy.MerchantProxy(merchantAddr, "/merchant/public/campaigns"))
 
-	// ── Merchant (authenticated + role=merchant) ───────────────────
+	// ── Merchant (authenticated + role=merchant/admin) ───────────────────
 	merchant := api.Group("/merchant")
 	merchant.Get("/health", proxy.MerchantProxy(merchantAddr, "/merchant/health"))
-	merchant.Use(authMiddleware)
-	merchant.Use(middlewares.RequireRole("merchant"))
+	// The merchant service has its own auth middleware for these routes
+	// so we bypass the gateway's auth middleware here.
 	merchant.Get("/dashboard", proxy.MerchantProxy(merchantAddr, "/merchant/dashboard"))
 	merchant.Get("/:store_id/dashboard", proxy.MerchantProxy(merchantAddr, "/merchant/:store_id/dashboard"))
 

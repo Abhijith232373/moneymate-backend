@@ -15,52 +15,61 @@ import (
 
 const createCampaign = `-- name: CreateCampaign :one
 INSERT INTO campaigns (
-    store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url
+    store_id, name, redeem_code, offer_category, offer_type, reward_value, min_bill_amount, redemption_limit, target_audience, start_date, end_date, status, banner_url
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-) RETURNING id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+) RETURNING id, store_id, name, redeem_code, offer_category, offer_type, reward_value, min_bill_amount, redemption_limit, target_audience, start_date, end_date, status, banner_url, created_at, updated_at
 `
 
 type CreateCampaignParams struct {
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	BannerUrl      *string
+	StoreID         uuid.UUID
+	Name            string
+	RedeemCode      *string
+	OfferCategory   *string
+	OfferType       string
+	RewardValue     pgtype.Numeric
+	MinBillAmount   pgtype.Numeric
+	RedemptionLimit int32
+	TargetAudience  string
+	StartDate       time.Time
+	EndDate         time.Time
+	Status          string
+	BannerUrl       *string
 }
 
 type CreateCampaignRow struct {
-	ID             uuid.UUID
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	BannerUrl      *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID              uuid.UUID
+	StoreID         uuid.UUID
+	Name            string
+	RedeemCode      *string
+	OfferCategory   *string
+	OfferType       string
+	RewardValue     pgtype.Numeric
+	MinBillAmount   pgtype.Numeric
+	RedemptionLimit int32
+	TargetAudience  string
+	StartDate       time.Time
+	EndDate         time.Time
+	Status          string
+	BannerUrl       *string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) (CreateCampaignRow, error) {
 	row := q.db.QueryRow(ctx, createCampaign,
 		arg.StoreID,
 		arg.Name,
+		arg.RedeemCode,
+		arg.OfferCategory,
 		arg.OfferType,
 		arg.RewardValue,
 		arg.MinBillAmount,
+		arg.RedemptionLimit,
 		arg.TargetAudience,
 		arg.StartDate,
 		arg.EndDate,
-		arg.IsActive,
+		arg.Status,
 		arg.BannerUrl,
 	)
 	var i CreateCampaignRow
@@ -68,13 +77,16 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 		&i.ID,
 		&i.StoreID,
 		&i.Name,
+		&i.RedeemCode,
+		&i.OfferCategory,
 		&i.OfferType,
 		&i.RewardValue,
 		&i.MinBillAmount,
+		&i.RedemptionLimit,
 		&i.TargetAudience,
 		&i.StartDate,
 		&i.EndDate,
-		&i.IsActive,
+		&i.Status,
 		&i.BannerUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -84,25 +96,28 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 
 const getCampaignByID = `-- name: GetCampaignByID :one
 SELECT 
-    id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at
+    id, store_id, name, redeem_code, offer_category, offer_type, reward_value, min_bill_amount, redemption_limit, target_audience, start_date, end_date, status, banner_url, created_at, updated_at
 FROM campaigns
 WHERE id = $1 LIMIT 1
 `
 
 type GetCampaignByIDRow struct {
-	ID             uuid.UUID
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	BannerUrl      *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID              uuid.UUID
+	StoreID         uuid.UUID
+	Name            string
+	RedeemCode      *string
+	OfferCategory   *string
+	OfferType       string
+	RewardValue     pgtype.Numeric
+	MinBillAmount   pgtype.Numeric
+	RedemptionLimit int32
+	TargetAudience  string
+	StartDate       time.Time
+	EndDate         time.Time
+	Status          string
+	BannerUrl       *string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaignByIDRow, error) {
@@ -112,13 +127,16 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaig
 		&i.ID,
 		&i.StoreID,
 		&i.Name,
+		&i.RedeemCode,
+		&i.OfferCategory,
 		&i.OfferType,
 		&i.RewardValue,
 		&i.MinBillAmount,
+		&i.RedemptionLimit,
 		&i.TargetAudience,
 		&i.StartDate,
 		&i.EndDate,
-		&i.IsActive,
+		&i.Status,
 		&i.BannerUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -126,87 +144,31 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaig
 	return i, err
 }
 
-const getCampaignsByOwnerID = `-- name: GetCampaignsByOwnerID :many
-SELECT 
-    c.id, c.store_id, c.name, c.offer_type, c.reward_value, c.min_bill_amount, c.target_audience, c.start_date, c.end_date, c.is_active, c.banner_url, c.created_at, c.updated_at
-FROM campaigns c
-JOIN stores s ON c.store_id = s.id
-WHERE s.owner_id = $1
-ORDER BY c.created_at DESC
-`
-
-type GetCampaignsByOwnerIDRow struct {
-	ID             uuid.UUID
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	BannerUrl      *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
-func (q *Queries) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]GetCampaignsByOwnerIDRow, error) {
-	rows, err := q.db.Query(ctx, getCampaignsByOwnerID, ownerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetCampaignsByOwnerIDRow{}
-	for rows.Next() {
-		var i GetCampaignsByOwnerIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.StoreID,
-			&i.Name,
-			&i.OfferType,
-			&i.RewardValue,
-			&i.MinBillAmount,
-			&i.TargetAudience,
-			&i.StartDate,
-			&i.EndDate,
-			&i.IsActive,
-			&i.BannerUrl,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getCampaignsByStoreID = `-- name: GetCampaignsByStoreID :many
 SELECT 
-    id, store_id, name, offer_type, reward_value, min_bill_amount, target_audience, start_date, end_date, is_active, banner_url, created_at, updated_at
+    id, store_id, name, redeem_code, offer_category, offer_type, reward_value, min_bill_amount, redemption_limit, target_audience, start_date, end_date, status, banner_url, created_at, updated_at
 FROM campaigns
 WHERE store_id = $1
 ORDER BY created_at DESC
 `
 
 type GetCampaignsByStoreIDRow struct {
-	ID             uuid.UUID
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	BannerUrl      *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID              uuid.UUID
+	StoreID         uuid.UUID
+	Name            string
+	RedeemCode      *string
+	OfferCategory   *string
+	OfferType       string
+	RewardValue     pgtype.Numeric
+	MinBillAmount   pgtype.Numeric
+	RedemptionLimit int32
+	TargetAudience  string
+	StartDate       time.Time
+	EndDate         time.Time
+	Status          string
+	BannerUrl       *string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (q *Queries) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]GetCampaignsByStoreIDRow, error) {
@@ -222,13 +184,16 @@ func (q *Queries) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) 
 			&i.ID,
 			&i.StoreID,
 			&i.Name,
+			&i.RedeemCode,
+			&i.OfferCategory,
 			&i.OfferType,
 			&i.RewardValue,
 			&i.MinBillAmount,
+			&i.RedemptionLimit,
 			&i.TargetAudience,
 			&i.StartDate,
 			&i.EndDate,
-			&i.IsActive,
+			&i.Status,
 			&i.BannerUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -245,17 +210,17 @@ func (q *Queries) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) 
 
 const updateCampaignStatus = `-- name: UpdateCampaignStatus :exec
 UPDATE campaigns
-SET is_active = $2, updated_at = NOW()
+SET status = $2, updated_at = NOW()
 WHERE id = $1 AND store_id = $3
 `
 
 type UpdateCampaignStatusParams struct {
-	ID       uuid.UUID
-	IsActive bool
-	StoreID  uuid.UUID
+	ID      uuid.UUID
+	Status  string
+	StoreID uuid.UUID
 }
 
 func (q *Queries) UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignStatusParams) error {
-	_, err := q.db.Exec(ctx, updateCampaignStatus, arg.ID, arg.IsActive, arg.StoreID)
+	_, err := q.db.Exec(ctx, updateCampaignStatus, arg.ID, arg.Status, arg.StoreID)
 	return err
 }

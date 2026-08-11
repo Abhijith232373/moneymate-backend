@@ -2,8 +2,11 @@ package http
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
+	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/usecases"
 )
 
@@ -70,6 +73,92 @@ func (h *AdminHandler) GetAllCampaigns(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"success": true, "data": campaigns})
+}
+
+func (h *AdminHandler) CreateCampaign(c fiber.Ctx) error {
+	var req CreateCampaignRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	storeIDStr := c.Params("store_id")
+	if storeIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "store_id is required in params"})
+	}
+	storeID, err := uuid.Parse(storeIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid store_id format"})
+	}
+
+	parseDate := func(dateStr string) (time.Time, error) {
+		if t, err := time.Parse("2006-01-02T15:04:05", dateStr); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse("2006-01-02T15:04", dateStr); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
+			return t, nil
+		}
+		return time.Parse("2006-01-02", dateStr)
+	}
+
+	startDate, err := parseDate(req.StartDate)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid start_date format"})
+	}
+
+	endDate, err := parseDate(req.EndDate)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid end_date format"})
+	}
+
+	campaign := &domain.Campaign{
+		StoreID:         storeID,
+		Name:            req.Name,
+		OfferType:       req.OfferType,
+		RewardValue:     req.RewardValue,
+		MinBillAmount:   req.MinBillAmount,
+		RedemptionLimit: req.RedemptionLimit,
+		TargetAudience:  req.TargetAudience,
+		StartDate:       startDate,
+		EndDate:         endDate,
+	}
+
+	if req.RedeemCode != "" {
+		campaign.RedeemCode = &req.RedeemCode
+	}
+	if req.OfferCategory != "" {
+		campaign.OfferCategory = &req.OfferCategory
+	}
+	if req.BannerURL != "" {
+		campaign.BannerURL = &req.BannerURL
+	}
+
+	created, err := h.usecase.CreateCampaign(c.Context(), campaign)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"success": true,
+		"data": CampaignResponse{
+			ID:              created.ID.String(),
+			StoreID:         created.StoreID.String(),
+			Name:            created.Name,
+			RedeemCode:      getStringOrEmpty(created.RedeemCode),
+			OfferCategory:   getStringOrEmpty(created.OfferCategory),
+			OfferType:       created.OfferType,
+			RewardValue:     created.RewardValue,
+			MinBillAmount:   created.MinBillAmount,
+			RedemptionLimit: created.RedemptionLimit,
+			StartDate:       created.StartDate.Format(time.RFC3339),
+			EndDate:         created.EndDate.Format(time.RFC3339),
+			BannerURL:       getStringOrEmpty(created.BannerURL),
+			Status:          created.Status,
+			CreatedAt:       created.CreatedAt.Format(time.RFC3339),
+		},
+	})
 }
 
 func (h *AdminHandler) GetCampaignsByStoreID(c fiber.Ctx) error {

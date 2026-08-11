@@ -16,6 +16,7 @@ type AdminRepository interface {
 
 	// Campaigns
 	GetAllCampaigns(ctx context.Context, limit, offset int) ([]*Campaign, error)
+	CreateCampaign(ctx context.Context, campaign *Campaign) (*Campaign, error)
 	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]*Campaign, error)
 	UpdateCampaignStatus(ctx context.Context, id uuid.UUID, isActive bool) error
 	DeleteCampaign(ctx context.Context, id uuid.UUID) error

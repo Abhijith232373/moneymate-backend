@@ -14,15 +14,16 @@ import (
 
 const createStore = `-- name: CreateStore :one
 INSERT INTO stores (
-    owner_id, owner_name, contact_email, mobile_number, 
+    id, role, owner_name, contact_email, mobile_number, 
     legal_name, dba_name, business_type, tax_id, registered_address, display_id, vpa, qr_code_base64, password_hash
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
 ) RETURNING id, display_id, vpa, qr_code_base64, status, plan, created_at
 `
 
 type CreateStoreParams struct {
-	OwnerID           uuid.UUID
+	ID                uuid.UUID
+	Role              string
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string
@@ -49,7 +50,8 @@ type CreateStoreRow struct {
 
 func (q *Queries) CreateStore(ctx context.Context, arg CreateStoreParams) (CreateStoreRow, error) {
 	row := q.db.QueryRow(ctx, createStore,
-		arg.OwnerID,
+		arg.ID,
+		arg.Role,
 		arg.OwnerName,
 		arg.ContactEmail,
 		arg.MobileNumber,
@@ -126,20 +128,20 @@ func (q *Queries) GetPendingStores(ctx context.Context) ([]GetPendingStoresRow, 
 
 const getStoreByEmail = `-- name: GetStoreByEmail :one
 SELECT 
-    id, owner_id, display_id, vpa, legal_name, status, plan, password_hash
+    id, display_id, vpa, legal_name, status, plan, password_hash, role
 FROM stores
 WHERE contact_email = $1 LIMIT 1
 `
 
 type GetStoreByEmailRow struct {
 	ID           uuid.UUID
-	OwnerID      uuid.UUID
 	DisplayID    string
 	Vpa          *string
 	LegalName    string
 	Status       MerchantStatus
 	Plan         SubscriptionPlan
 	PasswordHash string
+	Role         string
 }
 
 func (q *Queries) GetStoreByEmail(ctx context.Context, contactEmail string) (GetStoreByEmailRow, error) {
@@ -147,25 +149,25 @@ func (q *Queries) GetStoreByEmail(ctx context.Context, contactEmail string) (Get
 	var i GetStoreByEmailRow
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
 		&i.DisplayID,
 		&i.Vpa,
 		&i.LegalName,
 		&i.Status,
 		&i.Plan,
 		&i.PasswordHash,
+		&i.Role,
 	)
 	return i, err
 }
 
-const getStoreByOwnerID = `-- name: GetStoreByOwnerID :one
+const getStoreByID = `-- name: GetStoreByID :one
 SELECT 
     id, display_id, vpa, legal_name, status, plan 
 FROM stores 
-WHERE owner_id = $1 LIMIT 1
+WHERE id = $1 LIMIT 1
 `
 
-type GetStoreByOwnerIDRow struct {
+type GetStoreByIDRow struct {
 	ID        uuid.UUID
 	DisplayID string
 	Vpa       *string
@@ -174,9 +176,9 @@ type GetStoreByOwnerIDRow struct {
 	Plan      SubscriptionPlan
 }
 
-func (q *Queries) GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreByOwnerIDRow, error) {
-	row := q.db.QueryRow(ctx, getStoreByOwnerID, ownerID)
-	var i GetStoreByOwnerIDRow
+func (q *Queries) GetStoreByID(ctx context.Context, id uuid.UUID) (GetStoreByIDRow, error) {
+	row := q.db.QueryRow(ctx, getStoreByID, id)
+	var i GetStoreByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.DisplayID,

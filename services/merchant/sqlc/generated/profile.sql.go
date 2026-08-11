@@ -12,67 +12,9 @@ import (
 	"github.com/google/uuid"
 )
 
-const getStoreProfileByOwnerID = `-- name: GetStoreProfileByOwnerID :one
-SELECT 
-    id, owner_id, owner_name, contact_email, mobile_number,
-    legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
-FROM stores
-WHERE owner_id = $1
-LIMIT 1
-`
-
-type GetStoreProfileByOwnerIDRow struct {
-	ID                uuid.UUID
-	OwnerID           uuid.UUID
-	OwnerName         string
-	ContactEmail      string
-	MobileNumber      string
-	LegalName         string
-	DbaName           string
-	BusinessType      string
-	TaxID             string
-	RegisteredAddress string
-	DisplayID         string
-	Vpa               *string
-	QrCodeBase64      *string
-	Status            string
-	Plan              string
-	LogoUrl           string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-}
-
-// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner user ID.
-func (q *Queries) GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreProfileByOwnerIDRow, error) {
-	row := q.db.QueryRow(ctx, getStoreProfileByOwnerID, ownerID)
-	var i GetStoreProfileByOwnerIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.OwnerID,
-		&i.OwnerName,
-		&i.ContactEmail,
-		&i.MobileNumber,
-		&i.LegalName,
-		&i.DbaName,
-		&i.BusinessType,
-		&i.TaxID,
-		&i.RegisteredAddress,
-		&i.DisplayID,
-		&i.Vpa,
-		&i.QrCodeBase64,
-		&i.Status,
-		&i.Plan,
-		&i.LogoUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getStoreProfileByStoreID = `-- name: GetStoreProfileByStoreID :one
 SELECT 
-    id, owner_id, owner_name, contact_email, mobile_number,
+    id, role, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
     display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 FROM stores
@@ -82,7 +24,7 @@ LIMIT 1
 
 type GetStoreProfileByStoreIDRow struct {
 	ID                uuid.UUID
-	OwnerID           uuid.UUID
+	Role              string
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string
@@ -107,97 +49,7 @@ func (q *Queries) GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUI
 	var i GetStoreProfileByStoreIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
-		&i.OwnerName,
-		&i.ContactEmail,
-		&i.MobileNumber,
-		&i.LegalName,
-		&i.DbaName,
-		&i.BusinessType,
-		&i.TaxID,
-		&i.RegisteredAddress,
-		&i.DisplayID,
-		&i.Vpa,
-		&i.QrCodeBase64,
-		&i.Status,
-		&i.Plan,
-		&i.LogoUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateStoreProfileByOwnerID = `-- name: UpdateStoreProfileByOwnerID :one
-UPDATE stores
-SET legal_name = COALESCE(NULLIF($1::text, ''), legal_name),
-    dba_name = COALESCE(NULLIF($2::text, ''), dba_name),
-    registered_address = COALESCE(NULLIF($3::text, ''), registered_address),
-    business_type = COALESCE(NULLIF($4::text, ''), business_type),
-    tax_id = COALESCE(NULLIF($5::text, ''), tax_id),
-    owner_name = COALESCE(NULLIF($6::text, ''), owner_name),
-    contact_email = COALESCE(NULLIF($7::text, ''), contact_email),
-    mobile_number = COALESCE(NULLIF($8::text, ''), mobile_number),
-    logo_url = COALESCE(NULLIF($9::text, ''), logo_url),
-    updated_at = NOW()
-WHERE owner_id = $10
-RETURNING id, owner_id, owner_name, contact_email, mobile_number,
-    legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
-    display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
-`
-
-type UpdateStoreProfileByOwnerIDParams struct {
-	LegalName         string
-	DbaName           string
-	RegisteredAddress string
-	BusinessType      string
-	TaxID             string
-	OwnerName         string
-	ContactEmail      string
-	MobileNumber      string
-	LogoUrl           string
-	OwnerID           uuid.UUID
-}
-
-type UpdateStoreProfileByOwnerIDRow struct {
-	ID                uuid.UUID
-	OwnerID           uuid.UUID
-	OwnerName         string
-	ContactEmail      string
-	MobileNumber      string
-	LegalName         string
-	DbaName           string
-	BusinessType      string
-	TaxID             string
-	RegisteredAddress string
-	DisplayID         string
-	Vpa               *string
-	QrCodeBase64      *string
-	Status            string
-	Plan              string
-	LogoUrl           string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-}
-
-// UpdateStoreProfileByOwnerID modifies merchant business info, contact details, and logo using the owner user ID.
-func (q *Queries) UpdateStoreProfileByOwnerID(ctx context.Context, arg UpdateStoreProfileByOwnerIDParams) (UpdateStoreProfileByOwnerIDRow, error) {
-	row := q.db.QueryRow(ctx, updateStoreProfileByOwnerID,
-		arg.LegalName,
-		arg.DbaName,
-		arg.RegisteredAddress,
-		arg.BusinessType,
-		arg.TaxID,
-		arg.OwnerName,
-		arg.ContactEmail,
-		arg.MobileNumber,
-		arg.LogoUrl,
-		arg.OwnerID,
-	)
-	var i UpdateStoreProfileByOwnerIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.OwnerID,
+		&i.Role,
 		&i.OwnerName,
 		&i.ContactEmail,
 		&i.MobileNumber,
@@ -231,7 +83,7 @@ SET legal_name = COALESCE(NULLIF($1::text, ''), legal_name),
     logo_url = COALESCE(NULLIF($9::text, ''), logo_url),
     updated_at = NOW()
 WHERE id = $10
-RETURNING id, owner_id, owner_name, contact_email, mobile_number,
+RETURNING id, role, owner_name, contact_email, mobile_number,
     legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
     display_id, vpa, qr_code_base64, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 `
@@ -251,7 +103,7 @@ type UpdateStoreProfileByStoreIDParams struct {
 
 type UpdateStoreProfileByStoreIDRow struct {
 	ID                uuid.UUID
-	OwnerID           uuid.UUID
+	Role              string
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string
@@ -287,7 +139,7 @@ func (q *Queries) UpdateStoreProfileByStoreID(ctx context.Context, arg UpdateSto
 	var i UpdateStoreProfileByStoreIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
+		&i.Role,
 		&i.OwnerName,
 		&i.ContactEmail,
 		&i.MobileNumber,

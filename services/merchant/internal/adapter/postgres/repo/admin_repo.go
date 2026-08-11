@@ -35,7 +35,7 @@ func (r *AdminRepo) GetAllStores(ctx context.Context, limit, offset int) ([]*dom
 	}
 	query := `
 		SELECT 
-			id, owner_id, owner_name, contact_email, mobile_number,
+			id, owner_name, contact_email, mobile_number,
 			legal_name, COALESCE(dba_name, '') AS dba_name, business_type, COALESCE(tax_id, '') AS tax_id, registered_address,
 			display_id, status::text, plan::text, COALESCE(logo_url, '') AS logo_url, created_at, updated_at
 		FROM stores
@@ -52,7 +52,7 @@ func (r *AdminRepo) GetAllStores(ctx context.Context, limit, offset int) ([]*dom
 		var s domain.Store
 		var dba, tax string
 		if err := rows.Scan(
-			&s.ID, &s.OwnerID, &s.OwnerName, &s.ContactEmail, &s.MobileNumber,
+			&s.ID, &s.OwnerName, &s.ContactEmail, &s.MobileNumber,
 			&s.LegalName, &dba, &s.Type, &tax, &s.RegisteredAddress,
 			&s.DisplayID, &s.Status, &s.Plan, &s.LogoURL, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
@@ -93,7 +93,7 @@ func (r *AdminRepo) GetAllCampaigns(ctx context.Context, limit, offset int) ([]*
 	}
 	query := `
 		SELECT 
-			id, store_id, name, offer_type, COALESCE(reward_value, 0), COALESCE(min_bill_amount, 0), target_audience, start_date, end_date, is_active, created_at, updated_at
+			id, store_id, name, offer_type, COALESCE(reward_value, 0), COALESCE(min_bill_amount, 0), target_audience, start_date, end_date, status, created_at, updated_at
 		FROM campaigns
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2;`
@@ -108,7 +108,7 @@ func (r *AdminRepo) GetAllCampaigns(ctx context.Context, limit, offset int) ([]*
 		var c domain.Campaign
 		if err := rows.Scan(
 			&c.ID, &c.StoreID, &c.Name, &c.OfferType, &c.RewardValue, &c.MinBillAmount,
-			&c.TargetAudience, &c.StartDate, &c.EndDate, &c.IsActive, &c.CreatedAt, &c.UpdatedAt,
+			&c.TargetAudience, &c.StartDate, &c.EndDate, &c.Status, &c.CreatedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("GetAllCampaigns scan failed: %w", err)
 		}
@@ -117,13 +117,24 @@ func (r *AdminRepo) GetAllCampaigns(ctx context.Context, limit, offset int) ([]*
 	return campaigns, nil
 }
 
+func (r *AdminRepo) CreateCampaign(ctx context.Context, c *domain.Campaign) (*domain.Campaign, error) {
+	if c.Status == "" {
+		c.Status = "active"
+	}
+	return r.campaignRepo.CreateCampaign(ctx, c)
+}
+
 func (r *AdminRepo) GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]*domain.Campaign, error) {
 	return r.campaignRepo.GetCampaignsByStoreID(ctx, storeID)
 }
 
 func (r *AdminRepo) UpdateCampaignStatus(ctx context.Context, id uuid.UUID, isActive bool) error {
-	query := `UPDATE campaigns SET is_active = $2, updated_at = NOW() WHERE id = $1;`
-	_, err := r.db.Exec(ctx, query, id, isActive)
+	status := "paused"
+	if isActive {
+		status = "active"
+	}
+	query := `UPDATE campaigns SET status = $2, updated_at = NOW() WHERE id = $1;`
+	_, err := r.db.Exec(ctx, query, id, status)
 	if err != nil {
 		return fmt.Errorf("UpdateCampaignStatus failed: %w", err)
 	}

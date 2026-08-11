@@ -15,8 +15,10 @@ CREATE TYPE subscription_plan AS ENUM (
 -- 2. Core Stores Table (Step 1 & Step 2 of Registration)
 
 CREATE TABLE stores (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id            UUID NOT NULL, -- Foreign key referencing auth.users(id) across services
+    id                  UUID PRIMARY KEY,
+    
+    -- Role
+    role                VARCHAR(50) NOT NULL DEFAULT 'merchant',
     
     -- Owner Info (Step 2)
     owner_name          VARCHAR(255) NOT NULL, 
@@ -61,7 +63,6 @@ CREATE TABLE kyc_documents (
 );
 
 -- 4. Performance Indices
-CREATE INDEX idx_stores_owner_id ON stores(owner_id);
 CREATE INDEX idx_stores_display_id ON stores(display_id);
 CREATE INDEX idx_stores_contact_email ON stores(contact_email);
 CREATE INDEX idx_kyc_store_id ON kyc_documents(store_id);

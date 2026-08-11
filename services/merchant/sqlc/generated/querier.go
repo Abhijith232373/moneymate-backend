@@ -28,7 +28,6 @@ type Querier interface {
 	// DeductRewardBalance atomically subtracts redeemed funds from the available balance if sufficient funds exist.
 	DeductRewardBalance(ctx context.Context, arg DeductRewardBalanceParams) error
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (GetCampaignByIDRow, error)
-	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]GetCampaignsByOwnerIDRow, error)
 	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]GetCampaignsByStoreIDRow, error)
 	GetEarningsStats(ctx context.Context, storeID uuid.UUID) (EarningsStat, error)
 	// GetKYCStatusByStoreID retrieves the verification standing and document URLs for a merchant store joined with core store status.
@@ -41,9 +40,7 @@ type Querier interface {
 	// GetRewardTransactionsByStoreID retrieves paginated transaction history with optional time-range and keyword search filtering.
 	GetRewardTransactionsByStoreID(ctx context.Context, arg GetRewardTransactionsByStoreIDParams) ([]RewardTransaction, error)
 	GetStoreByEmail(ctx context.Context, contactEmail string) (GetStoreByEmailRow, error)
-	GetStoreByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreByOwnerIDRow, error)
-	// GetStoreProfileByOwnerID retrieves the complete merchant profile by owner user ID.
-	GetStoreProfileByOwnerID(ctx context.Context, ownerID uuid.UUID) (GetStoreProfileByOwnerIDRow, error)
+	GetStoreByID(ctx context.Context, id uuid.UUID) (GetStoreByIDRow, error)
 	// GetStoreProfileByStoreID retrieves the complete merchant profile including contact info, business details, and logo.
 	GetStoreProfileByStoreID(ctx context.Context, storeID uuid.UUID) (GetStoreProfileByStoreIDRow, error)
 	// GetStoreStatusByID retrieves the current state machine status string for a specific merchant store.
@@ -67,8 +64,6 @@ type Querier interface {
 	UpdateRewardBalance(ctx context.Context, arg UpdateRewardBalanceParams) error
 	// UpdateStorePlanEnum synchronizes the core store record's plan enum column with the active subscription tier.
 	UpdateStorePlanEnum(ctx context.Context, arg UpdateStorePlanEnumParams) error
-	// UpdateStoreProfileByOwnerID modifies merchant business info, contact details, and logo using the owner user ID.
-	UpdateStoreProfileByOwnerID(ctx context.Context, arg UpdateStoreProfileByOwnerIDParams) (UpdateStoreProfileByOwnerIDRow, error)
 	// UpdateStoreProfileByStoreID modifies merchant business info, contact details, and logo.
 	UpdateStoreProfileByStoreID(ctx context.Context, arg UpdateStoreProfileByStoreIDParams) (UpdateStoreProfileByStoreIDRow, error)
 	UpdateStoreStatus(ctx context.Context, arg UpdateStoreStatusParams) error
