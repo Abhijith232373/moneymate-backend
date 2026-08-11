@@ -33,6 +33,7 @@ WORKDIR /app
 RUN mkdir -p /app/config
 COPY --from=builder /bin/payment ./payment
 COPY --from=builder /moneymate-backend/services/payment/config/config.yaml ./config/config.yaml
+COPY --from=builder /moneymate-backend/services/payment/migrations ./migrations
 
 USER appuser
 EXPOSE 9094

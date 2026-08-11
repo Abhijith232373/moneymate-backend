@@ -22,6 +22,8 @@ type AuthUsecase interface {
 	Login(ctx context.Context, req LoginRequest) (*LoginResponse, error)
 	Logout(ctx context.Context, req LogoutRequest) error
 	RefreshToken(ctx context.Context, req RefreshTokenRequest) (*RefreshTokenResponse, error)
+	AdminLogin(ctx context.Context, req AdminLoginRequest) (*LoginResponse, error)
+
 }
 
 // ── DI interfaces ────────────────────────────────────────────────
@@ -216,6 +218,7 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if email == "" || req.Password == "" || len(req.PIN) != 6 {
 		return nil, apperrors.ErrInvalidInput
 	}
+	
 
 	user, err := u.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -260,6 +263,64 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 			FullName:        user.FullName,
 			Status:          string(user.Status),
 			IsEmailVerified: user.IsEmailVerified,
+		},
+	}, nil
+}
+
+
+func (u *authUsecase) AdminLogin(ctx context.Context, req AdminLoginRequest) (*LoginResponse, error) {
+	email := normalizeEmail(req.Email)
+	if email == "" || req.Password == "" {
+		return nil, apperrors.ErrInvalidInput
+	}
+
+	user, err := u.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		if err == apperrors.ErrUserNotFound {
+			return nil, apperrors.ErrInvalidPassword
+		}
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+	if user.PasswordHash == nil {
+		return nil, apperrors.ErrInvalidPassword
+	}
+	ok, err := u.hasher.Verify(*user.PasswordHash, req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("verify password: %w", err)
+	}
+	if !ok {
+		return nil, apperrors.ErrInvalidPassword
+	}
+	if user.Status != domain.UserStatusActive {
+		return nil, apperrors.ErrForbidden
+	}
+
+	roles, err := u.roleRepo.GetUserRoles(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get user roles: %w", err)
+	}
+	isAdmin := false
+	for _, r := range roles {
+		if r.Name == string(domain.AccountTypeAdmin) {
+			isAdmin = true
+			break
+		}
+	}
+	if !isAdmin {
+		return nil, apperrors.ErrForbidden 
+	}
+
+	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResponse{
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
+		User: UserSummary{
+			ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
+			Status: string(user.Status), IsEmailVerified: user.IsEmailVerified,
 		},
 	}, nil
 }

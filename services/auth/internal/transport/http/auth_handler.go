@@ -86,6 +86,23 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	return response.OK(c, "login successful", resp)
 }
 
+func (h *AuthHandler) AdminLogin(c fiber.Ctx) error {
+	var req adminLoginRequest 
+	if err := c.Bind().Body(&req); err != nil {
+		return response.BadRequest(c, nil, "invalid request body")
+	}
+	if err := validate.Struct(req); err != nil {
+		return response.BadRequest(c, formatValidationErrors(err), "validation failed")
+	}
+	resp, err := h.authUsecase.AdminLogin(c.Context(), usecase.AdminLoginRequest{
+		Email: req.Email, Password: req.Password,
+	})
+	if err != nil {
+		return handleError(c, err)
+	}
+	return response.OK(c, "admin login successful", resp)
+}
+
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	userIDStr, ok := c.Locals("userID").(string)
 	if !ok || userIDStr == "" {

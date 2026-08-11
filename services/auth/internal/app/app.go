@@ -1,4 +1,3 @@
-
 package app
 
 import (
@@ -64,7 +63,6 @@ func Build(cfg *config.Config) (app *App, err error) {
 		cfg.Database.Port,
 		cfg.Database.Name,
 		cfg.Database.SslMode,
-		
 	)
 	if err = postgres.RunMigrations(dsn, cfg.Database.MigrationsPath); err != nil {
 		return nil, fmt.Errorf("run migrations: %w", err)
@@ -114,12 +112,13 @@ func setupRedis(cfg *config.Config) (*redis.Client, error) {
 		DB:       0,
 	})
 }
+
 func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config) *transporthttp.Handlers {
 	jwtCfg := sharedjwt.Config{
-		AccessSecret:     cfg.JWT.AccessSecret,
-		RefreshSecret:    cfg.JWT.RefreshSecret,
-		AccessExpiryMins: cfg.JWT.AccessExpiryMinutes,
-		RefreshExpiryHrs: cfg.JWT.RefreshExpiryHours,
+		AccessSecret:      cfg.JWT.AccessSecret,
+		RefreshSecret:     cfg.JWT.RefreshSecret,
+		AccessExpiryMins:  cfg.JWT.AccessExpiryMinutes,
+		RefreshExpiryHrs:  cfg.JWT.RefreshExpiryHours,
 		TxTokenExpirySecs: cfg.JWT.TxTokenExpirySecs,
 	}
 
@@ -140,13 +139,14 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	userRepo := repo.NewUserRepo(pool)
 	roleRepo := repo.NewRoleRepo(pool)
 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
-	pinRepo := repo.NewUserPinRepo(pool) // NEW
+	pinRepo := repo.NewUserPinRepo(pool)
+	permRepo := repo.NewPermissionRepo(pool) // NEW
 	store := rediscard.NewStore(redisClient)
 	txMgr := sharedpgxtx.New(pool)
 
 	// Usecases
-	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g) 
-	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg) 
+	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g)
+	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg)
 
 	otpMailerIface := usecase.EmailSender(otpMailer)
 	if cfg.Env == "dev" {
@@ -157,13 +157,14 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 	adminRoleUC := usecase.NewAdminRoleUsecase(roleRepo, userRepo, g)
 	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
-	// pinUC := usecase.NewPinUsecase(userPinRepo, h)
+	permissionUC := usecase.NewPermissionUsecase(permRepo, roleRepo, g) // NEW
 
 	return &transporthttp.Handlers{
-		Auth:    transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
-		Role:    transporthttp.NewRoleHandler(adminRoleUC),
-		User:    transporthttp.NewUserHandler(adminUserUC),
-		UserPin: transporthttp.NewUserPinHandler(pinUC, issuer),
+		Auth:       transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
+		Role:       transporthttp.NewRoleHandler(adminRoleUC),
+		User:       transporthttp.NewUserHandler(adminUserUC),
+		UserPin:    transporthttp.NewUserPinHandler(pinUC, issuer),
+		Permission: transporthttp.NewPermissionHandler(permissionUC), // NEW
 	}
 }
 
@@ -180,21 +181,15 @@ func setupServer(cfg *config.Config, handlers *transporthttp.Handlers, pool *pgx
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Device-Id"},
-	}))  
+	}))
 
 	registerHealthRoutes(server, pool, redisClient)
 
-	// noopAuth := func(c fiber.Ctx) error { return c.Next() }
-	// app.go
-transporthttp.RegisterRoutes(server, handlers, cfg.InternalServiceSecret)
+	transporthttp.RegisterRoutes(server, handlers, cfg.InternalServiceSecret)
 
 	return server
 }
 
-// registerHealthRoutes splits liveness (is the process up) from
-// readiness (can it actually serve a request right now) — an
-// orchestrator should stop routing traffic here if /ready fails,
-// even while /health still reports the process alive.
 func registerHealthRoutes(server *fiber.App, pool *pgxpool.Pool, redisClient *redis.Client) {
 	server.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "service": "auth"})
