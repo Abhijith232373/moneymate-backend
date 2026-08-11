@@ -318,19 +318,22 @@ func (ns NullWalletTxnType) Value() (driver.Value, error) {
 }
 
 type Campaign struct {
-	ID             uuid.UUID
-	StoreID        uuid.UUID
-	Name           string
-	OfferType      string
-	RewardValue    pgtype.Numeric
-	MinBillAmount  pgtype.Numeric
-	TargetAudience string
-	BannerUrl      *string
-	StartDate      time.Time
-	EndDate        time.Time
-	IsActive       bool
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID              uuid.UUID
+	StoreID         uuid.UUID
+	Name            string
+	RedeemCode      *string
+	OfferCategory   *string
+	OfferType       string
+	RewardValue     pgtype.Numeric
+	MinBillAmount   pgtype.Numeric
+	RedemptionLimit int32
+	TargetAudience  string
+	BannerUrl       *string
+	StartDate       time.Time
+	EndDate         time.Time
+	Status          string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type EarningsPayoutRequest struct {

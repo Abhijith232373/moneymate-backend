@@ -1,9 +1,12 @@
 package http
 
 import (
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/domain"
 	usecase "github.com/moneymate-2026/moneymate-backend/auth/internal/usecases"
@@ -17,18 +20,20 @@ type AuthHandler struct {
 	authUsecase usecase.AuthUsecase
 	otpUsecase  usecase.OTPUsecase
 	userRepo    domain.UserRepository
-    jwtSecret   string
+	jwtSecret   string
+	userPin     usecase.UserPinUsecase
+	redisClient *redis.Client
 }
 
-func NewAuthHandler(authUsecase usecase.AuthUsecase, otpUsecase usecase.OTPUsecase, userRepo domain.UserRepository, jwtSecret string) *AuthHandler {
+func NewAuthHandler(authUsecase usecase.AuthUsecase, otpUsecase usecase.OTPUsecase, userRepo domain.UserRepository, jwtSecret string, redisClient *redis.Client) *AuthHandler {
 	return &AuthHandler{
 		authUsecase: authUsecase,
 		otpUsecase:  otpUsecase,
-		userRepo: userRepo,
-		jwtSecret: jwtSecret,
+		userRepo:    userRepo,
+		jwtSecret:   jwtSecret,
+		redisClient: redisClient,
 	}
 }
-
 
 func (h *AuthHandler) Register(accountType domain.AccountType) fiber.Handler {
 	return func(c fiber.Ctx) error {
@@ -45,6 +50,7 @@ func (h *AuthHandler) Register(accountType domain.AccountType) fiber.Handler {
 			Phone:       req.Phone,
 			FullName:    req.FullName,
 			Password:    req.Password,
+			PIN:         req.PIN,
 			AccountType: accountType,
 		}
 
@@ -65,10 +71,10 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return response.BadRequest(c, formatValidationErrors(err), "validation failed")
 	}
 
-
 	ucReq := usecase.LoginRequest{
 		Identifier: req.Email,
 		Password:   req.Password,
+		PIN:        req.PIN,
 		UserAgent:  c.Get("User-Agent"),
 		IPAddress:  c.IP(),
 	}
@@ -78,6 +84,23 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return handleError(c, err)
 	}
 	return response.OK(c, "login successful", resp)
+}
+
+func (h *AuthHandler) AdminLogin(c fiber.Ctx) error {
+	var req adminLoginRequest 
+	if err := c.Bind().Body(&req); err != nil {
+		return response.BadRequest(c, nil, "invalid request body")
+	}
+	if err := validate.Struct(req); err != nil {
+		return response.BadRequest(c, formatValidationErrors(err), "validation failed")
+	}
+	resp, err := h.authUsecase.AdminLogin(c.Context(), usecase.AdminLoginRequest{
+		Email: req.Email, Password: req.Password,
+	})
+	if err != nil {
+		return handleError(c, err)
+	}
+	return response.OK(c, "admin login successful", resp)
 }
 
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
@@ -108,23 +131,23 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 }
 
 func (h *AuthHandler) RefreshToken(c fiber.Ctx) error {
-    var req struct {
-        RefreshToken string `json:"refresh_token" validate:"required"`
-    }
-    if err := c.Bind().Body(&req); err != nil {
-        return response.BadRequest(c, nil, "invalid request body")
-    }
-    if err := validate.Struct(req); err != nil {
-        return response.BadRequest(c, formatValidationErrors(err), "validation failed")
-    }
+	var req struct {
+		RefreshToken string `json:"refresh_token" validate:"required"`
+	}
+	if err := c.Bind().Body(&req); err != nil {
+		return response.BadRequest(c, nil, "invalid request body")
+	}
+	if err := validate.Struct(req); err != nil {
+		return response.BadRequest(c, formatValidationErrors(err), "validation failed")
+	}
 
-    resp, err := h.authUsecase.RefreshToken(c.Context(), usecase.RefreshTokenRequest{
-        RefreshToken: req.RefreshToken,
-    })
-    if err != nil {
-        return handleError(c, err)
-    }
-    return response.OK(c, "token refreshed", resp)
+	resp, err := h.authUsecase.RefreshToken(c.Context(), usecase.RefreshTokenRequest{
+		RefreshToken: req.RefreshToken,
+	})
+	if err != nil {
+		return handleError(c, err)
+	}
+	return response.OK(c, "token refreshed", resp)
 }
 
 func (h *AuthHandler) SendRegistrationOTP(c fiber.Ctx) error {
@@ -165,82 +188,90 @@ func (h *AuthHandler) VerifyRegistrationOTP(c fiber.Ctx) error {
 }
 
 func (h *AuthHandler) VerifyAccessToken(c fiber.Ctx) error {
-    var req struct {
-        Token string `json:"token"`
-    }
-    if err := c.Bind().Body(&req); err != nil || req.Token == "" {
-        return response.BadRequest(c, nil, "token is required")
-    }
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := c.Bind().Body(&req); err != nil || req.Token == "" {
+		return response.BadRequest(c, nil, "token is required")
+	}
 
-    claims, err := jwtutil.ParseAccessToken(req.Token, h.jwtSecret)
-    if err != nil {
-        return response.Unauthorized(c, "invalid or expired token")
-    }
-    role := "user"
-    if len(claims.Roles) > 0 {
-        role = claims.Roles[0]
-    }
-    userID, err := uuid.Parse(claims.UserID)
-    if err != nil {
-        return response.Unauthorized(c, "invalid user ID in token")
-    }
-    user, err := h.userRepo.GetByID(c.Context(), userID)
-    if err != nil {
-        return response.Unauthorized(c, "user not found")
-    }
+	claims, err := jwtutil.ParseAccessToken(req.Token, h.jwtSecret)
+	if err != nil {
+		return response.Unauthorized(c, "invalid or expired token")
+	}
+	role := "user"
+	if len(claims.Roles) > 0 {
+		role = claims.Roles[0]
+	}
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return response.Unauthorized(c, "invalid user ID in token")
+	}
+	user, err := h.userRepo.GetByID(c.Context(), userID)
+	if err != nil {
+		return response.Unauthorized(c, "user not found")
+	}
 
-    return response.OK(c, "token verified", fiber.Map{
-        "valid":       true,
-        "user_id":     claims.UserID,
-        "email":       user.Email,
-        "role":        role,
-        "merchant_id": "",
-        "expires_at":  claims.ExpiresAt.Unix(),
-    })
+	return response.OK(c, "token verified", fiber.Map{
+		"valid":       true,
+		"user_id":     claims.UserID,
+		"email":       user.Email,
+		"role":        role,
+		"merchant_id": "",
+		"expires_at":  claims.ExpiresAt.Unix(),
+	})
 }
 
 func (h *AuthHandler) VerifyTransactionToken(c fiber.Ctx) error {
-    var req struct {
-        Token         string `json:"token"`
-        TransactionID string `json:"transaction_id"`
-    }
-    if err := c.Bind().Body(&req); err != nil || req.Token == "" {
-        return response.BadRequest(c, nil, "token and transaction_id are required")
-    }
+	var req struct {
+		Token         string `json:"token"`
+		TransactionID string `json:"transaction_id"`
+	}
+	if err := c.Bind().Body(&req); err != nil || req.Token == "" {
+		return response.BadRequest(c, nil, "token and transaction_id are required")
+	}
 
-    claims, err := jwtutil.ParseTransactionToken(req.Token, h.jwtSecret)
-    if err != nil {
-        return response.Unauthorized(c, "invalid or expired transaction token")
-    }
+	claims, err := jwtutil.ParseTransactionToken(req.Token, h.jwtSecret)
+	if err != nil {
+		return response.Unauthorized(c, "invalid or expired transaction token")
+	}
+	ttl := time.Until(claims.ExpiresAt.Time)
+	claimed, err := h.redisClient.SetNX(c.Context(), "txtoken:used:"+claims.ID, "1", ttl).Result()
+	if err != nil {
+		return response.InternalServerError(c)
+	}
+	if !claimed {
+		return response.Unauthorized(c, "transaction token already used")
+	}
 
-    return response.OK(c, "transaction token verified", fiber.Map{
-        "valid":          true,
-        "user_id":        claims.UserID,
-        "transaction_id": req.TransactionID,
-    })
+	return response.OK(c, "transaction token verified", fiber.Map{
+		"valid":          true,
+		"user_id":        claims.UserID,
+		"transaction_id": req.TransactionID,
+	})
 }
 
 func (h *AuthHandler) GetUserByID(c fiber.Ctx) error {
-    idStr := c.Params("id")
-    if idStr == "" {
-        return response.BadRequest(c, nil, "user ID is required")
-    }
+	idStr := c.Params("id")
+	if idStr == "" {
+		return response.BadRequest(c, nil, "user ID is required")
+	}
 
-    id, err := uuid.Parse(idStr)
-    if err != nil {
-        return response.BadRequest(c, nil, "invalid user ID format")
-    }
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return response.BadRequest(c, nil, "invalid user ID format")
+	}
 
-    user, err := h.userRepo.GetByID(c.Context(), id)
-    if err != nil {
-        return response.NotFound(c, "user not found")
-    }
+	user, err := h.userRepo.GetByID(c.Context(), id)
+	if err != nil {
+		return response.NotFound(c, "user not found")
+	}
 
-    return response.OK(c, "user found", fiber.Map{
-        "user_id":   user.ID.String(),
-        "email":     user.Email,
-        "full_name": user.FullName,
-        "handle":    user.Handle,
-        "role":      "user", // default - role resolution happens via jwt claims
-    })
+	return response.OK(c, "user found", fiber.Map{
+		"user_id":   user.ID.String(),
+		"email":     user.Email,
+		"full_name": user.FullName,
+		"handle":    user.Handle,
+		"role":      "user", // default - role resolution happens via jwt claims
+	})
 }

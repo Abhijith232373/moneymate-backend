@@ -54,27 +54,34 @@ type GetStoreResponse struct {
 }
 
 type CreateCampaignRequest struct {
-	Name           string  `json:"name"`
-	OfferType      string  `json:"offer_type"`
-	RewardValue    float64 `json:"reward_value"`
-	MinBillAmount  float64 `json:"min_bill_amount"`
-	StartDate      string  `json:"start_date"` // YYYY-MM-DD
-	EndDate        string  `json:"end_date"`   // YYYY-MM-DD
-	BannerURL      string  `json:"banner_url,omitempty"`
+	Name            string  `json:"name"`
+	RedeemCode      string  `json:"redeem_code"`
+	OfferCategory   string  `json:"offer_category"`
+	OfferType       string  `json:"offer_type"`
+	RewardValue     float64 `json:"reward_value"`
+	MinBillAmount   float64 `json:"min_bill_amount"`
+	RedemptionLimit int32   `json:"redemption_limit"`
+	TargetAudience  string  `json:"target_audience"`
+	StartDate       string  `json:"start_date"` // YYYY-MM-DDTHH:mm:ss
+	EndDate         string  `json:"end_date"`   // YYYY-MM-DDTHH:mm:ss
+	BannerURL       string  `json:"banner_url,omitempty"`
 }
 
 type CampaignResponse struct {
-	ID             string  `json:"id"`
-	StoreID        string  `json:"store_id"`
-	Name           string  `json:"name"`
-	OfferType      string  `json:"offer_type"`
-	RewardValue    float64 `json:"reward_value"`
-	MinBillAmount  float64 `json:"min_bill_amount"`
-	StartDate      string  `json:"start_date"`
-	EndDate        string  `json:"end_date"`
-	BannerURL      string  `json:"banner_url,omitempty"`
-	IsActive       bool    `json:"is_active"`
-	CreatedAt      string  `json:"created_at"`
+	ID              string  `json:"id"`
+	StoreID         string  `json:"store_id"`
+	Name            string  `json:"name"`
+	RedeemCode      string  `json:"redeem_code"`
+	OfferCategory   string  `json:"offer_category"`
+	OfferType       string  `json:"offer_type"`
+	RewardValue     float64 `json:"reward_value"`
+	MinBillAmount   float64 `json:"min_bill_amount"`
+	RedemptionLimit int32   `json:"redemption_limit"`
+	StartDate       string  `json:"start_date"`
+	EndDate         string  `json:"end_date"`
+	BannerURL       string  `json:"banner_url,omitempty"`
+	Status          string  `json:"status"`
+	CreatedAt       string  `json:"created_at"`
 }
 
 // RewardSummaryResponse represents the JSON payload sent to the frontend Rewards Center dashboard.

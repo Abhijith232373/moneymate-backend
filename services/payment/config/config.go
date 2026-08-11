@@ -14,10 +14,12 @@ type ServerConfig struct {
 }
 
 type Config struct {
-	Env      string
-	Server   ServerConfig `mapstructure:"server"`
-	Database sharedconfig.DatabaseConfig
-	JWT      sharedconfig.JWTConfig // NEW — needed to verify access + transaction tokens
+	Env                   string
+	Server                ServerConfig `mapstructure:"server"`
+	Database              sharedconfig.DatabaseConfig
+	JWT                   sharedconfig.JWTConfig
+	AuthServiceURL        string
+	InternalServiceSecret string
 }
 
 func LoadConfig() (*Config, error) {
@@ -41,7 +43,9 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
 	cfg.Database = sharedconfig.LoadDatabaseConfig(v, "payment")
-	cfg.JWT = sharedconfig.LoadJWTConfig(v) // same secrets auth-svc signs with
+	cfg.JWT = sharedconfig.LoadJWTConfig(v)
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
+	cfg.AuthServiceURL = sharedconfig.Get("AUTH_SERVICE_URL", "http://auth:8081")
+	cfg.InternalServiceSecret = sharedconfig.MustGet("INTERNAL_SERVICE_SECRET")
 	return &cfg, nil
 }

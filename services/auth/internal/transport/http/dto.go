@@ -8,9 +8,14 @@ type registerRequest struct {
 	Phone    string `json:"phone" validate:"omitempty,e164"`
 	FullName string `json:"full_name" validate:"required,min=2,max=100"`
 	Password string `json:"password" validate:"required,min=8,max=72"`
+	PIN      string `json:"pin" validate:"required,len=6,numeric"`
 }
-
 type loginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+	PIN      string `json:"pin" validate:"required,len=6,numeric"`
+}
+type adminLoginRequest struct{
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
 }
@@ -60,6 +65,23 @@ type assignRoleRequest struct {
 	RoleID string `json:"role_id" validate:"required,uuid"`
 }
 
+//permissions
+
+type createPermissionRequest struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+}
+
+type updatePermissionRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type assignPermissionRequest struct {
+	RoleID       string `json:"role_id" validate:"required"`
+	PermissionID string `json:"permission_id" validate:"required"`
+}
+
 //admin
 
 type createUserRequest struct {
@@ -94,4 +116,4 @@ type pinRequest struct {
 type pinVerifyResponse struct {
 	TransactionToken string `json:"transaction_token"`
 	ExpiresIn        int    `json:"expires_in"`
-}
+}

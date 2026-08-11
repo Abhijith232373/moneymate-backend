@@ -94,7 +94,7 @@ func (uc *subscriptionUseCase) ChangePlan(ctx context.Context, storeID uuid.UUID
 		if err == nil {
 			activeCount := 0
 			for _, c := range campaigns {
-				if c.IsActive {
+				if c.Status == "active" {
 					activeCount++
 				}
 			}

@@ -14,24 +14,25 @@ type RegisterRequest struct {
 	Phone       string
 	FullName    string
 	Password    string
-	AccountType domain.AccountType 
+	PIN         string
+	AccountType domain.AccountType
 }
 type RegisterResponse struct {
-	UserID uuid.UUID
-	Email  string
-	Handle string
-	Status string
+	AccessToken      string
+	RefreshToken     string
+	AccessExpiresAt  time.Time
+	RefreshExpiresAt time.Time
+	User             UserSummary
 }
-
 // ── Login ─────────────────────────────────────────────────────────
 
 type LoginRequest struct {
 	Identifier string
 	Password   string
+	PIN        string
 	UserAgent  string
 	IPAddress  string
 }
-
 type LoginResponse struct {
 	AccessToken      string
 	RefreshToken     string
@@ -47,6 +48,10 @@ type UserSummary struct {
 	FullName        string
 	Status          string
 	IsEmailVerified bool
+}
+type AdminLoginRequest struct {
+	Email    string
+	Password string
 }
 
 // ── Logout ────────────────────────────────────────────────────────

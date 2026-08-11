@@ -12,14 +12,17 @@ type Campaign struct {
 	ID             uuid.UUID
 	StoreID        uuid.UUID
 	Name           string
+	RedeemCode     *string
+	OfferCategory  *string
 	OfferType      string
 	RewardValue    float64
 	MinBillAmount  float64
+	RedemptionLimit int32
 	TargetAudience string
 	BannerURL      *string
 	StartDate      time.Time
 	EndDate        time.Time
-	IsActive       bool
+	Status         string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -30,5 +33,6 @@ type CampaignRepository interface {
 	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]*Campaign, error)
 
 	GetCampaignByID(ctx context.Context, id uuid.UUID) (*Campaign, error)
-	UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, isActive bool) error
+	GetPublicCampaigns(ctx context.Context, limit, offset int) ([]*Campaign, error)
+	UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, status string) error
 }

@@ -41,6 +41,22 @@ func (r *permissionRepo) Create(ctx context.Context, permission *domain.Permissi
 	mapAuthPermissionToDomain(result, permission)
 	return nil
 }
+func (r *permissionRepo) Update(ctx context.Context, permission *domain.Permission) error {
+	result, err := r.q.UpdatePermission(ctx, db.UpdatePermissionParams{
+		ID:          uuidToPgtype(permission.ID),
+		Name:        permission.Name,
+		Description: stringPtrToText(permission.Description),
+	})
+	if err != nil {
+		mappedErr := apperrors.MapDBErrors(err)
+		if mappedErr != err {
+			return mappedErr
+		}
+		return fmt.Errorf("update permission: %w", err)
+	}
+	mapAuthPermissionToDomain(result, permission)
+	return nil
+}
 
 func (r *permissionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Permission, error) {
 	row, err := r.q.GetPermissionByID(ctx, uuidToPgtype(id))

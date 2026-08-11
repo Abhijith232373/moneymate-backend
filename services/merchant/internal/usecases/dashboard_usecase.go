@@ -141,7 +141,7 @@ func (uc *DashboardUseCase) GetDashboard(ctx context.Context, id string) (*Dashb
 	if err == nil && len(camps) > 0 {
 		for _, c := range camps {
 			statusStr := "Inactive"
-			if c.IsActive {
+			if c.Status == "active" {
 				statusStr = "Active"
 				activeCount++
 			}
