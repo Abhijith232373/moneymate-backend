@@ -27,7 +27,6 @@ func NewRazorpayClient(keyID, secret string) RazorpayClient {
 }
 
 func (r *razorpayClient) CreateOrder(amount float64, currency string, receiptID string) (string, error) {
-	// Amount should be in paise (smallest currency unit), so multiply by 100
 	amountInPaise := int(amount * 100)
 
 	data := map[string]interface{}{
