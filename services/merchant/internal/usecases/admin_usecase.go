@@ -52,6 +52,10 @@ func (uc *AdminUseCase) GetAllCampaigns(ctx context.Context, limit, offset int) 
 	return uc.adminRepo.GetAllCampaigns(ctx, limit, offset)
 }
 
+func (uc *AdminUseCase) CreateCampaign(ctx context.Context, campaign *domain.Campaign) (*domain.Campaign, error) {
+	return uc.adminRepo.CreateCampaign(ctx, campaign)
+}
+
 func (uc *AdminUseCase) GetCampaignsByStoreID(ctx context.Context, storeIDStr string) ([]*domain.Campaign, error) {
 	storeID, err := uuid.Parse(storeIDStr)
 	if err != nil {

@@ -1,7 +1,7 @@
 package http
 
 type RegisterStoreRequest struct {
-	OwnerID           string `json:"owner_id"`
+
 	OwnerName         string `json:"owner_name"`
 	ContactEmail      string `json:"contact_email"`
 	MobileNumber      string `json:"mobile_number"`
@@ -34,7 +34,7 @@ type LoginStoreRequest struct {
 
 type LoginStoreResponse struct {
 	StoreID      string `json:"store_id"`
-	OwnerID      string `json:"owner_id"`
+
 	DisplayID    string `json:"display_id"`
 	VPA          string `json:"vpa"`
 	LegalName    string `json:"legal_name"`
@@ -54,27 +54,34 @@ type GetStoreResponse struct {
 }
 
 type CreateCampaignRequest struct {
-	Name           string  `json:"name"`
-	OfferType      string  `json:"offer_type"`
-	RewardValue    float64 `json:"reward_value"`
-	MinBillAmount  float64 `json:"min_bill_amount"`
-	StartDate      string  `json:"start_date"` // YYYY-MM-DD
-	EndDate        string  `json:"end_date"`   // YYYY-MM-DD
-	BannerURL      string  `json:"banner_url,omitempty"`
+	Name            string  `json:"name"`
+	RedeemCode      string  `json:"redeem_code"`
+	OfferCategory   string  `json:"offer_category"`
+	OfferType       string  `json:"offer_type"`
+	RewardValue     float64 `json:"reward_value"`
+	MinBillAmount   float64 `json:"min_bill_amount"`
+	RedemptionLimit int32   `json:"redemption_limit"`
+	TargetAudience  string  `json:"target_audience"`
+	StartDate       string  `json:"start_date"` // YYYY-MM-DDTHH:mm:ss
+	EndDate         string  `json:"end_date"`   // YYYY-MM-DDTHH:mm:ss
+	BannerURL       string  `json:"banner_url,omitempty"`
 }
 
 type CampaignResponse struct {
-	ID             string  `json:"id"`
-	StoreID        string  `json:"store_id"`
-	Name           string  `json:"name"`
-	OfferType      string  `json:"offer_type"`
-	RewardValue    float64 `json:"reward_value"`
-	MinBillAmount  float64 `json:"min_bill_amount"`
-	StartDate      string  `json:"start_date"`
-	EndDate        string  `json:"end_date"`
-	BannerURL      string  `json:"banner_url,omitempty"`
-	IsActive       bool    `json:"is_active"`
-	CreatedAt      string  `json:"created_at"`
+	ID              string  `json:"id"`
+	StoreID         string  `json:"store_id"`
+	Name            string  `json:"name"`
+	RedeemCode      string  `json:"redeem_code"`
+	OfferCategory   string  `json:"offer_category"`
+	OfferType       string  `json:"offer_type"`
+	RewardValue     float64 `json:"reward_value"`
+	MinBillAmount   float64 `json:"min_bill_amount"`
+	RedemptionLimit int32   `json:"redemption_limit"`
+	StartDate       string  `json:"start_date"`
+	EndDate         string  `json:"end_date"`
+	BannerURL       string  `json:"banner_url,omitempty"`
+	Status          string  `json:"status"`
+	CreatedAt       string  `json:"created_at"`
 }
 
 // RewardSummaryResponse represents the JSON payload sent to the frontend Rewards Center dashboard.
@@ -211,7 +218,7 @@ type UpdateKYCDocumentsResponse struct {
 // ProfileResponse represents the merchant business and primary contact profile data for the Settings/Profile page.
 type ProfileResponse struct {
 	StoreID      string `json:"storeId,omitempty"`
-	OwnerID      string `json:"ownerId,omitempty"`
+
 	BusinessName string `json:"businessName"`
 	DBAName      string `json:"dbaName"`
 	Address      string `json:"address"`
@@ -226,6 +233,7 @@ type ProfileResponse struct {
 	VPA          string `json:"vpa"`
 	QRCodeBase64 string `json:"qr_code_base64"`
 	Plan         string `json:"plan"`
+	CreatedAt    string `json:"createdAt"`
 }
 
 // UpdateProfileRequest represents the incoming payload from the merchant Settings/Profile page form.

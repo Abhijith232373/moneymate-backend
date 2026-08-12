@@ -23,7 +23,7 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 		merchant.Use(authMiddleware)
 	}
 
-	merchant.Get("/status/:owner_id", h.GetStore)
+	merchant.Get("/status/:store_id", h.GetStore)
 	merchant.Get("/pending", h.GetPendingStores)
 
 	// Profile & Settings routes
@@ -41,6 +41,7 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 	}
 
 	// Campaign routes
+	merchant.Get("/public/campaigns", ch.GetAllPublicCampaigns)
 	merchant.Post("/campaigns", ch.CreateCampaign)
 	merchant.Post("/:store_id/campaigns", ch.CreateCampaign)
 	merchant.Get("/campaigns", ch.GetCampaigns)
@@ -129,6 +130,8 @@ func RegisterAdminRoutes(router fiber.Router, ah *AdminHandler, authMiddleware f
 		grp.Get("/campaigns", ah.GetAllCampaigns)
 		grp.Get("/stores/:store_id/campaigns", ah.GetCampaignsByStoreID)
 		grp.Get("/merchants/:store_id/campaigns", ah.GetCampaignsByStoreID)
+		grp.Post("/stores/:store_id/campaigns", ah.CreateCampaign)
+		grp.Post("/merchants/:store_id/campaigns", ah.CreateCampaign)
 		grp.Put("/campaigns/:id/status", ah.UpdateCampaignStatus)
 		grp.Delete("/campaigns/:id", ah.DeleteCampaign)
 

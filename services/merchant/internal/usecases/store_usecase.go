@@ -24,7 +24,6 @@ func NewStoreUseCase(repo domain.MerchantRepository) *StoreUseCase {
 }
 
 type RegisterStoreInput struct {
-	OwnerID           string
 	OwnerName         string
 	ContactEmail      string
 	MobileNumber      string
@@ -41,10 +40,11 @@ type RegisterStoreInput struct {
 
 // ProcessRegistration applies validation and executes state persistence.
 func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStoreInput) (*domain.Store, error) {
-	ownerUUID, err := uuid.Parse(in.OwnerID)
+	storeIDStr, err := uuid.NewV7()
 	if err != nil {
-		return nil, fmt.Errorf("invalid owner UUID format: %w", err)
+		return nil, fmt.Errorf("failed to generate store UUID: %w", err)
 	}
+	storeID := storeIDStr
 
 	displayID, err := generateDisplayID()
 	if err != nil {
@@ -63,7 +63,8 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 	}
 
 	store := &domain.Store{
-		OwnerID:           ownerUUID,
+		ID:                storeID,
+		Role:              "merchant",
 		OwnerName:         strings.TrimSpace(in.OwnerName),
 		ContactEmail:      strings.ToLower(strings.TrimSpace(in.ContactEmail)),
 		MobileNumber:      strings.TrimSpace(in.MobileNumber),
@@ -97,14 +98,14 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 	return createdStore, nil
 }
 
-// GetStore retrieves a store by owner ID.
-func (uc *StoreUseCase) GetStore(ctx context.Context, ownerID string) (*domain.Store, error) {
-	ownerUUID, err := uuid.Parse(ownerID)
+// GetStore retrieves a store by ID.
+func (uc *StoreUseCase) GetStore(ctx context.Context, id string) (*domain.Store, error) {
+	storeUUID, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid owner UUID format: %w", err)
+		return nil, fmt.Errorf("invalid store UUID format: %w", err)
 	}
 
-	return uc.repo.GetStoreByOwnerID(ctx, ownerUUID)
+	return uc.repo.GetStoreByID(ctx, storeUUID)
 }
 
 // AuthenticateStore checks if the email and password match a registered store.
@@ -154,7 +155,6 @@ func (uc *StoreUseCase) GetPendingStores(ctx context.Context) ([]*domain.Store, 
 
 type UpdateProfileInput struct {
 	StoreID           string
-	OwnerID           string
 	BusinessName      string
 	DBAName           string
 	Address           string
@@ -166,7 +166,7 @@ type UpdateProfileInput struct {
 	ProfileImage      string
 }
 
-// GetProfile retrieves the store profile by store UUID or owner UUID.
+// GetProfile retrieves the store profile by store UUID.
 func (uc *StoreUseCase) GetProfile(ctx context.Context, id string) (*domain.Store, error) {
 	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
@@ -178,21 +178,17 @@ func (uc *StoreUseCase) GetProfile(ctx context.Context, id string) (*domain.Stor
 		return store, nil
 	}
 
-	return uc.repo.GetStoreProfileByOwnerID(ctx, parsedUUID)
+	return nil, fmt.Errorf("profile not found")
 }
 
-// UpdateProfile updates store profile fields.
 func (uc *StoreUseCase) UpdateProfile(ctx context.Context, in UpdateProfileInput) (*domain.Store, error) {
-	var storeID, ownerID uuid.UUID
+	var storeID uuid.UUID
 	if in.StoreID != "" {
 		storeID, _ = uuid.Parse(in.StoreID)
 	}
-	if in.OwnerID != "" {
-		ownerID, _ = uuid.Parse(in.OwnerID)
-	}
 
-	if storeID == uuid.Nil && ownerID == uuid.Nil {
-		return nil, fmt.Errorf("either StoreID or OwnerID must be provided")
+	if storeID == uuid.Nil {
+		return nil, fmt.Errorf("StoreID must be provided")
 	}
 
 	var dba *string
@@ -206,7 +202,6 @@ func (uc *StoreUseCase) UpdateProfile(ctx context.Context, in UpdateProfileInput
 
 	store := &domain.Store{
 		ID:                storeID,
-		OwnerID:           ownerID,
 		LegalName:         strings.TrimSpace(in.BusinessName),
 		DBAName:           dba,
 		RegisteredAddress: strings.TrimSpace(in.Address),
@@ -223,10 +218,6 @@ func (uc *StoreUseCase) UpdateProfile(ctx context.Context, in UpdateProfileInput
 		if err == nil && res != nil && res.ID != uuid.Nil {
 			return res, nil
 		}
-	}
-
-	if ownerID != uuid.Nil {
-		return uc.repo.UpdateStoreProfileByOwnerID(ctx, store)
 	}
 
 	return nil, fmt.Errorf("failed to update store profile")

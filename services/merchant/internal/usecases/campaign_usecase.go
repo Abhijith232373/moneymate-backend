@@ -12,8 +12,9 @@ import (
 type CampaignUseCase interface {
 	CreateCampaign(ctx context.Context, campaign *domain.Campaign) (*domain.Campaign, error)
 	GetCampaignsByStoreID(ctx context.Context, storeID uuid.UUID) ([]*domain.Campaign, error)
-	GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*domain.Campaign, error)
-	UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, isActive bool) error
+	GetPublicCampaigns(ctx context.Context, limit, offset int) ([]*domain.Campaign, error)
+
+	UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, status string) error
 }
 
 type campaignUseCase struct {
@@ -43,7 +44,7 @@ func (uc *campaignUseCase) CreateCampaign(ctx context.Context, c *domain.Campaig
 
 	activeCount := 0
 	for _, camp := range campaigns {
-		if camp.IsActive {
+		if camp.Status == "active" {
 			activeCount++
 		}
 	}
@@ -64,7 +65,7 @@ func (uc *campaignUseCase) CreateCampaign(ctx context.Context, c *domain.Campaig
 		}
 	}
 
-	c.IsActive = true
+	c.Status = "active"
 	return uc.campaignRepo.CreateCampaign(ctx, c)
 }
 
@@ -72,12 +73,12 @@ func (uc *campaignUseCase) GetCampaignsByStoreID(ctx context.Context, storeID uu
 	return uc.campaignRepo.GetCampaignsByStoreID(ctx, storeID)
 }
 
-func (uc *campaignUseCase) GetCampaignsByOwnerID(ctx context.Context, ownerID uuid.UUID) ([]*domain.Campaign, error) {
-	return uc.campaignRepo.GetCampaignsByOwnerID(ctx, ownerID)
+func (uc *campaignUseCase) GetPublicCampaigns(ctx context.Context, limit, offset int) ([]*domain.Campaign, error) {
+	return uc.campaignRepo.GetPublicCampaigns(ctx, limit, offset)
 }
 
-func (uc *campaignUseCase) UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, isActive bool) error {
-	if isActive {
+func (uc *campaignUseCase) UpdateCampaignStatus(ctx context.Context, id, storeID uuid.UUID, status string) error {
+	if status == "active" {
 		// Fetch store to get the current plan
 		store, err := uc.storeRepo.GetStoreProfileByStoreID(ctx, storeID)
 		if err != nil {
@@ -93,7 +94,7 @@ func (uc *campaignUseCase) UpdateCampaignStatus(ctx context.Context, id, storeID
 		activeCount := 0
 		for _, camp := range campaigns {
 			// Count active ones excluding the one we are updating, though if it's already active this won't change the count
-			if camp.IsActive && camp.ID != id {
+			if camp.Status == "active" && camp.ID != id {
 				activeCount++
 			}
 		}
@@ -113,5 +114,5 @@ func (uc *campaignUseCase) UpdateCampaignStatus(ctx context.Context, id, storeID
 		}
 	}
 
-	return uc.campaignRepo.UpdateCampaignStatus(ctx, id, storeID, isActive)
+	return uc.campaignRepo.UpdateCampaignStatus(ctx, id, storeID, status)
 }

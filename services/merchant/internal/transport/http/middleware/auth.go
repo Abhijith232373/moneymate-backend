@@ -10,10 +10,10 @@ import (
 
 var JWTSecret = []byte("super_secret_moneymate_key_change_in_prod")
 
-func GenerateToken(storeID string, ownerID string) (string, error) {
+func GenerateToken(storeID string, role string) (string, error) {
 	claims := jwt.MapClaims{
 		"store_id": storeID,
-		"owner_id": ownerID,
+		"role":     role,
 		"exp":      time.Now().Add(time.Hour * 72).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -53,8 +53,8 @@ func RequireAuth() fiber.Handler {
 		if storeID, ok := claims["store_id"].(string); ok {
 			c.Locals("store_id", storeID)
 		}
-		if ownerID, ok := claims["owner_id"].(string); ok {
-			c.Locals("owner_id", ownerID)
+		if role, ok := claims["role"].(string); ok {
+			c.Locals("role", role)
 		}
 
 		return c.Next()
