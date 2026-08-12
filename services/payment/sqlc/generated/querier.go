@@ -13,18 +13,32 @@ import (
 
 type Querier interface {
 	AddBalance(ctx context.Context, arg AddBalanceParams) error
+	CountDeposits(ctx context.Context, arg CountDepositsParams) (int64, error)
+	CountWithdrawals(ctx context.Context, arg CountWithdrawalsParams) (int64, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
+	CreateDeposit(ctx context.Context, arg CreateDepositParams) (PaymentDeposit, error)
+	CreateExternalSettlementAccount(ctx context.Context) (CreateExternalSettlementAccountRow, error)
+	CreateWallet(ctx context.Context, arg CreateWalletParams) (CreateWalletRow, error)
+	GetAccountByHandle(ctx context.Context, handle *string) (GetAccountByHandleRow, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (GetAccountByIDRow, error)
 	GetAccountByIDForUpdate(ctx context.Context, id uuid.UUID) (GetAccountByIDForUpdateRow, error)
+	GetDepositByOrderID(ctx context.Context, razorpayOrderID string) (PaymentDeposit, error)
 	GetEntriesByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]GetEntriesByTransactionIDRow, error)
+	GetExternalSettlementAccount(ctx context.Context) (GetExternalSettlementAccountRow, error)
+	GetTotalBalanceByUser(ctx context.Context, userID pgtype.UUID) (int64, error)
 	GetTransactionByID(ctx context.Context, id uuid.UUID) (GetTransactionByIDRow, error)
 	GetTransactionByIdempotencyKey(ctx context.Context, arg GetTransactionByIdempotencyKeyParams) (GetTransactionByIdempotencyKeyRow, error)
 	GetWalletByUserID(ctx context.Context, userID pgtype.UUID) (GetWalletByUserIDRow, error)
 	InsertJournalEntry(ctx context.Context, arg InsertJournalEntryParams) error
 	InsertTransaction(ctx context.Context, arg InsertTransactionParams) (InsertTransactionRow, error)
 	ListAccountsByUser(ctx context.Context, userID pgtype.UUID) ([]ListAccountsByUserRow, error)
+	ListDeposits(ctx context.Context, arg ListDepositsParams) ([]PaymentDeposit, error)
 	ListEntriesByAccount(ctx context.Context, accountID uuid.UUID) ([]ListEntriesByAccountRow, error)
 	ListTransactionsByAccount(ctx context.Context, accountID uuid.UUID) ([]ListTransactionsByAccountRow, error)
+	ListWithdrawals(ctx context.Context, arg ListWithdrawalsParams) ([]PaymentTransaction, error)
+	MarkDepositFailed(ctx context.Context, arg MarkDepositFailedParams) error
+	MarkDepositPaid(ctx context.Context, arg MarkDepositPaidParams) error
+	MarkDepositPaidIfCreated(ctx context.Context, arg MarkDepositPaidIfCreatedParams) (int64, error)
 	UpdateTransactionStatus(ctx context.Context, arg UpdateTransactionStatusParams) error
 }
 

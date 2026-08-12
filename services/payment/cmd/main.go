@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/moneymate-2026/moneymate-backend/services/payment/config"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/app"
+	kafkaconsumer "github.com/moneymate-2026/moneymate-backend/services/payment/internal/infra/kafkaConsumer"
 )
 
 func main() {
@@ -22,6 +24,13 @@ func main() {
 	}
 	defer paymentApp.Close()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go paymentApp.KafkaConsumer.Run(ctx, func(ctx context.Context, payload []byte) error {
+		return kafkaconsumer.HandleUserRegistered(ctx, paymentApp.WalletUC, payload)
+	}) // NEW — starts the Kafka consumer loop
+
 	go func() {
 		if err := paymentApp.Run(); err != nil {
 			log.Fatalf("App run failed: %v", err)
@@ -32,6 +41,7 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	log.Println("Shutdown signal received, gracefully shutting down...")
+	cancel() // NEW — stops the consumer loop
 	paymentApp.Close()
 	log.Println("Payment service stopped cleanly")
 }

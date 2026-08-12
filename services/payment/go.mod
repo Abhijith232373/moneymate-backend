@@ -5,10 +5,11 @@ go 1.26.4
 require (
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/fiber/v3 v3.4.0
+	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
-	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260721103819-7d0193ac3dc1
+	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260811104043-77fe62eb300d
 	github.com/spf13/viper v1.21.0
 )
 
@@ -28,6 +29,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect

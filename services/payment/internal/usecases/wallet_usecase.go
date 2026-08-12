@@ -12,9 +12,11 @@ import (
 )
 
 type WalletUsecase interface {
-	CreateWallet(ctx context.Context, userID string) (*domain.Account, error)
+	CreateWallet(ctx context.Context, userID, handle string) (*domain.Account, error)
 	GetWallet(ctx context.Context, userID string) (*domain.Account, error)
 	GetByID(ctx context.Context, id string) (*domain.Account, error)
+	GetByHandle(ctx context.Context, handle string) (*domain.Account, error)
+	GetTotalBalance(ctx context.Context, userID string) (int64, error)
 }
 
 type walletUsecase struct {
@@ -26,28 +28,28 @@ func NewWalletUsecase(accounts domain.AccountRepository) WalletUsecase {
 }
 
 // CreateWallet is idempotent: a user only ever gets one wallet.
-func (u *walletUsecase) CreateWallet(ctx context.Context, userID string) (*domain.Account, error) {
+func (u *walletUsecase) CreateWallet(ctx context.Context, userID, handle string) (*domain.Account, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
+		return nil, apperrors.ErrInvalidInput
+	}
+	if handle == "" {
 		return nil, apperrors.ErrInvalidInput
 	}
 
 	existing, err := u.accounts.GetWalletByUserID(ctx, uid)
 	if err == nil && existing != nil {
-		return existing, nil // already has a wallet — return it
+		return existing, nil
 	}
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		return nil, err
 	}
 
-	created, err := u.accounts.Create(ctx, &domain.Account{
-		UserID:   &uid,
-		Type:     domain.AccountTypeWallet,
-		Currency: "INR",
+	created, err := u.accounts.CreateWallet(ctx, &domain.Account{
+		UserID: &uid, Currency: "INR", Handle: &handle,
 	})
 	if err != nil {
 		if errors.Is(err, apperrors.ErrAlreadyExists) {
-			// Lost a race — another request created it first. Return the winner.
 			return u.accounts.GetWalletByUserID(ctx, uid)
 		}
 		return nil, fmt.Errorf("create wallet: %w", err)
@@ -69,4 +71,19 @@ func (u *walletUsecase) GetByID(ctx context.Context, id string) (*domain.Account
 		return nil, apperrors.ErrInvalidInput
 	}
 	return u.accounts.GetByID(ctx, accID)
+}
+
+func (u *walletUsecase) GetByHandle(ctx context.Context, handle string) (*domain.Account, error) {
+	if handle == "" {
+		return nil, apperrors.ErrInvalidInput
+	}
+	return u.accounts.GetByHandle(ctx, handle)
+}
+
+func (u *walletUsecase) GetTotalBalance(ctx context.Context, userID string) (int64, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return 0, apperrors.ErrInvalidInput
+	}
+	return u.accounts.GetTotalBalanceByUser(ctx, uid)
 }

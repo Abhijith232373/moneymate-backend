@@ -33,7 +33,7 @@ const createAccount = `-- name: CreateAccount :one
 INSERT INTO payment.accounts (user_id, merchant_id, type, currency)
 VALUES ($1, $2, $3::payment.account_type, $4)
 RETURNING id, user_id, merchant_id, type::text AS type, currency,
-          balance, version, created_at, updated_at
+          balance, version, handle, created_at, updated_at
 `
 
 type CreateAccountParams struct {
@@ -51,6 +51,7 @@ type CreateAccountRow struct {
 	Currency   string
 	Balance    int64
 	Version    int64
+	Handle     *string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -71,6 +72,127 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (C
 		&i.Currency,
 		&i.Balance,
 		&i.Version,
+		&i.Handle,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createExternalSettlementAccount = `-- name: CreateExternalSettlementAccount :one
+INSERT INTO payment.accounts (type, currency)
+VALUES ('external_settlement', 'INR')
+RETURNING id, user_id, merchant_id, type::text AS type, currency,
+          balance, version, handle, created_at, updated_at
+`
+
+type CreateExternalSettlementAccountRow struct {
+	ID         uuid.UUID
+	UserID     pgtype.UUID
+	MerchantID pgtype.UUID
+	Type       string
+	Currency   string
+	Balance    int64
+	Version    int64
+	Handle     *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) CreateExternalSettlementAccount(ctx context.Context) (CreateExternalSettlementAccountRow, error) {
+	row := q.db.QueryRow(ctx, createExternalSettlementAccount)
+	var i CreateExternalSettlementAccountRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.MerchantID,
+		&i.Type,
+		&i.Currency,
+		&i.Balance,
+		&i.Version,
+		&i.Handle,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWallet = `-- name: CreateWallet :one
+INSERT INTO payment.accounts (user_id, type, currency, handle)
+VALUES ($1, 'wallet', $2, $3)
+RETURNING id, user_id, merchant_id, type::text AS type, currency,
+          balance, version, handle, created_at, updated_at
+`
+
+type CreateWalletParams struct {
+	UserID   pgtype.UUID
+	Currency string
+	Handle   *string
+}
+
+type CreateWalletRow struct {
+	ID         uuid.UUID
+	UserID     pgtype.UUID
+	MerchantID pgtype.UUID
+	Type       string
+	Currency   string
+	Balance    int64
+	Version    int64
+	Handle     *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (CreateWalletRow, error) {
+	row := q.db.QueryRow(ctx, createWallet, arg.UserID, arg.Currency, arg.Handle)
+	var i CreateWalletRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.MerchantID,
+		&i.Type,
+		&i.Currency,
+		&i.Balance,
+		&i.Version,
+		&i.Handle,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountByHandle = `-- name: GetAccountByHandle :one
+SELECT id, user_id, merchant_id, type::text AS type, currency,
+       balance, version, handle, created_at, updated_at
+FROM payment.accounts
+WHERE handle = $1
+`
+
+type GetAccountByHandleRow struct {
+	ID         uuid.UUID
+	UserID     pgtype.UUID
+	MerchantID pgtype.UUID
+	Type       string
+	Currency   string
+	Balance    int64
+	Version    int64
+	Handle     *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) GetAccountByHandle(ctx context.Context, handle *string) (GetAccountByHandleRow, error) {
+	row := q.db.QueryRow(ctx, getAccountByHandle, handle)
+	var i GetAccountByHandleRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.MerchantID,
+		&i.Type,
+		&i.Currency,
+		&i.Balance,
+		&i.Version,
+		&i.Handle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -79,7 +201,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (C
 
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT id, user_id, merchant_id, type::text AS type, currency,
-       balance, version, created_at, updated_at
+       balance, version, handle, created_at, updated_at
 FROM payment.accounts
 WHERE id = $1
 `
@@ -92,6 +214,7 @@ type GetAccountByIDRow struct {
 	Currency   string
 	Balance    int64
 	Version    int64
+	Handle     *string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -107,6 +230,7 @@ func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (GetAccountB
 		&i.Currency,
 		&i.Balance,
 		&i.Version,
+		&i.Handle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -115,7 +239,7 @@ func (q *Queries) GetAccountByID(ctx context.Context, id uuid.UUID) (GetAccountB
 
 const getAccountByIDForUpdate = `-- name: GetAccountByIDForUpdate :one
 SELECT id, user_id, merchant_id, type::text AS type, currency,
-       balance, version, created_at, updated_at
+       balance, version, handle, created_at, updated_at
 FROM payment.accounts
 WHERE id = $1
 FOR UPDATE
@@ -129,6 +253,7 @@ type GetAccountByIDForUpdateRow struct {
 	Currency   string
 	Balance    int64
 	Version    int64
+	Handle     *string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -144,15 +269,68 @@ func (q *Queries) GetAccountByIDForUpdate(ctx context.Context, id uuid.UUID) (Ge
 		&i.Currency,
 		&i.Balance,
 		&i.Version,
+		&i.Handle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const getExternalSettlementAccount = `-- name: GetExternalSettlementAccount :one
+SELECT id, user_id, merchant_id, type::text AS type, currency,
+       balance, version, handle, created_at, updated_at
+FROM payment.accounts
+WHERE type = 'external_settlement'
+LIMIT 1
+`
+
+type GetExternalSettlementAccountRow struct {
+	ID         uuid.UUID
+	UserID     pgtype.UUID
+	MerchantID pgtype.UUID
+	Type       string
+	Currency   string
+	Balance    int64
+	Version    int64
+	Handle     *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) GetExternalSettlementAccount(ctx context.Context) (GetExternalSettlementAccountRow, error) {
+	row := q.db.QueryRow(ctx, getExternalSettlementAccount)
+	var i GetExternalSettlementAccountRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.MerchantID,
+		&i.Type,
+		&i.Currency,
+		&i.Balance,
+		&i.Version,
+		&i.Handle,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTotalBalanceByUser = `-- name: GetTotalBalanceByUser :one
+SELECT COALESCE(SUM(balance), 0)::bigint AS total
+FROM payment.accounts
+WHERE user_id = $1
+`
+
+func (q *Queries) GetTotalBalanceByUser(ctx context.Context, userID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalBalanceByUser, userID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const getWalletByUserID = `-- name: GetWalletByUserID :one
 SELECT id, user_id, merchant_id, type::text AS type, currency,
-       balance, version, created_at, updated_at
+       balance, version, handle, created_at, updated_at
 FROM payment.accounts
 WHERE user_id = $1 AND type = 'wallet'
 `
@@ -165,6 +343,7 @@ type GetWalletByUserIDRow struct {
 	Currency   string
 	Balance    int64
 	Version    int64
+	Handle     *string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -180,6 +359,7 @@ func (q *Queries) GetWalletByUserID(ctx context.Context, userID pgtype.UUID) (Ge
 		&i.Currency,
 		&i.Balance,
 		&i.Version,
+		&i.Handle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -188,7 +368,7 @@ func (q *Queries) GetWalletByUserID(ctx context.Context, userID pgtype.UUID) (Ge
 
 const listAccountsByUser = `-- name: ListAccountsByUser :many
 SELECT id, user_id, merchant_id, type::text AS type, currency,
-       balance, version, created_at, updated_at
+       balance, version, handle, created_at, updated_at
 FROM payment.accounts
 WHERE user_id = $1
 ORDER BY created_at
@@ -202,6 +382,7 @@ type ListAccountsByUserRow struct {
 	Currency   string
 	Balance    int64
 	Version    int64
+	Handle     *string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -223,6 +404,7 @@ func (q *Queries) ListAccountsByUser(ctx context.Context, userID pgtype.UUID) ([
 			&i.Currency,
 			&i.Balance,
 			&i.Version,
+			&i.Handle,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

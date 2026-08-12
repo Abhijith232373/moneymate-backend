@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS payment.idx_accounts_external_settlement_singleton;

@@ -15,6 +15,7 @@ const (
 	AccountTypeMerchantSettlement AccountType = "merchant_settlement"
 	AccountTypeMerchantPayout     AccountType = "merchant_payout"
 	AccountTypePlatformCommission AccountType = "platform_commission_pool"
+	AccountTypeExternalSettlement AccountType = "external_settlement"
 )
 
 type Account struct {
@@ -24,6 +25,7 @@ type Account struct {
 	Type       AccountType
 	Currency   string
 	Balance    int64 // paise
+	Handle     *string
 	Version    int64
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -31,7 +33,13 @@ type Account struct {
 
 type AccountRepository interface {
 	Create(ctx context.Context, a *Account) (*Account, error)
+	CreateWallet(ctx context.Context, a *Account) (*Account, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Account, error)
+	GetByHandle(ctx context.Context, handle string) (*Account, error)
 	GetWalletByUserID(ctx context.Context, userID uuid.UUID) (*Account, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]*Account, error)
+	GetTotalBalanceByUser(ctx context.Context, userID uuid.UUID) (int64, error)
+	AddBalance(ctx context.Context, id uuid.UUID, amount int64) error
+	CreateExternalSettlementAccount(ctx context.Context) (*Account, error)
+ 	GetExternalSettlementAccount(ctx context.Context) (*Account, error)
 }

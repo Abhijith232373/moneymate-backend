@@ -1,0 +1,1 @@
+ALTER TYPE payment.account_type ADD VALUE 'external_settlement';

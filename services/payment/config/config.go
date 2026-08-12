@@ -18,6 +18,7 @@ type Config struct {
 	Server                ServerConfig `mapstructure:"server"`
 	Database              sharedconfig.DatabaseConfig
 	JWT                   sharedconfig.JWTConfig
+	Kafka    sharedconfig.KafkaConfig
 	AuthServiceURL        string
 	InternalServiceSecret string
 }
@@ -45,6 +46,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Database = sharedconfig.LoadDatabaseConfig(v, "payment")
 	cfg.JWT = sharedconfig.LoadJWTConfig(v)
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
+	cfg.Kafka = sharedconfig.LoadKafkaConfig(v)
 	cfg.AuthServiceURL = sharedconfig.Get("AUTH_SERVICE_URL", "http://auth:8081")
 	cfg.InternalServiceSecret = sharedconfig.MustGet("INTERNAL_SERVICE_SECRET")
 	return &cfg, nil

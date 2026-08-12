@@ -40,9 +40,9 @@ type JournalEntry struct {
 type TransactionRepository interface {
 	Create(ctx context.Context, t *Transaction) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Transaction, error)
-	// GetByIdempotencyKey now scoped to the sending account — see A4.
 	GetByIdempotencyKey(ctx context.Context, key string, fromAccountID uuid.UUID) (*Transaction, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status TxStatus) error
 	ListByAccount(ctx context.Context, accountID uuid.UUID) ([]*Transaction, error)
 	GetEntriesByTransactionID(ctx context.Context, txID uuid.UUID) ([]*JournalEntry, error)
+	ListWithdrawals(ctx context.Context, settlementAccountID uuid.UUID, fromAccountID *uuid.UUID, limit, offset int32) ([]*Transaction, int64, error)
 }

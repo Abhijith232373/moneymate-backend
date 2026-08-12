@@ -25,6 +25,7 @@ type Querier interface {
 	DeletePermission(ctx context.Context, id pgtype.UUID) error
 	DeleteRole(ctx context.Context, id pgtype.UUID) error
 	EmailExists(ctx context.Context, email string) (bool, error)
+	FetchUnpublishedOutboxEvents(ctx context.Context, limit int32) ([]AuthOutboxEvent, error)
 	GetOAuthAccount(ctx context.Context, arg GetOAuthAccountParams) (AuthOauthAccount, error)
 	GetOAuthAccountsByUser(ctx context.Context, userID pgtype.UUID) ([]AuthOauthAccount, error)
 	GetPINByUserID(ctx context.Context, userID pgtype.UUID) (AuthUserPin, error)
@@ -43,10 +44,12 @@ type Querier interface {
 	HandleExists(ctx context.Context, handle string) (bool, error)
 	IncrementPINFailedAttempts(ctx context.Context, userID pgtype.UUID) (int32, error)
 	IncrementTokenVersion(ctx context.Context, id pgtype.UUID) (int64, error)
+	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) error
 	ListPermissions(ctx context.Context) ([]AuthPermission, error)
 	ListRoles(ctx context.Context) ([]AuthRole, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]AuthUser, error)
 	LockPIN(ctx context.Context, arg LockPINParams) error
+	MarkOutboxEventPublished(ctx context.Context, id pgtype.UUID) error
 	PINExists(ctx context.Context, userID pgtype.UUID) (bool, error)
 	PhoneExists(ctx context.Context, phone pgtype.Text) (bool, error)
 	RemovePermissionFromRole(ctx context.Context, arg RemovePermissionFromRoleParams) error

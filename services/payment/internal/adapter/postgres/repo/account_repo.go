@@ -36,12 +36,32 @@ func (r *AccountRepo) Create(ctx context.Context, a *domain.Account) (*domain.Ac
 	return rowToAccount(generated.GetAccountByIDRow(row)), nil
 }
 
+func (r *AccountRepo) CreateWallet(ctx context.Context, a *domain.Account) (*domain.Account, error) {
+	row, err := r.q.CreateWallet(ctx, generated.CreateWalletParams{
+		UserID:   uuidPtrToPgtype(a.UserID),
+		Currency: a.Currency,
+		Handle:   a.Handle,
+	})
+	if err != nil {
+		return nil, mapDBErr(err)
+	}
+	return rowToAccount(generated.GetAccountByIDRow(row)), nil
+}
+
 func (r *AccountRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Account, error) {
 	row, err := r.q.GetAccountByID(ctx, id)
 	if err != nil {
 		return nil, mapDBErr(err)
 	}
 	return rowToAccount(row), nil
+}
+
+func (r *AccountRepo) GetByHandle(ctx context.Context, handle string) (*domain.Account, error) {
+	row, err := r.q.GetAccountByHandle(ctx, &handle)
+	if err != nil {
+		return nil, mapDBErr(err)
+	}
+	return rowToAccount(generated.GetAccountByIDRow(row)), nil
 }
 
 func (r *AccountRepo) GetWalletByUserID(ctx context.Context, userID uuid.UUID) (*domain.Account, error) {
@@ -64,6 +84,18 @@ func (r *AccountRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]*doma
 	return accounts, nil
 }
 
+func (r *AccountRepo) GetTotalBalanceByUser(ctx context.Context, userID uuid.UUID) (int64, error) {
+	total, err := r.q.GetTotalBalanceByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return 0, mapDBErr(err)
+	}
+	return total, nil
+}
+
+func (r *AccountRepo) AddBalance(ctx context.Context, id uuid.UUID, amount int64) error {
+	return mapDBErr(r.q.AddBalance(ctx, generated.AddBalanceParams{ID: id, Balance: amount}))
+}
+
 func rowToAccount(row generated.GetAccountByIDRow) *domain.Account {
 	var userID, merchantID *uuid.UUID
 	if row.UserID.Valid {
@@ -82,9 +114,26 @@ func rowToAccount(row generated.GetAccountByIDRow) *domain.Account {
 		Currency:   row.Currency,
 		Balance:    row.Balance,
 		Version:    row.Version,
+		Handle:     row.Handle,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
 	}
+}
+
+func (r *AccountRepo) GetExternalSettlementAccount(ctx context.Context) (*domain.Account, error) {
+	row, err := r.q.GetExternalSettlementAccount(ctx)
+	if err != nil {
+		return nil, mapDBErr(err)
+	}
+	return rowToAccount(generated.GetAccountByIDRow(row)), nil
+}
+
+func (r *AccountRepo) CreateExternalSettlementAccount(ctx context.Context) (*domain.Account, error) {
+	row, err := r.q.CreateExternalSettlementAccount(ctx)
+	if err != nil {
+		return nil, mapDBErr(err)
+	}
+	return rowToAccount(generated.GetAccountByIDRow(row)), nil
 }
 
 func mapDBErr(err error) error {

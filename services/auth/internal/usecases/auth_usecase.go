@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -23,7 +24,6 @@ type AuthUsecase interface {
 	Logout(ctx context.Context, req LogoutRequest) error
 	RefreshToken(ctx context.Context, req RefreshTokenRequest) (*RefreshTokenResponse, error)
 	AdminLogin(ctx context.Context, req AdminLoginRequest) (*LoginResponse, error)
-
 }
 
 // ── DI interfaces ────────────────────────────────────────────────
@@ -44,24 +44,11 @@ type TokenIssuer interface {
 	IssueRefreshToken(userID uuid.UUID) (token, tokenHash string, expiresAt time.Time, err error)
 }
 
-// type authUsecase struct {
-// 	userRepo         domain.UserRepository
-// 	roleRepo         domain.RoleRepository
-// 	refreshTokenRepo domain.RefreshTokenRepository
-// 	pinRepo          domain.UserPinRepository
-// 	pinUsecase       UserPinUsecase
-// 	store            domain.Store
-// 	tx               domain.TxManager
-// 	hasher           PasswordHasher
-// 	idGen            IDGenerator
-// 	issuer           TokenIssuer
-// 	jwtCfg           jwtutil.Config
-// }
-
 type authUsecase struct {
 	userRepo         domain.UserRepository
 	roleRepo         domain.RoleRepository
 	refreshTokenRepo domain.RefreshTokenRepository
+	outboxRepo       domain.OutboxRepository
 	pinRepo          domain.UserPinRepository
 	pinUsecase       UserPinUsecase
 	store            domain.Store
@@ -75,6 +62,7 @@ type authUsecase struct {
 func NewAuthUsecase(
 	userRepo domain.UserRepository,
 	roleRepo domain.RoleRepository,
+	outboxRepo       domain.OutboxRepository,
 	refreshTokenRepo domain.RefreshTokenRepository,
 	pinRepo domain.UserPinRepository,
 	pinUsecase UserPinUsecase,
@@ -88,7 +76,7 @@ func NewAuthUsecase(
 	return &authUsecase{
 		userRepo: userRepo, roleRepo: roleRepo, refreshTokenRepo: refreshTokenRepo,
 		pinRepo: pinRepo, pinUsecase: pinUsecase, store: store, tx: tx,
-		hasher: hasher, idGen: idGen, issuer: issuer, jwtCfg: jwtCfg,
+		hasher: hasher, idGen: idGen, issuer: issuer, jwtCfg: jwtCfg,outboxRepo: outboxRepo,
 	}
 }
 
@@ -176,40 +164,53 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 		Handle: handle, PasswordHash: &passwordHash, Status: domain.UserStatusActive,
 	}
 
-	err = u.tx.WithTx(ctx, func(ctx context.Context) error {
-		if err := u.userRepo.Create(ctx, user); err != nil {
-			return fmt.Errorf("create user: %w", err)
-		}
-		if err := u.userRepo.VerifyEmail(ctx, user.ID); err != nil {
-			return fmt.Errorf("verify email: %w", err)
-		}
-		if err := u.roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil); err != nil {
-			return fmt.Errorf("assign role: %w", err)
-		}
-		if err := u.pinRepo.Create(ctx, &domain.UserPin{
-			ID: pinID, UserID: user.ID, PinHash: pinHash,
-		}); err != nil {
-			return fmt.Errorf("create pin: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
 
-	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
-	if err != nil {
-		return nil, err
-	}
 
-	return &RegisterResponse{
-		AccessToken: accessToken, RefreshToken: refreshToken,
-		AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
-		User: UserSummary{
-			ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
-			Status: string(user.Status), IsEmailVerified: true,
-		},
-	}, nil
+outboxID, err := u.idGen.NewV7()
+if err != nil {
+	return nil, fmt.Errorf("generate outbox id: %w", err)
+}
+eventPayload, err := json.Marshal(UserRegisteredEvent{UserID: userID, Handle: handle})
+if err != nil {
+	return nil, fmt.Errorf("marshal event: %w", err)
+}
+
+err = u.tx.WithTx(ctx, func(ctx context.Context) error {
+	if err := u.userRepo.Create(ctx, user); err != nil {
+		return fmt.Errorf("create user: %w", err)
+	}
+	if err := u.userRepo.VerifyEmail(ctx, user.ID); err != nil {
+		return fmt.Errorf("verify email: %w", err)
+	}
+	if err := u.roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil); err != nil {
+		return fmt.Errorf("assign role: %w", err)
+	}
+	if err := u.pinRepo.Create(ctx, &domain.UserPin{ID: pinID, UserID: user.ID, PinHash: pinHash}); err != nil {
+		return fmt.Errorf("create pin: %w", err)
+	}
+	if err := u.outboxRepo.Insert(ctx, &domain.OutboxEvent{
+		ID: outboxID, Topic: "user.registered", Payload: eventPayload,
+	}); err != nil {
+		return fmt.Errorf("insert outbox event: %w", err)
+	}
+	return nil
+})
+if err != nil {
+	return nil, err
+}
+
+accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
+if err != nil {
+	return nil, err
+}
+return &RegisterResponse{
+	AccessToken: accessToken, RefreshToken: refreshToken,
+	AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
+	User: UserSummary{
+		ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
+		Status: string(user.Status), IsEmailVerified: true,
+	},
+}, nil
 }
 
 // ── Login ─────────────────────────────────────────────────────────
@@ -218,7 +219,6 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	if email == "" || req.Password == "" || len(req.PIN) != 6 {
 		return nil, apperrors.ErrInvalidInput
 	}
-	
 
 	user, err := u.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -243,7 +243,7 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 	}
 
 	if err := u.pinUsecase.VerifyPIN(ctx, user.ID, VerifyPINRequest{PIN: req.PIN}); err != nil {
-		return nil, err 
+		return nil, err
 	}
 
 	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
@@ -266,7 +266,6 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		},
 	}, nil
 }
-
 
 func (u *authUsecase) AdminLogin(ctx context.Context, req AdminLoginRequest) (*LoginResponse, error) {
 	email := normalizeEmail(req.Email)
@@ -307,7 +306,7 @@ func (u *authUsecase) AdminLogin(ctx context.Context, req AdminLoginRequest) (*L
 		}
 	}
 	if !isAdmin {
-		return nil, apperrors.ErrForbidden 
+		return nil, apperrors.ErrForbidden
 	}
 
 	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
@@ -548,13 +547,6 @@ func validatePassword(pw string) error {
 	}
 	return nil
 }
-
-// func (u *authUsecase) getDummyHash() string {
-//     u.dummyHashOnce.Do(func() {
-//         u.dummyHash, _ = u.hasher.Hash("dummy-password-for-timing-safety-only")
-//     })
-//     return u.dummyHash
-// }
 
 func constantTimeEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
