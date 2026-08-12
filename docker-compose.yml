@@ -103,6 +103,7 @@ services:
       - .env
     environment:
       - CONFIG_PATH=/moneymate-backend/services/auth/config/config.yaml
+      - PAYMENT_SERVICE_URL=http://payment:9094
       - POSTGRES_USER=${AUTH_DB_USER}
       - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD}
       - POSTGRES_HOST=${POSTGRES_HOST}

@@ -63,6 +63,14 @@ type AuthOauthAccount struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+type AuthOutboxEvent struct {
+	ID          pgtype.UUID        `json:"id"`
+	Topic       string             `json:"topic"`
+	Payload     []byte             `json:"payload"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+}
+
 type AuthPermission struct {
 	ID          pgtype.UUID        `json:"id"`
 	Name        string             `json:"name"`

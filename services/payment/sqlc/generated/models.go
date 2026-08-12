@@ -21,6 +21,7 @@ const (
 	PaymentAccountTypeMerchantSettlement     PaymentAccountType = "merchant_settlement"
 	PaymentAccountTypeMerchantPayout         PaymentAccountType = "merchant_payout"
 	PaymentAccountTypePlatformCommissionPool PaymentAccountType = "platform_commission_pool"
+	PaymentAccountTypeExternalSettlement     PaymentAccountType = "external_settlement"
 )
 
 func (e *PaymentAccountType) Scan(src interface{}) error {
@@ -56,6 +57,49 @@ func (ns NullPaymentAccountType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.PaymentAccountType), nil
+}
+
+type PaymentDepositStatus string
+
+const (
+	PaymentDepositStatusCreated PaymentDepositStatus = "created"
+	PaymentDepositStatusPaid    PaymentDepositStatus = "paid"
+	PaymentDepositStatusFailed  PaymentDepositStatus = "failed"
+)
+
+func (e *PaymentDepositStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentDepositStatus(s)
+	case string:
+		*e = PaymentDepositStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentDepositStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentDepositStatus struct {
+	PaymentDepositStatus PaymentDepositStatus
+	Valid                bool // Valid is true if PaymentDepositStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentDepositStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentDepositStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentDepositStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentDepositStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentDepositStatus), nil
 }
 
 type PaymentTxDirection string
@@ -154,6 +198,19 @@ type PaymentAccount struct {
 	Version    int64
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	Handle     *string
+}
+
+type PaymentDeposit struct {
+	ID                uuid.UUID
+	UserID            uuid.UUID
+	AccountID         uuid.UUID
+	RazorpayOrderID   string
+	RazorpayPaymentID *string
+	Amount            int64
+	Status            PaymentDepositStatus
+	CreatedAt         time.Time
+	CompletedAt       pgtype.Timestamptz
 }
 
 type PaymentJournalEntry struct {

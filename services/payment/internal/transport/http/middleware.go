@@ -62,3 +62,13 @@ func userIDFromLocals(c fiber.Ctx) string {
 	id, _ := c.Locals(localsUserID).(string)
 	return id
 }
+
+func RequireInternalSecret(secret string) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		provided := c.Get("X-Internal-Secret")
+		if provided == "" || provided != secret {
+			return response.Unauthorized(c, "internal access required")
+		}
+		return c.Next()
+	}
+}

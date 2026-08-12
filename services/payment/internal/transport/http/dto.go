@@ -39,3 +39,8 @@ type transferResponse struct {
 	FromBalance string             `json:"from_balance"`
 	ToBalance   string             `json:"to_balance"`
 }
+
+type createWalletInternalRequest struct {
+	UserID string `json:"user_id" validate:"required"`
+	Handle string `json:"handle" validate:"required"`
+}

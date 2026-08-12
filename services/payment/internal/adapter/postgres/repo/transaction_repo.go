@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/domain"
@@ -50,6 +51,32 @@ func (r *TransactionRepo) GetByIdempotencyKey(ctx context.Context, key string, f
 	}
 	return rowToTransaction(generated.GetTransactionByIDRow(row)), nil
 }
+
+func (r *TransactionRepo) ListWithdrawals(ctx context.Context, settlementAccountID uuid.UUID, fromAccountID *uuid.UUID, limit, offset int32) ([]*domain.Transaction, int64, error) {
+	var fromParam pgtype.UUID
+	if fromAccountID != nil {
+		fromParam = pgtype.UUID{Bytes: *fromAccountID, Valid: true}
+	}
+	rows, err := r.q.ListWithdrawals(ctx, generated.ListWithdrawalsParams{
+		Limit: limit, Offset: offset,
+		SettlementAccountID: settlementAccountID, FromAccountID: fromParam,
+	})
+	if err != nil {
+		return nil, 0, mapDBErr(err)
+	}
+	total, err := r.q.CountWithdrawals(ctx, generated.CountWithdrawalsParams{
+		SettlementAccountID: settlementAccountID, FromAccountID: fromParam,
+	})
+	if err != nil {
+		return nil, 0, mapDBErr(err)
+	}
+	txs := make([]*domain.Transaction, len(rows))
+	for i, row := range rows {
+		txs[i] = paymentTxToTransaction(row)
+	}
+	return txs, total, nil
+}
+
 
 func (r *TransactionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.TxStatus) error {
 	return mapDBErr(r.q.UpdateTransactionStatus(ctx, generated.UpdateTransactionStatusParams{
@@ -98,6 +125,25 @@ func rowToTransaction(row generated.GetTransactionByIDRow) *domain.Transaction {
 		Status:         domain.TxStatus(row.Status),
 		IdempotencyKey: row.IdempotencyKey,
 		Description:    row.Description,
+		CreatedAt:      row.CreatedAt,
+		CompletedAt:    pgtypeToTimePtr(row.CompletedAt),
+	}
+}
+
+
+func paymentTxToTransaction(row generated.PaymentTransaction) *domain.Transaction {
+	var desc string
+	if row.Description != nil {
+		desc = *row.Description
+	}
+	return &domain.Transaction{
+		ID:             row.ID,
+		FromAccountID:  row.FromAccountID,
+		ToAccountID:    row.ToAccountID,
+		Amount:         row.Amount,
+		Status:         domain.TxStatus(row.Status), // PaymentTxStatus -> domain.TxStatus, both string-backed enums, safe cast
+		IdempotencyKey: row.IdempotencyKey,
+		Description:    desc,
 		CreatedAt:      row.CreatedAt,
 		CompletedAt:    pgtypeToTimePtr(row.CompletedAt),
 	}

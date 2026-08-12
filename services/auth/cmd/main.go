@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -19,11 +20,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize application: %v", err)
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go application.Publisher.Run(ctx) // NEW — starts the outbox polling loop
+
 	go func() {
 		addr := "0.0.0.0:" + cfg.Server.HTTPAddr
 
 		if cfg.Server.HTTPAddr == "" {
-			addr = "0.0.0.0:8081" 
+			addr = "0.0.0.0:8081"
 		}
 		log.Printf("Auth service starting on %s", addr)
 
@@ -37,6 +44,8 @@ func main() {
 
 	<-quit
 	log.Println("Shutdown signal received, gracefully shutting down...")
+
+	cancel() // NEW — stops the publisher loop
 
 	if err := application.Server.Shutdown(); err != nil {
 		log.Printf("Error shutting down Fiber server: %v", err)

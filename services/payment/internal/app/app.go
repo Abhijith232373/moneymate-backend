@@ -16,16 +16,21 @@ import (
 	authclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/authClient"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/postgres/repo"
+	// kafkaconsumer "github.com/moneymate-2026/moneymate-backend/services/payment/internal/infra/kafkaconsumer"
 	transporthttp "github.com/moneymate-2026/moneymate-backend/services/payment/internal/transport/http"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/usecases"
 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/kafka"
 )
 
 type App struct {
-	HTTPServer *fiber.App
-	DB         *pgxpool.Pool
-	HTTPAddr   string
+	HTTPServer    *fiber.App
+	DB            *pgxpool.Pool
+	HTTPAddr      string
+	KafkaConsumer *kafka.Consumer
+	WalletUC      usecases.WalletUsecase
 }
+
 func Build(cfg *config.Config) (*App, error) {
 	ctx := context.Background()
 
@@ -65,7 +70,19 @@ func Build(cfg *config.Config) (*App, error) {
 	}
 
 	authClient := authclient.New(cfg.AuthServiceURL, cfg.InternalServiceSecret)
-	server := setupHTTPServer(walletHandler, transferHandler, jwtCfg, authClient)
+	server := setupHTTPServer(walletHandler, transferHandler, jwtCfg, authClient, cfg.InternalServiceSecret)
+
+	kafkaConsumer, err := kafka.NewConsumer(kafka.ConsumerConfig{
+		Brokers:  cfg.Kafka.Brokers,
+		Username: cfg.Kafka.Username,
+		Password: cfg.Kafka.Password,
+		CACert:   cfg.Kafka.CACert,
+		Topic:    "user.registered",
+		GroupID:  "payment-svc",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create kafka consumer: %w", err)
+	}
 
 	httpAddr := cfg.Server.HTTPAddr
 	if port := os.Getenv("PORT"); port != "" {
@@ -78,11 +95,16 @@ func Build(cfg *config.Config) (*App, error) {
 		httpAddr = "0.0.0.0:" + httpAddr
 	}
 
-	return &App{HTTPServer: server, DB: pool, HTTPAddr: httpAddr}, nil
+	return &App{
+		HTTPServer:    server,
+		DB:            pool,
+		HTTPAddr:      httpAddr,
+		KafkaConsumer: kafkaConsumer,
+		WalletUC:      walletUC,
+	}, nil
 }
 
-
-func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client) *fiber.App {
+func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) *fiber.App {
 	server := fiber.New(fiber.Config{AppName: "payment-service"})
 	server.Use(recover.New())
 	server.Use(cors.New(cors.Config{
@@ -94,9 +116,8 @@ func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.Transfer
 	server.Get("/health", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "service": "payment"})
 	})
-	
 
-	transporthttp.RegisterRoutes(server, wh, th, jwtCfg,authClient)
+	transporthttp.RegisterRoutes(server, wh, th, jwtCfg, authClient, internalSecret)
 	return server
 }
 
@@ -111,5 +132,8 @@ func (a *App) Close() {
 	}
 	if a.DB != nil {
 		a.DB.Close()
+	}
+	if a.KafkaConsumer != nil {
+		a.KafkaConsumer.Close()
 	}
 }

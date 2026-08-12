@@ -183,3 +183,8 @@ type UpdatePINRequest struct {
 type VerifyPINRequest struct {
 	PIN string
 }
+
+type UserRegisteredEvent struct {
+	UserID uuid.UUID `json:"user_id"`
+	Handle string    `json:"handle"`
+}

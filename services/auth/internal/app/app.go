@@ -16,13 +16,16 @@ import (
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres/repo"
 	rediscard "github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/redis"
+	"github.com/moneymate-2026/moneymate-backend/auth/internal/domain"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/hasher"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/idgen"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/mailer"
+	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/outboxpublisher"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/tokenissuer"
 	transporthttp "github.com/moneymate-2026/moneymate-backend/auth/internal/transport/http"
 	usecase "github.com/moneymate-2026/moneymate-backend/auth/internal/usecases"
 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/kafka"
 	sharedmailer "github.com/moneymate-2026/moneymate-backend/shared/pkg/mailer"
 	sharedpgxtx "github.com/moneymate-2026/moneymate-backend/shared/pkg/pgxtx"
 )
@@ -34,6 +37,7 @@ type App struct {
 	DB          *pgxpool.Pool
 	RedisClient *redis.Client
 	Config      *config.Config
+	Publisher   *outboxpublisher.Publisher // NEW
 }
 
 func Build(cfg *config.Config) (app *App, err error) {
@@ -77,7 +81,21 @@ func Build(cfg *config.Config) (app *App, err error) {
 		return nil, fmt.Errorf("setup redis: %w", err)
 	}
 
-	handlers := setupDependencies(pool, redisClient, cfg)
+	outboxRepo := repo.NewOutboxRepo(pool)
+
+	kafkaProducer, err := kafka.NewProducer(kafka.Config{
+		Brokers:  cfg.Kafka.Brokers,
+		Username: cfg.Kafka.Username,
+		Password: cfg.Kafka.Password,
+		CACert:   cfg.Kafka.CACert,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create kafka producer: %w", err)
+	}
+
+	publisher := outboxpublisher.New(outboxRepo, kafkaProducer)
+
+	handlers := setupDependencies(pool, redisClient, cfg, outboxRepo)
 	server := setupServer(cfg, handlers, pool, redisClient)
 
 	return &App{
@@ -85,6 +103,7 @@ func Build(cfg *config.Config) (app *App, err error) {
 		DB:          pool,
 		RedisClient: redisClient,
 		Config:      cfg,
+		Publisher:   publisher,
 	}, nil
 }
 
@@ -113,7 +132,7 @@ func setupRedis(cfg *config.Config) (*redis.Client, error) {
 	})
 }
 
-func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config) *transporthttp.Handlers {
+func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config, outboxRepo domain.OutboxRepository) *transporthttp.Handlers {
 	jwtCfg := sharedjwt.Config{
 		AccessSecret:      cfg.JWT.AccessSecret,
 		RefreshSecret:     cfg.JWT.RefreshSecret,
@@ -128,25 +147,22 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 		FromName:    cfg.Email.FromName,
 	}
 
-	// Infra
 	h := hasher.New()
 	g := idgen.New()
 	issuer := tokenissuer.New(jwtCfg)
 	mailerClient := sharedmailer.New(emailCfg)
 	otpMailer := mailer.NewOtpMail(mailerClient)
 
-	// Repositories
 	userRepo := repo.NewUserRepo(pool)
 	roleRepo := repo.NewRoleRepo(pool)
 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
 	pinRepo := repo.NewUserPinRepo(pool)
-	permRepo := repo.NewPermissionRepo(pool) // NEW
+	permRepo := repo.NewPermissionRepo(pool)
 	store := rediscard.NewStore(redisClient)
 	txMgr := sharedpgxtx.New(pool)
 
-	// Usecases
 	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g)
-	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg)
+	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, outboxRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg)
 
 	otpMailerIface := usecase.EmailSender(otpMailer)
 	if cfg.Env == "dev" {
@@ -157,18 +173,17 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 	adminRoleUC := usecase.NewAdminRoleUsecase(roleRepo, userRepo, g)
 	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
-	permissionUC := usecase.NewPermissionUsecase(permRepo, roleRepo, g) // NEW
+	permissionUC := usecase.NewPermissionUsecase(permRepo, roleRepo, g)
 
 	return &transporthttp.Handlers{
 		Auth:       transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
 		Role:       transporthttp.NewRoleHandler(adminRoleUC),
 		User:       transporthttp.NewUserHandler(adminUserUC),
 		UserPin:    transporthttp.NewUserPinHandler(pinUC, issuer),
-		Permission: transporthttp.NewPermissionHandler(permissionUC), // NEW
+		Permission: transporthttp.NewPermissionHandler(permissionUC),
 	}
 }
 
-// setupServer configures the Fiber application, middleware, and routing.
 func setupServer(cfg *config.Config, handlers *transporthttp.Handlers, pool *pgxpool.Pool, redisClient *redis.Client) *fiber.App {
 	server := fiber.New(fiber.Config{
 		ReadTimeout:  cfg.Server.ReadTimeout,
@@ -184,7 +199,6 @@ func setupServer(cfg *config.Config, handlers *transporthttp.Handlers, pool *pgx
 	}))
 
 	registerHealthRoutes(server, pool, redisClient)
-
 	transporthttp.RegisterRoutes(server, handlers, cfg.InternalServiceSecret)
 
 	return server

@@ -16,20 +16,36 @@ type WalletHandler struct {
 func NewWalletHandler(wallets usecases.WalletUsecase) *WalletHandler {
 	return &WalletHandler{wallets: wallets}
 }
-
 func (h *WalletHandler) CreateWallet(c fiber.Ctx) error {
 	userID := userIDFromLocals(c)
 	if userID == "" {
 		return response.Unauthorized(c, "authentication required")
 	}
+	// self-service creation — handle not supplied by the client; this path
+	// is effectively dead once auth-svc always creates the wallet at
+	// registration, but kept for now in case a wallet is ever missing and
+	// needs manual recovery.
+	return response.BadRequest(c, nil, "wallets are created automatically at registration")
+}
 
-	acc, err := h.wallets.CreateWallet(c.Context(), userID)
+// CreateWalletInternal is called by auth-svc's Register flow, immediately
+// after a new user is created. Protected by RequireInternalSecret — never
+// exposed through the gateway.
+func (h *WalletHandler) CreateWalletInternal(c fiber.Ctx) error {
+	var req createWalletInternalRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return response.BadRequest(c, nil, "invalid request body")
+	}
+	if err := validate.Struct(req); err != nil {
+		return response.BadRequest(c, nil, "validation failed")
+	}
+
+	acc, err := h.wallets.CreateWallet(c.Context(), req.UserID, req.Handle)
 	if err != nil {
 		return handleError(c, err)
 	}
 	return response.Created(c, "wallet created", toWalletResponse(acc))
 }
-
 // GetMyWallet replaces the old GetWalletByUser(:user_id) route — a user can
 // only ever look up their own wallet through this endpoint. Looking up an
 // arbitrary user's wallet by path param is intentionally removed.
