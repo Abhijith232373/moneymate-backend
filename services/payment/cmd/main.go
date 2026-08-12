@@ -9,7 +9,7 @@ import (
 
 	"github.com/moneymate-2026/moneymate-backend/services/payment/config"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/app"
-	kafkaconsumer "github.com/moneymate-2026/moneymate-backend/services/payment/internal/infra/kafkaConsumer"
+	kafkaconsumer "github.com/moneymate-2026/moneymate-backend/services/payment/internal/infra/kafkaconsumer"
 )
 
 func main() {
