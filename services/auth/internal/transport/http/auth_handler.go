@@ -87,7 +87,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 }
 
 func (h *AuthHandler) AdminLogin(c fiber.Ctx) error {
-	var req adminLoginRequest 
+	var req adminLoginRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return response.BadRequest(c, nil, "invalid request body")
 	}
@@ -104,7 +104,7 @@ func (h *AuthHandler) AdminLogin(c fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
-	userIDStr, ok := c.Locals("userID").(string)
+	userIDStr, ok := c.Locals("user_id").(string)
 	if !ok || userIDStr == "" {
 		return response.Unauthorized(c, "authentication required")
 	}

@@ -12,7 +12,7 @@ func RequireUserID(c fiber.Ctx) error {
 	if userID == "" {
 		return response.Unauthorized(c, "missing authentication context")
 	}
-	c.Locals("userID", userID)
+	c.Locals("user_id", userID)
 	return c.Next()
 }
 
