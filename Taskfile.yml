@@ -9,6 +9,7 @@ vars:
   AUTH_MIGRATIONS: /moneymate-backend/services/auth/migrations
   MERCHANT_MIGRATIONS: /moneymate-backend/services/merchant/migrations
   PAYMENT_MIGRATIONS: /moneymate-backend/services/payment/migrations
+  SUPPORT_MIGRATIONS: /moneymate-backend/services/support/migrations
 
 tasks:
 
@@ -162,9 +163,36 @@ tasks:
       -database "${PAYMENT_DB_URL}"
       version
 
+  migrate:support:
+    desc: "Run support service migrations up"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm support
+      migrate
+      -path {{.SUPPORT_MIGRATIONS}}
+      -database "${SUPPORT_DB_URL}"
+      up
+
+  migrate:support:down:
+    desc: "Roll back last support migration"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm support
+      migrate
+      -path {{.SUPPORT_MIGRATIONS}}
+      -database "${SUPPORT_DB_URL}"
+      down 1
+
+  migrate:support:status:
+    desc: "Show current support migration version"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm support
+      migrate
+      -path {{.SUPPORT_MIGRATIONS}}
+      -database "${SUPPORT_DB_URL}"
+      version
+
   migrate:all:
     desc: "Run migrations for all services"
-    deps: [migrate:auth, migrate:merchant, migrate:payment]
+    deps: [migrate:auth, migrate:merchant, migrate:payment, migrate:support]
 
   # ── Code Generation ───────────────────────────────────────────
   sqlc:auth:

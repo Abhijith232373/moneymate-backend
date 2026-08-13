@@ -27,3 +27,8 @@ PASSWORD 'automation_password';
 CREATE ROLE payment_user
 LOGIN
 PASSWORD 'payment_password';
+
+-- Support Service
+CREATE ROLE support_user
+LOGIN
+PASSWORD 'support_password';
