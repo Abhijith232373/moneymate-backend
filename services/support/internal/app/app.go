@@ -81,10 +81,8 @@ func setupHTTPServer(handler *transporthttp.SupportHandler) *fiber.App {
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 	}))
 
-	noopAuth := func(c fiber.Ctx) error { return c.Next() }
-
-	transporthttp.RegisterRoutes(server, handler, noopAuth)
-	transporthttp.RegisterAdminRoutes(server, handler, noopAuth)
+	transporthttp.RegisterRoutes(server, handler)
+	transporthttp.RegisterAdminRoutes(server, handler)
 
 	return server
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-func RegisterRoutes(router fiber.Router, h *SupportHandler, authMiddleware fiber.Handler) {
+func RegisterRoutes(router fiber.Router, h *SupportHandler) {
 	support := router.Group("/support")
 
 	support.Get("/health", func(c fiber.Ctx) error {
@@ -14,9 +14,7 @@ func RegisterRoutes(router fiber.Router, h *SupportHandler, authMiddleware fiber
 		})
 	})
 
-	if authMiddleware != nil {
-		support.Use(authMiddleware)
-	}
+
 
 	// Feedback
 	support.Post("/feedbacks", h.CreateFeedback)
@@ -33,12 +31,10 @@ func RegisterRoutes(router fiber.Router, h *SupportHandler, authMiddleware fiber
 	support.Get("/reports/user/:reporter_id", h.ListReportsByUser)
 }
 
-func RegisterAdminRoutes(router fiber.Router, h *SupportHandler, authMiddleware fiber.Handler) {
+func RegisterAdminRoutes(router fiber.Router, h *SupportHandler) {
 	admin := router.Group("/admin/support")
 
-	if authMiddleware != nil {
-		admin.Use(authMiddleware)
-	}
+
 
 	// Admin viewing and updating statuses
 	admin.Get("/feedbacks", h.ListFeedbacks)

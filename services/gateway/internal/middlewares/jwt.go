@@ -3,7 +3,6 @@ package middlewares
 import (
 	"log"
 	"strings"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
 	jwtutil "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
@@ -43,7 +42,6 @@ func RequireAuth(jwtSecret string) fiber.Handler {
 		c.Locals("user_id", claims.UserID)
 		c.Locals("email", claims.Email)
 		c.Locals("role", role)
-
 		return c.Next()
 	}
 }
