@@ -1,0 +1,117 @@
+
+services:
+  auth:
+    image: ghcr.io/aamir-sufiyan-n/moneymate-auth:latest
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - POSTGRES_USER=${AUTH_DB_USER}
+      - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=5432
+      - REDIS_ADDR=redis:6379
+      - ENVIRONMENT=${ENVIRONMENT}
+    expose:
+      - "8081"
+    ports: ["8081:8081"]
+    restart: unless-stopped
+    depends_on:
+      - redis
+    networks:
+      - moneymate-network
+
+  payment:
+    image: ghcr.io/aamir-sufiyan-n/moneymate-payment:latest
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - AUTH_SERVICE_URL=http://auth:8081
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=5432
+      - ENVIRONMENT=${ENVIRONMENT}
+      - POSTGRES_USER=${PAYMENT_DB_USER}
+      - POSTGRES_PASSWORD=${PAYMENT_DB_PASSWORD}
+    expose:
+      - "9094"
+    ports:
+      - "9094:9094"
+    restart: unless-stopped
+    depends_on:
+      - auth
+    networks:
+      - moneymate-network
+
+  gateway:
+    image: ghcr.io/aamir-sufiyan-n/moneymate-gateway:latest
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - SERVER_PORT=8080
+      - SERVICES_AUTH_ADDR=auth:8081
+      - SERVICES_MERCH_ADDR=merchant:9092
+      - SERVICES_PAYMENT_ADDR=payment:9094
+      - REDIS_ADDRESS=redis:6379
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - auth
+    networks:
+      - moneymate-network
+
+  merchant:
+    image: ghcr.io/aamir-sufiyan-n/moneymate-merchant:latest
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${MERCHANT_DB_USER}
+      - POSTGRES_PASSWORD=${MERCHANT_DB_PASSWORD}
+      - ENVIRONMENT=${ENVIRONMENT}
+    expose:
+      - "9092"
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+    networks:
+      - moneymate-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - moneymate-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@moneymate.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - moneymate-network
+
+volumes:
+  redis_data:
+
+networks:
+  moneymate-network:
+    driver: bridge

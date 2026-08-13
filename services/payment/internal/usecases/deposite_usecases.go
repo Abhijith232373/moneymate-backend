@@ -13,8 +13,8 @@ import (
 // RazorpayClient is the contract this usecase depends on — never the concrete
 // HTTP implementation. Satisfied by infra/razorpay.Client.
 type RazorpayClient interface {
-	CreateOrder(amountPaise int64, receipt string) (orderID string, err error)
-	VerifyWebhookSignature(payload []byte, signature string) bool
+	CreateOrder(amount float64, currency string, receiptID string) (string, error)
+	VerifySignature(orderID, paymentID, signature string) error
 }
 
 type InitiateDepositResponse struct {
@@ -55,7 +55,6 @@ func NewDepositUsecase(
 		razorpayKeyID: razorpayKeyID, externalSettlementAccountID: externalSettlementAccountID,
 	}
 }
-
 func (u *depositUsecase) InitiateDeposit(ctx context.Context, userID string, amountPaise int64) (*InitiateDepositResponse, error) {
 	if amountPaise < minDepositPaise || amountPaise > maxDepositPaise {
 		return nil, apperrors.ErrInvalidInput
@@ -71,8 +70,9 @@ func (u *depositUsecase) InitiateDeposit(ctx context.Context, userID string, amo
 	}
 
 	depositID := uuid.New()
+	amountRupees := float64(amountPaise) / 100.0
 
-	orderID, err := u.razorpay.CreateOrder(amountPaise, depositID.String())
+	orderID, err := u.razorpay.CreateOrder(amountRupees, "INR", depositID.String())
 	if err != nil {
 		return nil, fmt.Errorf("create razorpay order: %w", err)
 	}

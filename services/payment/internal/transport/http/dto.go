@@ -44,3 +44,19 @@ type createWalletInternalRequest struct {
 	UserID string `json:"user_id" validate:"required"`
 	Handle string `json:"handle" validate:"required"`
 }
+
+
+type initiateDepositRequest struct {
+	AmountRupees float64 `json:"amount" validate:"required,gt=0"`
+}
+
+type confirmDepositRequest struct {
+	OrderID   string `json:"razorpay_order_id" validate:"required"`
+	PaymentID string `json:"razorpay_payment_id" validate:"required"`
+	Signature string `json:"razorpay_signature" validate:"required"`
+}
+
+type requestWithdrawalRequest struct {
+	AmountRupees   float64 `json:"amount" validate:"required,gt=0"`
+	IdempotencyKey string  `json:"idempotency_key" validate:"required"`
+}

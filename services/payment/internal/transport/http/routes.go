@@ -7,7 +7,8 @@ import (
 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 )
 
-func RegisterRoutes(router fiber.Router, wh *WalletHandler, th *TransferHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) {
+
+func RegisterRoutes(router fiber.Router, wh *WalletHandler, th *TransferHandler, dh *DepositHandler, wdh *WithdrawalHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) {
 	pay := router.Group("/payment", RequireUserID(jwtCfg))
 
 	pay.Get("/wallets/me", wh.GetMyWallet)
@@ -15,6 +16,13 @@ func RegisterRoutes(router fiber.Router, wh *WalletHandler, th *TransferHandler,
 
 	pay.Post("/transfers", RequireTransactionToken(authClient), th.Transfer)
 	pay.Get("/transactions/:id", th.GetTransaction)
+
+	pay.Post("/deposits", dh.Initiate)
+	pay.Post("/deposits/confirm", dh.Confirm)
+	pay.Get("/deposits", dh.List)
+
+	pay.Post("/withdrawals", RequireTransactionToken(authClient), wdh.Request)
+	pay.Get("/withdrawals", wdh.List)
 
 	internal := router.Group("/internal", RequireInternalSecret(internalSecret))
 	internal.Post("/payment/wallets", wh.CreateWalletInternal)
