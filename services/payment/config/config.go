@@ -19,6 +19,7 @@ type Config struct {
 	Database              sharedconfig.DatabaseConfig
 	JWT                   sharedconfig.JWTConfig
 	Kafka    sharedconfig.KafkaConfig
+	Razorpay sharedconfig.RazorpayConfig
 	AuthServiceURL        string
 	InternalServiceSecret string
 }
@@ -45,6 +46,7 @@ func LoadConfig() (*Config, error) {
 	}
 	cfg.Database = sharedconfig.LoadDatabaseConfig(v, "payment")
 	cfg.JWT = sharedconfig.LoadJWTConfig(v)
+	cfg.Razorpay = sharedconfig.LoadRazorpayConfig(v)
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
 	cfg.Kafka = sharedconfig.LoadKafkaConfig(v)
 	cfg.AuthServiceURL = sharedconfig.Get("AUTH_SERVICE_URL", "http://auth:8081")

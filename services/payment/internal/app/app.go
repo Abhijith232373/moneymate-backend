@@ -16,11 +16,11 @@ import (
 	authclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/authClient"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/postgres/repo"
-	// kafkaconsumer "github.com/moneymate-2026/moneymate-backend/services/payment/internal/infra/kafkaconsumer"
 	transporthttp "github.com/moneymate-2026/moneymate-backend/services/payment/internal/transport/http"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/usecases"
 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 	"github.com/moneymate-2026/moneymate-backend/shared/pkg/kafka"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/payment"
 )
 
 type App struct {
@@ -55,12 +55,24 @@ func Build(cfg *config.Config) (*App, error) {
 	accountRepo := repo.NewAccountRepo(pool)
 	transactionRepo := repo.NewTransactionRepo(pool)
 	ledgerRepo := repo.NewLedgerRepo(pool)
+	depositRepo := repo.NewDepositRepo(pool)
+
+	externalSettlementID, err := seedExternalSettlementAccount(ctx, accountRepo)
+	if err != nil {
+		return nil, fmt.Errorf("seed external settlement account: %w", err)
+	}
+
+	razorpayClient := payment.NewRazorpayClient(cfg.Razorpay.KeyID, cfg.Razorpay.KeySecret)
 
 	walletUC := usecases.NewWalletUsecase(accountRepo)
 	transferUC := usecases.NewTransferUsecase(accountRepo, transactionRepo, ledgerRepo)
+	depositUC := usecases.NewDepositUsecase(depositRepo, accountRepo, razorpayClient, cfg.Razorpay.KeyID, externalSettlementID)
+	withdrawalUC := usecases.NewWithdrawalUsecase(accountRepo, transactionRepo, ledgerRepo, externalSettlementID)
 
 	walletHandler := transporthttp.NewWalletHandler(walletUC)
 	transferHandler := transporthttp.NewTransferHandler(transferUC)
+	depositHandler := transporthttp.NewDepositHandler(depositUC, razorpayClient)
+	withdrawalHandler := transporthttp.NewWithdrawalHandler(withdrawalUC)
 
 	jwtCfg := sharedjwt.Config{
 		AccessSecret:     cfg.JWT.AccessSecret,
@@ -70,7 +82,7 @@ func Build(cfg *config.Config) (*App, error) {
 	}
 
 	authClient := authclient.New(cfg.AuthServiceURL, cfg.InternalServiceSecret)
-	server := setupHTTPServer(walletHandler, transferHandler, jwtCfg, authClient, cfg.InternalServiceSecret)
+	server := setupHTTPServer(walletHandler, transferHandler, depositHandler, withdrawalHandler, jwtCfg, authClient, cfg.InternalServiceSecret)
 
 	kafkaConsumer, err := kafka.NewConsumer(kafka.ConsumerConfig{
 		Brokers:  cfg.Kafka.Brokers,
@@ -104,7 +116,7 @@ func Build(cfg *config.Config) (*App, error) {
 	}, nil
 }
 
-func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) *fiber.App {
+func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, dh *transporthttp.DepositHandler, wdh *transporthttp.WithdrawalHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) *fiber.App {
 	server := fiber.New(fiber.Config{AppName: "payment-service"})
 	server.Use(recover.New())
 	server.Use(cors.New(cors.Config{
@@ -117,7 +129,7 @@ func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.Transfer
 		return c.JSON(fiber.Map{"status": "ok", "service": "payment"})
 	})
 
-	transporthttp.RegisterRoutes(server, wh, th, jwtCfg, authClient, internalSecret)
+	transporthttp.RegisterRoutes(server, wh, th, dh, wdh, jwtCfg, authClient, internalSecret)
 	return server
 }
 

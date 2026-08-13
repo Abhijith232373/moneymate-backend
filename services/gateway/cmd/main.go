@@ -81,8 +81,15 @@ func main() {
 		AllowMethods: strings.Split(cfg.CORS.AllowMethods, ","),
 		AllowHeaders: strings.Split(cfg.CORS.AllowHeaders, ","),
 	}))
-	http.RegisterRoutes(app, authMiddleware, authClient, serviceRegistry, hub, cfg.Services.AuthAddr,cfg.Services.MerchantAddr)
-
+	http.RegisterRoutes(http.RouteConfig{
+	App:            app,
+	AuthMiddleware: authMiddleware,
+	AuthClient:     authClient,
+	Registry:       serviceRegistry,
+	Hub:            hub,
+	AuthAddr:       cfg.Services.AuthAddr,
+	MerchantAddr:   cfg.Services.MerchantAddr,
+})
 	go func() {
 		addr := ":" + cfg.Server.Port
 		log.Printf("[startup] gateway listening on %s", addr)
