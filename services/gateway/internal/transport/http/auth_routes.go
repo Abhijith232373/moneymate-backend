@@ -23,10 +23,10 @@ func registerAuthRoutes(api fiber.Router, authAddr string, authMiddleware fiber.
 	merchantAuth.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 }
 
-func registerPinRoutes(api fiber.Router, authAddr string) {
+func registerPinRoutes(api fiber.Router, authAddr string, authMiddleware fiber.Handler) {
 	userPin := api.Group("/pin")
+	userPin.Use(authMiddleware)
 	userPin.Post("/", proxy.AuthProxy(authAddr, "/user/pin"))
 	userPin.Put("/", proxy.AuthProxy(authAddr, "/user/pin"))
-	userPin.Post("/verify", proxy.AuthProxy(authAddr, "/user/pin"))
+	userPin.Post("/verify", proxy.AuthProxy(authAddr, "/user/pin/verify"))
 }
-
