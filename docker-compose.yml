@@ -28,6 +28,31 @@ services:
     networks:
       - moneymate-network
 
+  support:
+    build:
+      context: .
+      dockerfile: ./services/support/Dockerfile
+      target: dev
+    volumes:
+      - ./:/moneymate-backend
+      - ./shared:/moneymate-backend/shared
+    working_dir: /moneymate-backend/services/support
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/moneymate-backend/services/support/config/config.yaml
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=5432
+      - ENVIRONMENT=dev
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - moneymate-network
+
   payment:
     build:
       context: .
