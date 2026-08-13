@@ -14,9 +14,10 @@ type ServerConfig struct {
 }
 
 type ServicesConfig struct {
-	AuthAddr   string            `mapstructure:"auth_addr"`
-	MerchantAddr string			`mapstructure:"merch_addr"`
-	Downstream map[string]string `mapstructure:"downstream"`
+	AuthAddr     string            `mapstructure:"auth_addr"`
+	MerchantAddr string            `mapstructure:"merch_addr"`
+	PaymentAddr  string            `mapstructure:"payment_addr"`
+	Downstream   map[string]string `mapstructure:"downstream"`
 }
 
 type RedisConfig struct {
@@ -47,9 +48,9 @@ type TracingConfig struct {
 }
 
 type Config struct {
-	Server       ServerConfig    `mapstructure:"server"`
-	Services     ServicesConfig  `mapstructure:"services"`
-	Redis        RedisConfig     `mapstructure:"redis"`
+	Server       ServerConfig   `mapstructure:"server"`
+	Services     ServicesConfig `mapstructure:"services"`
+	Redis        RedisConfig    `mapstructure:"redis"`
 	JWT          JWTConfig
 	RateLimiting RateLimitConfig `mapstructure:"rate_limiting"`
 	CORS         CORSConfig      `mapstructure:"cors"`
@@ -70,6 +71,7 @@ func LoadConfig() (*Config, error) {
 	v.BindEnv("redis.password", "REDIS_PASSWORD")
 	v.BindEnv("services.auth_addr", "SERVICES_AUTH_ADDR")
 	v.BindEnv("services.merch_addr", "SERVICES_MERCH_ADDR")
+	v.BindEnv("services.payment_addr", "SERVICES_PAYMENT_ADDR")
 	v.BindEnv("server.port", "SERVER_PORT")
 
 	if err := v.ReadInConfig(); err != nil {
@@ -84,6 +86,12 @@ func LoadConfig() (*Config, error) {
 	cfg.JWT.Secret = sharedconfig.Get("JWT_ACCESS_SECRET", "")
 	cfg.Redis.Password = sharedconfig.Get("REDIS_PASSWORD", "")
 
+	// The ServiceRegistry (proxy.NewServiceRegistry) is built from this map at
+	// startup. Every service the gateway proxies to via HTTPProxy/ProxyToService
+	// needs an entry here.
+	cfg.Services.Downstream = map[string]string{
+		"payment": cfg.Services.PaymentAddr,
+	}
 	if err := validate(&cfg); err != nil {
 		return nil, err
 	}

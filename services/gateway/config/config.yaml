@@ -3,8 +3,9 @@ server:
   environment: "development"
 
 services:
-  auth_addr: "localhost:8081"           
-  merch_addr: "merchant:9092"          
+  auth_addr: "localhost:8081"
+  merch_addr: "merchant:9092"
+  payment_addr: "payment:9094"
 
 redis:
   address: "localhost:6379"

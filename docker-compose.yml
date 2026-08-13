@@ -74,7 +74,9 @@ services:
       - CONFIG_PATH=/moneymate-backend/services/gateway/config/config.yaml
       - SERVER_PORT=8080
       - SERVICES_AUTH_ADDR=auth:8081
+      - SERVICES_PAYMENT_ADDR=payment:9094
       - REDIS_ADDRESS=redis:6379
+
 
     ports:
       - "8080:8080"
