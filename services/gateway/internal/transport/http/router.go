@@ -269,5 +269,9 @@ func RegisterRoutes(cfg RouteConfig) {
 	registerSecureRoutes(api, cfg.AuthMiddleware, cfg.AuthAddr)
 	registerDownstreamRoutes(api, cfg.AuthMiddleware, cfg.Registry)
 
+	
 	ws.RegisterWebSocketRoutes(cfg.App, cfg.Hub, cfg.AuthClient)
 }
+
+
+
