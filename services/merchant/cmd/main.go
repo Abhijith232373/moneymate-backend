@@ -34,5 +34,5 @@ func main() {
 	<-quit
 	log.Println("Shutdown signal received, gracefully shutting down...")
 	merchantApp.Close()
-	log.Println("Merchant service stopped cleanly ✅")
+	log.Println("Merchant service stopped cleanly ")
 }

@@ -6,6 +6,7 @@ services:
   auth_addr: "localhost:8081"
   merch_addr: "merchant:9092"
   payment_addr: "payment:9094"
+  support_addr: "support:8085"
 
 redis:
   address: "localhost:6379"

@@ -6,7 +6,7 @@ import (
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
 )
 
-func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string) {
+func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string, registry *proxy.ServiceRegistry) {
 	admin := api.Group("/admin")
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
@@ -31,6 +31,7 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	registerAdminKYCRoutes(admin, merchantAddr)
 	registerAdminRewardsRoutes(admin, merchantAddr)
 	registerAdminSubscriptionRoutes(admin, merchantAddr)
+	registerAdminSupportRoutes(admin, registry)
 }
 
 func registerAdminUserRoutes(admin fiber.Router, authAddr string) {
@@ -101,4 +102,11 @@ func registerAdminRewardsRoutes(admin fiber.Router, merchantAddr string) {
 func registerAdminSubscriptionRoutes(admin fiber.Router, merchantAddr string) {
 	adminSubscriptions := admin.Group("/subscriptions")
 	adminSubscriptions.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/subscriptions"))
+}
+
+func registerAdminSupportRoutes(admin fiber.Router, registry *proxy.ServiceRegistry) {
+	adminSupport := admin.Group("/support")
+	adminSupport.Get("/feedbacks", proxy.HTTPProxy(registry, "support", "/admin/support/feedbacks"))
+	adminSupport.Get("/complaints", proxy.HTTPProxy(registry, "support", "/admin/support/complaints"))
+	adminSupport.Get("/reports", proxy.HTTPProxy(registry, "support", "/admin/support/reports"))
 }

@@ -263,10 +263,11 @@ func RegisterRoutes(cfg RouteConfig) {
 
 	registerAuthRoutes(api, cfg.AuthAddr, cfg.AuthMiddleware)
 	registerPinRoutes(api, cfg.AuthAddr, cfg.AuthMiddleware)
-	registerAdminRoutes(api, cfg.AuthMiddleware, cfg.AuthAddr, cfg.MerchantAddr)
+	registerAdminRoutes(api, cfg.AuthMiddleware, cfg.AuthAddr, cfg.MerchantAddr, cfg.Registry)
 	registerMerchantRoutes(api, cfg.MerchantAddr)
 	registerPaymentRoutes(api, cfg.AuthMiddleware, cfg.Registry)
 	registerSecureRoutes(api, cfg.AuthMiddleware, cfg.AuthAddr)
+	registerSupportRoutes(api, cfg.AuthMiddleware, cfg.Registry)
 	registerDownstreamRoutes(api, cfg.AuthMiddleware, cfg.Registry)
 
 	
