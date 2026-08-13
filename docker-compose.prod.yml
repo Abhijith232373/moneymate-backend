@@ -53,6 +53,7 @@ services:
       - SERVICES_AUTH_ADDR=auth:8081
       - SERVICES_MERCH_ADDR=merchant:9092
       - SERVICES_PAYMENT_ADDR=payment:9094
+      - SERVICES_SUPPORT_ADDR=support:8085
       - REDIS_ADDRESS=redis:6379
     ports:
       - "8080:8080"
@@ -78,6 +79,25 @@ services:
       - "9092"
     ports:
       - "9092:9092"
+    restart: unless-stopped
+    networks:
+      - moneymate-network
+
+  support:
+    image: ghcr.io/aamir-sufiyan-n/moneymate-support:latest
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${SUPPORT_DB_USER}
+      - POSTGRES_PASSWORD=${SUPPORT_DB_PASSWORD}
+      - ENVIRONMENT=${ENVIRONMENT}
+    expose:
+      - "8085"
+    ports:
+      - "8085:8085"
     restart: unless-stopped
     networks:
       - moneymate-network

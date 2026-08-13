@@ -17,6 +17,7 @@ type ServicesConfig struct {
 	AuthAddr     string            `mapstructure:"auth_addr"`
 	MerchantAddr string            `mapstructure:"merch_addr"`
 	PaymentAddr  string            `mapstructure:"payment_addr"`
+	SupportAddr  string            `mapstructure:"support_addr"`
 	Downstream   map[string]string `mapstructure:"downstream"`
 }
 
@@ -72,6 +73,7 @@ func LoadConfig() (*Config, error) {
 	v.BindEnv("services.auth_addr", "SERVICES_AUTH_ADDR")
 	v.BindEnv("services.merch_addr", "SERVICES_MERCH_ADDR")
 	v.BindEnv("services.payment_addr", "SERVICES_PAYMENT_ADDR")
+	v.BindEnv("services.support_addr", "SERVICES_SUPPORT_ADDR")
 	v.BindEnv("server.port", "SERVER_PORT")
 
 	if err := v.ReadInConfig(); err != nil {
@@ -91,6 +93,7 @@ func LoadConfig() (*Config, error) {
 	// needs an entry here.
 	cfg.Services.Downstream = map[string]string{
 		"payment": cfg.Services.PaymentAddr,
+		"support": cfg.Services.SupportAddr,
 	}
 	if err := validate(&cfg); err != nil {
 		return nil, err

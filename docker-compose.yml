@@ -100,6 +100,7 @@ services:
       - SERVER_PORT=8080
       - SERVICES_AUTH_ADDR=auth:8081
       - SERVICES_PAYMENT_ADDR=payment:9094
+      - SERVICES_SUPPORT_ADDR=support:8085
       - REDIS_ADDRESS=redis:6379
 
 
