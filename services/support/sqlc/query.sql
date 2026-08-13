@@ -48,3 +48,26 @@ SELECT * FROM reports
 WHERE reporter_id = $1 AND reporter_type = $2
 ORDER BY created_at DESC;
 
+-- name: CreateChatMessage :one
+INSERT INTO chat_messages (
+  sender_id, sender_type, receiver_id, receiver_type, message
+) VALUES (
+  $1, $2, $3, $4, $5
+)
+RETURNING *;
+
+-- name: GetChatHistory :many
+SELECT * FROM chat_messages
+WHERE (sender_id = $1 AND receiver_id = $2)
+   OR (sender_id = $2 AND receiver_id = $1)
+ORDER BY created_at ASC;
+
+-- name: GetAdminChatHistory :many
+SELECT * FROM chat_messages
+WHERE (sender_id = $1 OR receiver_id = $1)
+ORDER BY created_at ASC;
+
+-- name: MarkMessagesAsRead :exec
+UPDATE chat_messages
+SET is_read = TRUE
+WHERE sender_id = $1 AND receiver_id = $2 AND is_read = FALSE;
