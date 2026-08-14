@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/domain"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/usecases"
@@ -21,16 +22,9 @@ func (h *WalletHandler) CreateWallet(c fiber.Ctx) error {
 	if userID == "" {
 		return response.Unauthorized(c, "authentication required")
 	}
-	// self-service creation — handle not supplied by the client; this path
-	// is effectively dead once auth-svc always creates the wallet at
-	// registration, but kept for now in case a wallet is ever missing and
-	// needs manual recovery.
 	return response.BadRequest(c, nil, "wallets are created automatically at registration")
 }
 
-// CreateWalletInternal is called by auth-svc's Register flow, immediately
-// after a new user is created. Protected by RequireInternalSecret — never
-// exposed through the gateway.
 func (h *WalletHandler) CreateWalletInternal(c fiber.Ctx) error {
 	var req createWalletInternalRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -46,19 +40,41 @@ func (h *WalletHandler) CreateWalletInternal(c fiber.Ctx) error {
 	}
 	return response.Created(c, "wallet created", toWalletResponse(acc))
 }
-// GetMyWallet replaces the old GetWalletByUser(:user_id) route — a user can
-// only ever look up their own wallet through this endpoint. Looking up an
-// arbitrary user's wallet by path param is intentionally removed.
+
+
 func (h *WalletHandler) GetMyWallet(c fiber.Ctx) error {
 	userID := userIDFromLocals(c)
 	if userID == "" {
 		return response.Unauthorized(c, "authentication required")
 	}
-	acc, err := h.wallets.GetWallet(c.Context(), userID)
+	result, err := h.wallets.GetWalletWithTotal(c.Context(), userID)
 	if err != nil {
 		return handleError(c, err)
 	}
-	return response.OK(c, "wallet found", toWalletResponse(acc))
+	return response.OK(c, "wallet found", fiber.Map{
+		"wallet":        toWalletResponse(result.Wallet),
+		"total_balance": money.FormatPaise(result.TotalBalance),
+	})
+}
+
+func (h *WalletHandler) ListMyAccounts(c fiber.Ctx) error {
+	userID := userIDFromLocals(c)
+	if userID == "" {
+		return response.Unauthorized(c, "authentication required")
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return response.BadRequest(c, nil, "invalid user id")
+	}
+	accounts, err := h.wallets.ListAccounts(c.Context(), uid)
+	if err != nil {
+		return handleError(c, err)
+	}
+	out := make([]walletResponse, len(accounts))
+	for i, a := range accounts {
+		out[i] = toWalletResponse(a)
+	}
+	return response.OK(c, "accounts listed", out)
 }
 
 func (h *WalletHandler) GetWalletByID(c fiber.Ctx) error {
