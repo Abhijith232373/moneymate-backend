@@ -18,7 +18,7 @@ func RegisterRoutes(router fiber.Router, wh *WalletHandler, th *TransferHandler,
 	pay.Post("/transfers", RequireTransactionToken(authClient), th.Transfer)
 	pay.Get("/transactions/:id", th.GetTransaction)
 
-	pay.Post("/deposits", dh.Initiate)
+	pay.Post("/deposits",RequireTransactionToken(authClient), dh.Initiate)
 	pay.Post("/deposits/confirm", dh.Confirm)
 	pay.Get("/deposits", dh.List)
 
