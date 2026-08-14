@@ -4,6 +4,7 @@ use (
 	./services/auth
 	./services/gateway
 	./services/merchant
+	./services/notification
 	./services/payment
 	./services/support
 	./shared
