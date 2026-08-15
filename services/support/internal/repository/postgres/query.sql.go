@@ -161,9 +161,17 @@ func (q *Queries) CreateReport(ctx context.Context, arg CreateReportParams) (Rep
 }
 
 const getAdminChatHistory = `-- name: GetAdminChatHistory :many
-SELECT id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at FROM chat_messages
-WHERE (sender_id = $1 OR receiver_id = $1)
-ORDER BY created_at ASC
+SELECT id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at FROM (
+    SELECT DISTINCT ON (
+        CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END
+    ) id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at
+    FROM chat_messages
+    WHERE sender_id = $1 OR receiver_id = $1
+    ORDER BY 
+        CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END, 
+        created_at DESC
+) AS latest_messages
+ORDER BY created_at DESC
 `
 
 func (q *Queries) GetAdminChatHistory(ctx context.Context, senderID uuid.UUID) ([]ChatMessage, error) {

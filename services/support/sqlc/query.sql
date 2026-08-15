@@ -63,9 +63,17 @@ WHERE (sender_id = $1 AND receiver_id = $2)
 ORDER BY created_at ASC;
 
 -- name: GetAdminChatHistory :many
-SELECT * FROM chat_messages
-WHERE (sender_id = $1 OR receiver_id = $1)
-ORDER BY created_at ASC;
+SELECT * FROM (
+    SELECT DISTINCT ON (
+        CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END
+    ) *
+    FROM chat_messages
+    WHERE sender_id = $1 OR receiver_id = $1
+    ORDER BY 
+        CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END, 
+        created_at DESC
+) AS latest_messages
+ORDER BY created_at DESC;
 
 -- name: MarkMessagesAsRead :exec
 UPDATE chat_messages

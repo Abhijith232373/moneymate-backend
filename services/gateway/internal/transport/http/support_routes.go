@@ -14,20 +14,16 @@ func registerSupportRoutes(api fiber.Router, authMiddleware fiber.Handler, regis
 
 	// Feedback
 	support.Post("/feedbacks", proxy.HTTPProxy(registry, "support", "/support/feedbacks"))
-	support.Get("/feedbacks", proxy.HTTPProxy(registry, "support", "/support/feedbacks"))
 
 	// Complaints
 	support.Post("/complaints", proxy.HTTPProxy(registry, "support", "/support/complaints"))
-	support.Get("/complaints", proxy.HTTPProxy(registry, "support", "/support/complaints"))
-	support.Get("/complaints/user/:user_id", proxy.HTTPProxy(registry, "support", "/support/complaints/user/:user_id"))
+	support.Get("/complaints/me", proxy.HTTPProxy(registry, "support", "/support/complaints/me"))
 
 	// Reports
 	support.Post("/reports", proxy.HTTPProxy(registry, "support", "/support/reports"))
-	support.Get("/reports", proxy.HTTPProxy(registry, "support", "/support/reports"))
-	support.Get("/reports/user/:reporter_id", proxy.HTTPProxy(registry, "support", "/support/reports/user/:reporter_id"))
+	support.Get("/reports/me", proxy.HTTPProxy(registry, "support", "/support/reports/me"))
 
 	// Chat
 	support.Post("/chat/send", proxy.HTTPProxy(registry, "support", "/support/chat/send"))
-	support.Get("/chat/history/:admin_id", proxy.HTTPProxy(registry, "support", "/support/chat/history/:admin_id"))
 	support.Put("/chat/read/:sender_id", proxy.HTTPProxy(registry, "support", "/support/chat/read/:sender_id"))
 }

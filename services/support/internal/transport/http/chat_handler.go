@@ -48,25 +48,25 @@ func (h *ChatHandler) SendMessage(c fiber.Ctx) error {
 	return response.OK(c, "Message sent successfully", msg)
 }
 
-func (h *ChatHandler) GetChatHistory(c fiber.Ctx) error {
-	userIDStr := c.Get("X-User-ID")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		return response.BadRequest(c, nil, "Invalid user ID")
-	}
-
-	adminIDStr := c.Params("admin_id")
+func (h *ChatHandler) GetChatHistoryForAdmin(c fiber.Ctx) error {
+	adminIDStr := c.Get("X-User-ID")
 	adminID, err := uuid.Parse(adminIDStr)
 	if err != nil {
 		return response.BadRequest(c, nil, "Invalid admin ID")
 	}
 
-	history, err := h.useCase.GetChatHistory(c.Context(), userID, adminID)
+	userIDStr := c.Params("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return response.BadRequest(c, nil, "Invalid user ID")
+	}
+
+	history, err := h.useCase.GetChatHistory(c.Context(), adminID, userID)
 	if err != nil {
 		return response.InternalServerError(c)
 	}
 
-	return response.OK(c, "Chat history retrieved", history)
+	return response.OK(c, "Admin chat history with user retrieved", history)
 }
 
 func (h *ChatHandler) GetAdminChatHistory(c fiber.Ctx) error {

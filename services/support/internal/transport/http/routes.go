@@ -18,21 +18,17 @@ func RegisterRoutes(router fiber.Router, h *SupportHandler, chatHandler *ChatHan
 
 	// Feedback
 	support.Post("/feedbacks", h.CreateFeedback)
-	support.Get("/feedbacks", h.ListFeedbacks)
 
 	// Complaints
 	support.Post("/complaints", h.CreateComplaint)
-	support.Get("/complaints", h.ListComplaints)
-	support.Get("/complaints/user/:user_id", h.ListComplaintsByUser)
+	support.Get("/complaints/me", h.ListComplaintsByUser)
 
 	// Reports
 	support.Post("/reports", h.CreateReport)
-	support.Get("/reports", h.ListReports)
-	support.Get("/reports/user/:reporter_id", h.ListReportsByUser)
+	support.Get("/reports/me", h.ListReportsByUser)
 
 	// Chat
 	support.Post("/chat/send", chatHandler.SendMessage)
-	support.Get("/chat/history/:admin_id", chatHandler.GetChatHistory)
 	support.Put("/chat/read/:sender_id", chatHandler.MarkMessagesAsRead)
 }
 
@@ -49,6 +45,7 @@ func RegisterAdminRoutes(router fiber.Router, h *SupportHandler, chatHandler *Ch
 	admin.Get("/reports", h.ListReports)
 
 	// Chat
-	admin.Get("/chat/history", chatHandler.GetAdminChatHistory)
+	admin.Get("/chat/history/:user_id", chatHandler.GetChatHistoryForAdmin)
+	admin.Get("/chat/inbox", chatHandler.GetAdminChatHistory) // Inbox view for all chats
 	admin.Post("/chat/send", chatHandler.SendMessage)
 }

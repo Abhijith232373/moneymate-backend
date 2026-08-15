@@ -27,3 +27,18 @@ CREATE TABLE reports (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id UUID NOT NULL,
+    sender_type VARCHAR(20) NOT NULL, -- 'user', 'merchant', 'admin'
+    receiver_id UUID NOT NULL, 
+    receiver_type VARCHAR(20) NOT NULL, -- 'user', 'merchant', 'admin'
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_chat_messages_sender_receiver ON chat_messages(sender_id, receiver_id);
+CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);
+
