@@ -1,6 +1,6 @@
 -- Auth Service
 CREATE ROLE auth_user
-LOGIN               -- adding LOGIN makes it a database user that your Go service can authenticate as.
+LOGIN               
 PASSWORD 'auth_password';
 
 -- Core Service
@@ -32,3 +32,8 @@ PASSWORD 'payment_password';
 CREATE ROLE support_user
 LOGIN
 PASSWORD 'support_password';
+
+-- notification Service
+CREATE ROLE notification_user
+LOGIN
+PASSWORD 'notification_password';

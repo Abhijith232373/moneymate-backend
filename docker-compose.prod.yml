@@ -1,5 +1,24 @@
 
 services:
+  notification:
+    image: ghcr.io/aamir-sufiyan-n/moneymate-notification:latest
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=5432
+      - ENVIRONMENT=${ENVIRONMENT}
+    expose:
+      - "9095"
+    ports:
+      - "9095:9095"
+    restart: unless-stopped
+    depends_on:
+      - auth
+    networks:
+      - moneymate-network
+      
   auth:
     image: ghcr.io/aamir-sufiyan-n/moneymate-auth:latest
     env_file:
