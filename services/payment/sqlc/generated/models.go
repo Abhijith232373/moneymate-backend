@@ -201,6 +201,14 @@ type PaymentAccount struct {
 	Handle     *string
 }
 
+type PaymentCategory struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type PaymentDeposit struct {
 	ID                uuid.UUID
 	UserID            uuid.UUID
@@ -232,4 +240,5 @@ type PaymentTransaction struct {
 	Description    *string
 	CreatedAt      time.Time
 	CompletedAt    pgtype.Timestamptz
+	CategoryID     pgtype.UUID
 }

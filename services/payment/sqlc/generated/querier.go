@@ -16,15 +16,19 @@ type Querier interface {
 	CountDeposits(ctx context.Context, arg CountDepositsParams) (int64, error)
 	CountWithdrawals(ctx context.Context, arg CountWithdrawalsParams) (int64, error)
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error)
+	CreateCategory(ctx context.Context, arg CreateCategoryParams) (PaymentCategory, error)
 	CreateDeposit(ctx context.Context, arg CreateDepositParams) (PaymentDeposit, error)
 	CreateExternalSettlementAccount(ctx context.Context) (CreateExternalSettlementAccountRow, error)
 	CreateWallet(ctx context.Context, arg CreateWalletParams) (CreateWalletRow, error)
+	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) error
 	GetAccountByHandle(ctx context.Context, handle *string) (GetAccountByHandleRow, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (GetAccountByIDRow, error)
 	GetAccountByIDForUpdate(ctx context.Context, id uuid.UUID) (GetAccountByIDForUpdateRow, error)
+	GetCategoryByID(ctx context.Context, id uuid.UUID) (PaymentCategory, error)
 	GetDepositByOrderID(ctx context.Context, razorpayOrderID string) (PaymentDeposit, error)
 	GetEntriesByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]GetEntriesByTransactionIDRow, error)
 	GetExternalSettlementAccount(ctx context.Context) (GetExternalSettlementAccountRow, error)
+	GetSpendByCategory(ctx context.Context, arg GetSpendByCategoryParams) ([]GetSpendByCategoryRow, error)
 	GetTotalBalanceByUser(ctx context.Context, userID pgtype.UUID) (int64, error)
 	GetTransactionByID(ctx context.Context, id uuid.UUID) (GetTransactionByIDRow, error)
 	GetTransactionByIdempotencyKey(ctx context.Context, arg GetTransactionByIdempotencyKeyParams) (GetTransactionByIdempotencyKeyRow, error)
@@ -32,6 +36,7 @@ type Querier interface {
 	InsertJournalEntry(ctx context.Context, arg InsertJournalEntryParams) error
 	InsertTransaction(ctx context.Context, arg InsertTransactionParams) (InsertTransactionRow, error)
 	ListAccountsByUser(ctx context.Context, userID pgtype.UUID) ([]ListAccountsByUserRow, error)
+	ListCategoriesByUser(ctx context.Context, userID uuid.UUID) ([]PaymentCategory, error)
 	ListDeposits(ctx context.Context, arg ListDepositsParams) ([]PaymentDeposit, error)
 	ListEntriesByAccount(ctx context.Context, accountID uuid.UUID) ([]ListEntriesByAccountRow, error)
 	ListTransactionsByAccount(ctx context.Context, accountID uuid.UUID) ([]ListTransactionsByAccountRow, error)
@@ -39,6 +44,7 @@ type Querier interface {
 	MarkDepositFailed(ctx context.Context, arg MarkDepositFailedParams) error
 	MarkDepositPaid(ctx context.Context, arg MarkDepositPaidParams) error
 	MarkDepositPaidIfCreated(ctx context.Context, arg MarkDepositPaidIfCreatedParams) (int64, error)
+	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (PaymentCategory, error)
 	UpdateTransactionStatus(ctx context.Context, arg UpdateTransactionStatusParams) error
 }
 
