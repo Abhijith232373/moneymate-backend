@@ -17,6 +17,8 @@ type WalletUsecase interface {
 	GetByID(ctx context.Context, id string) (*domain.Account, error)
 	GetByHandle(ctx context.Context, handle string) (*domain.Account, error)
 	GetTotalBalance(ctx context.Context, userID string) (int64, error)
+	GetWalletWithTotal(ctx context.Context, userID string) (*WalletBalanceResponse, error) 
+	ListAccounts(ctx context.Context, userID uuid.UUID) ([]*domain.Account, error)
 }
 
 type walletUsecase struct {
@@ -25,6 +27,9 @@ type walletUsecase struct {
 
 func NewWalletUsecase(accounts domain.AccountRepository) WalletUsecase {
 	return &walletUsecase{accounts: accounts}
+}
+func (u *walletUsecase) ListAccounts(ctx context.Context, userID uuid.UUID) ([]*domain.Account, error) {
+	return u.accounts.ListByUser(ctx, userID)
 }
 
 // CreateWallet is idempotent: a user only ever gets one wallet.
@@ -63,6 +68,26 @@ func (u *walletUsecase) GetWallet(ctx context.Context, userID string) (*domain.A
 		return nil, apperrors.ErrInvalidInput
 	}
 	return u.accounts.GetWalletByUserID(ctx, uid)
+}
+type WalletBalanceResponse struct {
+	Wallet       *domain.Account
+	TotalBalance int64
+}
+
+func (u *walletUsecase) GetWalletWithTotal(ctx context.Context, userID string) (*WalletBalanceResponse, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, apperrors.ErrInvalidInput
+	}
+	wallet, err := u.accounts.GetWalletByUserID(ctx, uid)
+	if err != nil {
+		return nil, fmt.Errorf("get wallet: %w", err)
+	}
+	total, err := u.accounts.GetTotalBalanceByUser(ctx, uid)
+	if err != nil {
+		return nil, fmt.Errorf("get total balance: %w", err)
+	}
+	return &WalletBalanceResponse{Wallet: wallet, TotalBalance: total}, nil
 }
 
 func (u *walletUsecase) GetByID(ctx context.Context, id string) (*domain.Account, error) {

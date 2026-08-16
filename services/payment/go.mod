@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
-	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260811104043-77fe62eb300d
+	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260813114436-992632ebc1a2
 	github.com/spf13/viper v1.21.0
 )
 
@@ -34,7 +34,10 @@ require (
 	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.16 // indirect
+	github.com/razorpay/razorpay-go v1.4.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
+	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
