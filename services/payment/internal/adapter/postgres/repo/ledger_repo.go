@@ -22,17 +22,7 @@ func NewLedgerRepo(pool *pgxpool.Pool) *LedgerRepo {
 	return &LedgerRepo{pool: pool}
 }
 
-// ExecuteTransfer moves money atomically. It:
-//  1. locks both accounts (in a stable, sorted order — no deadlocks)
-//  2. checks the sender has enough balance
-//  3. writes the transaction + two journal entries (debit + credit)
-//  4. updates both balances
-//  5. commits — or rolls everything back on any failure
-//
-// If the (idempotency_key, from_account_id) pair was already used, the INSERT
-// hits the unique constraint and the whole tx rolls back cleanly — no partial
-// writes. The caller (transfer_usecase) is responsible for turning that into
-// a replay of the original result rather than a bare error. See A10.
+
 func (r *LedgerRepo) ExecuteTransfer(ctx context.Context, t *domain.Transaction) (*domain.LedgerResult, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -71,16 +61,17 @@ func (r *LedgerRepo) ExecuteTransfer(ctx context.Context, t *domain.Transaction)
 	now := time.Now().UTC()
 	txID := uuid.New()
 
-	inserted, err := q.InsertTransaction(ctx, generated.InsertTransactionParams{
-		ID:             txID,
-		FromAccountID:  t.FromAccountID,
-		ToAccountID:    t.ToAccountID,
-		Amount:         t.Amount,
-		Column5:        generated.PaymentTxStatus(domain.TxStatusCompleted),
-		IdempotencyKey: t.IdempotencyKey,
-		Description:    &t.Description,
-		CompletedAt:    pgtype.Timestamptz{Time: now, Valid: true},
-	})
+inserted, err := q.InsertTransaction(ctx, generated.InsertTransactionParams{
+	ID:             txID,
+	FromAccountID:  t.FromAccountID,
+	ToAccountID:    t.ToAccountID,
+	Amount:         t.Amount,
+	Column5:        generated.PaymentTxStatus(domain.TxStatusCompleted),
+	IdempotencyKey: t.IdempotencyKey,
+	Description:    &t.Description,
+	CategoryID:     categoryIDToPgtype(t.CategoryID), // NEW — needs a nullable UUID helper
+	CompletedAt:    pgtype.Timestamptz{Time: now, Valid: true},
+})
 	if err != nil {
 		return nil, mapDBErr(err) // unique-violation ⇒ ErrIdempotencyKeyUsed, handled by usecase
 	}
@@ -130,4 +121,10 @@ func (r *LedgerRepo) ExecuteTransfer(ctx context.Context, t *domain.Transaction)
 
 func (r *LedgerRepo) getAccount(ctx context.Context, id uuid.UUID) (*domain.Account, error) {
 	return NewAccountRepo(r.pool).GetByID(ctx, id)
+}
+func categoryIDToPgtype(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{}
+	}
+	return pgtype.UUID{Bytes: *id, Valid: true}
 }

@@ -24,8 +24,32 @@ type Transaction struct {
 	Status         TxStatus
 	IdempotencyKey string
 	Description    string
+	CategoryID     *uuid.UUID 
 	CreatedAt      time.Time
 	CompletedAt    *time.Time
+}
+
+type Category struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type CategoryRepository interface {
+	Create(ctx context.Context, userID uuid.UUID, name string) (*Category, error)
+	ListByUser(ctx context.Context, userID uuid.UUID) ([]Category, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*Category, error)
+	Update(ctx context.Context, id, userID uuid.UUID, name string) (*Category, error)
+	Delete(ctx context.Context, id, userID uuid.UUID) error
+}
+
+type SpendByCategory struct {
+	CategoryID       *uuid.UUID
+	CategoryName     string
+	TransactionCount int64
+	TotalAmount      int64
 }
 
 type JournalEntry struct {

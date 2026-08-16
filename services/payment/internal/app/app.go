@@ -56,6 +56,7 @@ func Build(cfg *config.Config) (*App, error) {
 	transactionRepo := repo.NewTransactionRepo(pool)
 	ledgerRepo := repo.NewLedgerRepo(pool)
 	depositRepo := repo.NewDepositRepo(pool)
+	categoryRepo := repo.NewCategoryRepo(pool)
 
 	externalSettlementID, err := seedExternalSettlementAccount(ctx, accountRepo)
 	if err != nil {
@@ -65,14 +66,16 @@ func Build(cfg *config.Config) (*App, error) {
 	razorpayClient := payment.NewRazorpayClient(cfg.Razorpay.KeyID, cfg.Razorpay.KeySecret)
 
 	walletUC := usecases.NewWalletUsecase(accountRepo)
-	transferUC := usecases.NewTransferUsecase(accountRepo, transactionRepo, ledgerRepo)
+	transferUC := usecases.NewTransferUsecase(accountRepo, transactionRepo, ledgerRepo, categoryRepo)
 	depositUC := usecases.NewDepositUsecase(depositRepo, accountRepo, razorpayClient, cfg.Razorpay.KeyID, externalSettlementID)
 	withdrawalUC := usecases.NewWithdrawalUsecase(accountRepo, transactionRepo, ledgerRepo, externalSettlementID)
+	categoryUC:= usecases.NewCategoryUsecase(categoryRepo)
 
 	walletHandler := transporthttp.NewWalletHandler(walletUC)
 	transferHandler := transporthttp.NewTransferHandler(transferUC)
 	depositHandler := transporthttp.NewDepositHandler(depositUC, razorpayClient)
 	withdrawalHandler := transporthttp.NewWithdrawalHandler(withdrawalUC)
+	cateGoryhandler:=transporthttp.NewCategoryHandler(categoryUC)
 
 	jwtCfg := sharedjwt.Config{
 		AccessSecret:     cfg.JWT.AccessSecret,
@@ -82,7 +85,7 @@ func Build(cfg *config.Config) (*App, error) {
 	}
 
 	authClient := authclient.New(cfg.AuthServiceURL, cfg.InternalServiceSecret)
-	server := setupHTTPServer(walletHandler, transferHandler, depositHandler, withdrawalHandler, jwtCfg, authClient, cfg.InternalServiceSecret)
+	server := setupHTTPServer(walletHandler, transferHandler, depositHandler, withdrawalHandler,cateGoryhandler, jwtCfg, authClient, cfg.InternalServiceSecret)
 
 	kafkaConsumer, err := kafka.NewConsumer(kafka.ConsumerConfig{
 		Brokers:  cfg.Kafka.Brokers,
@@ -116,7 +119,7 @@ func Build(cfg *config.Config) (*App, error) {
 	}, nil
 }
 
-func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, dh *transporthttp.DepositHandler, wdh *transporthttp.WithdrawalHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) *fiber.App {
+func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.TransferHandler, dh *transporthttp.DepositHandler, wdh *transporthttp.WithdrawalHandler, ch *transporthttp.CategoryHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) *fiber.App {
 	server := fiber.New(fiber.Config{AppName: "payment-service"})
 	server.Use(recover.New())
 	server.Use(cors.New(cors.Config{
@@ -129,7 +132,7 @@ func setupHTTPServer(wh *transporthttp.WalletHandler, th *transporthttp.Transfer
 		return c.JSON(fiber.Map{"status": "ok", "service": "payment"})
 	})
 
-	transporthttp.RegisterRoutes(server, wh, th, dh, wdh, jwtCfg, authClient, internalSecret)
+	transporthttp.RegisterRoutes(server, wh, th, dh, wdh,ch, jwtCfg, authClient, internalSecret)
 	return server
 }
 

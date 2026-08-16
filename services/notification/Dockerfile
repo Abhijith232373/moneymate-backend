@@ -10,6 +10,7 @@ COPY services/auth/go.mod services/auth/go.mod
 COPY services/gateway/go.mod services/gateway/go.mod
 COPY services/merchant/go.mod services/merchant/go.mod
 COPY services/payment/go.mod services/payment/go.mod
+COPY services/support/go.mod services/support/go.mod
 COPY services/notification/go.mod services/notification/go.mod
 
 RUN go work sync
