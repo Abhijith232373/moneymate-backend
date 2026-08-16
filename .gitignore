@@ -62,14 +62,10 @@ logs/
 # ── Test / coverage ──────────────────────────────────────────────
 coverage/
 
+# ── firebase-credential ──────────────────────────────────────────────
+firebase-service-account.json
+
 # ── Misc ──────────────────────────────────────────────
 MoneyMate_Technical_Architecture_Documentation.pdf
 doc.md
-STEP2_GATEWAY_PLAN.md
-STEP2_TOPICS_TO_LEARN.md
-STEP3_GRPC_TO_REST_PLAN.md
-IMPLEMENTATION_PLAN.md
-implementation_plan_1.md
-API.md
-moneymate.postman_collection.json
-api-structure.txt
+notification_service_implementation_plan.md
