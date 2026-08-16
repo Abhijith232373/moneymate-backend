@@ -12,12 +12,13 @@ import (
 )
 
 type TransferInput struct {
-	AuthenticatedUserID string // from the verified access token — NOT client-supplied
-	FromAccountID        string
-	ToAccountID           string
-	AmountPaise           int64 // already converted by the handler
-	IdempotencyKey        string
-	Description           string
+	AuthenticatedUserID string
+	FromAccountID       string
+	ToHandle            string // was: ToAccountID
+	AmountPaise         int64
+	IdempotencyKey      string
+	Description         string
+	CategoryID          *string
 }
 
 type TransferUsecase interface {
@@ -29,18 +30,18 @@ type transferUsecase struct {
 	accounts     domain.AccountRepository
 	transactions domain.TransactionRepository
 	ledger       domain.LedgerRepository
+	categories   domain.CategoryRepository
 }
 
 func NewTransferUsecase(
 	accounts domain.AccountRepository,
 	transactions domain.TransactionRepository,
 	ledger domain.LedgerRepository,
+	categories domain.CategoryRepository, // NEW
 ) TransferUsecase {
-	return &transferUsecase{accounts: accounts, transactions: transactions, ledger: ledger}
+	return &transferUsecase{accounts: accounts, transactions: transactions, ledger: ledger, categories: categories}
 }
-
 func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*domain.LedgerResult, error) {
-	// ── Validation ────────────────────────────────────────────────
 	if in.AmountPaise <= 0 {
 		return nil, apperrors.ErrInvalidInput
 	}
@@ -56,17 +57,12 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 	if err != nil {
 		return nil, apperrors.ErrInvalidInput
 	}
-	toID, err := uuid.Parse(in.ToAccountID)
-	if err != nil {
-		return nil, apperrors.ErrInvalidInput
-	}
-	if fromID == toID {
+
+	handle := strings.TrimSpace(in.ToHandle)
+	if handle == "" {
 		return nil, apperrors.ErrInvalidInput
 	}
 
-	// ── Ownership check: the caller must own the source wallet ───
-	// This is the domain-layer enforcement of Decision 3. It runs regardless
-	// of which transport (HTTP today, gRPC/internal later) calls this usecase.
 	fromAcc, err := u.accounts.GetByID(ctx, fromID)
 	if err != nil {
 		return nil, err
@@ -78,15 +74,23 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 		return nil, apperrors.ErrForbidden
 	}
 
-	toAcc, err := u.accounts.GetByID(ctx, toID)
+	// Resolve the recipient's handle to their wallet account.
+	toAcc, err := u.accounts.GetByHandle(ctx, handle)
 	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, apperrors.ErrInvalidInput // don't leak "handle not found" vs other errors — keep it generic
+		}
 		return nil, err
 	}
 	if toAcc.Type != domain.AccountTypeWallet {
 		return nil, apperrors.ErrInvalidInput
 	}
+	toID := toAcc.ID
 
-	// ── Idempotency: replay, never double-charge ─────────────────
+	if fromID == toID {
+		return nil, apperrors.ErrInvalidInput // can't send to yourself
+	}
+
 	existing, err := u.transactions.GetByIdempotencyKey(ctx, key, fromID)
 	if err == nil && existing != nil {
 		return u.replay(ctx, existing)
@@ -95,7 +99,19 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 		return nil, err
 	}
 
-	// ── Atomic double-entry write ────────────────────────────────
+	var categoryID *uuid.UUID
+	if in.CategoryID != nil && *in.CategoryID != "" {
+		cid, err := uuid.Parse(*in.CategoryID)
+		if err != nil {
+			return nil, apperrors.ErrInvalidInput
+		}
+		cat, err := u.categories.GetByID(ctx, cid)
+		if err != nil || cat.UserID != authUserID {
+			return nil, apperrors.ErrInvalidInput
+		}
+		categoryID = &cid
+	}
+
 	result, err := u.ledger.ExecuteTransfer(ctx, &domain.Transaction{
 		FromAccountID:  fromID,
 		ToAccountID:    toID,
@@ -103,13 +119,10 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 		Status:         domain.TxStatusPending,
 		IdempotencyKey: key,
 		Description:    in.Description,
+		CategoryID:     categoryID,
 	})
 	if err != nil {
 		if errors.Is(err, apperrors.ErrIdempotencyKeyUsed) {
-			// Lost a race against a concurrent identical request. The other
-			// request's insert won; fetch its result and hand back the same
-			// success response instead of an error to a legitimately-retrying
-			// client.
 			winner, getErr := u.transactions.GetByIdempotencyKey(ctx, key, fromID)
 			if getErr != nil {
 				return nil, getErr
@@ -121,8 +134,6 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 	return result, nil
 }
 
-// replay rebuilds a LedgerResult for an already-processed idempotency key so
-// the caller gets the original outcome instead of a new transfer.
 func (u *transferUsecase) replay(ctx context.Context, t *domain.Transaction) (*domain.LedgerResult, error) {
 	entries, err := u.transactions.GetEntriesByTransactionID(ctx, t.ID)
 	if err != nil {

@@ -13,9 +13,63 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getSpendByCategory = `-- name: GetSpendByCategory :many
+SELECT
+    COALESCE(c.name, 'Other') AS category_name,
+    t.category_id,
+    COUNT(*)::bigint AS transaction_count,
+    SUM(t.amount)::bigint AS total_amount
+FROM payment.transactions t
+LEFT JOIN payment.categories c ON c.id = t.category_id
+WHERE t.from_account_id = $1
+    AND t.status = 'completed'
+    AND t.created_at >= $2
+    AND t.created_at < $3
+GROUP BY c.name, t.category_id
+ORDER BY total_amount DESC
+`
+
+type GetSpendByCategoryParams struct {
+	FromAccountID uuid.UUID
+	CreatedAt     time.Time
+	CreatedAt_2   time.Time
+}
+
+type GetSpendByCategoryRow struct {
+	CategoryName     string
+	CategoryID       pgtype.UUID
+	TransactionCount int64
+	TotalAmount      int64
+}
+
+func (q *Queries) GetSpendByCategory(ctx context.Context, arg GetSpendByCategoryParams) ([]GetSpendByCategoryRow, error) {
+	rows, err := q.db.Query(ctx, getSpendByCategory, arg.FromAccountID, arg.CreatedAt, arg.CreatedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSpendByCategoryRow{}
+	for rows.Next() {
+		var i GetSpendByCategoryRow
+		if err := rows.Scan(
+			&i.CategoryName,
+			&i.CategoryID,
+			&i.TransactionCount,
+			&i.TotalAmount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTransactionByID = `-- name: GetTransactionByID :one
 SELECT id, from_account_id, to_account_id, amount, status::text AS status,
-       idempotency_key, COALESCE(description, '') AS description, created_at, completed_at
+       idempotency_key, COALESCE(description, '') AS description, category_id, created_at, completed_at
 FROM payment.transactions
 WHERE id = $1
 `
@@ -28,6 +82,7 @@ type GetTransactionByIDRow struct {
 	Status         string
 	IdempotencyKey string
 	Description    string
+	CategoryID     pgtype.UUID
 	CreatedAt      time.Time
 	CompletedAt    pgtype.Timestamptz
 }
@@ -43,6 +98,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (GetTran
 		&i.Status,
 		&i.IdempotencyKey,
 		&i.Description,
+		&i.CategoryID,
 		&i.CreatedAt,
 		&i.CompletedAt,
 	)
@@ -51,7 +107,7 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id uuid.UUID) (GetTran
 
 const getTransactionByIdempotencyKey = `-- name: GetTransactionByIdempotencyKey :one
 SELECT id, from_account_id, to_account_id, amount, status::text AS status,
-       idempotency_key, COALESCE(description, '') AS description, created_at, completed_at
+       idempotency_key, COALESCE(description, '') AS description, category_id, created_at, completed_at
 FROM payment.transactions
 WHERE idempotency_key = $1 AND from_account_id = $2
 `
@@ -69,6 +125,7 @@ type GetTransactionByIdempotencyKeyRow struct {
 	Status         string
 	IdempotencyKey string
 	Description    string
+	CategoryID     pgtype.UUID
 	CreatedAt      time.Time
 	CompletedAt    pgtype.Timestamptz
 }
@@ -84,6 +141,7 @@ func (q *Queries) GetTransactionByIdempotencyKey(ctx context.Context, arg GetTra
 		&i.Status,
 		&i.IdempotencyKey,
 		&i.Description,
+		&i.CategoryID,
 		&i.CreatedAt,
 		&i.CompletedAt,
 	)
@@ -92,11 +150,11 @@ func (q *Queries) GetTransactionByIdempotencyKey(ctx context.Context, arg GetTra
 
 const insertTransaction = `-- name: InsertTransaction :one
 INSERT INTO payment.transactions
-    (id, from_account_id, to_account_id, amount, status, idempotency_key, description, completed_at)
+    (id, from_account_id, to_account_id, amount, status, idempotency_key, description, category_id, completed_at)
 VALUES
-    ($1, $2, $3, $4, $5::payment.tx_status, $6, $7, $8)
+    ($1, $2, $3, $4, $5::payment.tx_status, $6, $7, $8, $9)
 RETURNING id, from_account_id, to_account_id, amount, status::text AS status,
-          idempotency_key, COALESCE(description, '') AS description, created_at, completed_at
+          idempotency_key, COALESCE(description, '') AS description, category_id, created_at, completed_at
 `
 
 type InsertTransactionParams struct {
@@ -107,6 +165,7 @@ type InsertTransactionParams struct {
 	Column5        PaymentTxStatus
 	IdempotencyKey string
 	Description    *string
+	CategoryID     pgtype.UUID
 	CompletedAt    pgtype.Timestamptz
 }
 
@@ -118,6 +177,7 @@ type InsertTransactionRow struct {
 	Status         string
 	IdempotencyKey string
 	Description    string
+	CategoryID     pgtype.UUID
 	CreatedAt      time.Time
 	CompletedAt    pgtype.Timestamptz
 }
@@ -131,6 +191,7 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 		arg.Column5,
 		arg.IdempotencyKey,
 		arg.Description,
+		arg.CategoryID,
 		arg.CompletedAt,
 	)
 	var i InsertTransactionRow
@@ -142,6 +203,7 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 		&i.Status,
 		&i.IdempotencyKey,
 		&i.Description,
+		&i.CategoryID,
 		&i.CreatedAt,
 		&i.CompletedAt,
 	)
@@ -150,7 +212,7 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 
 const listTransactionsByAccount = `-- name: ListTransactionsByAccount :many
 SELECT t.id, t.from_account_id, t.to_account_id, t.amount, t.status::text AS status,
-       t.idempotency_key, COALESCE(t.description, '') AS description, t.created_at, t.completed_at
+       t.idempotency_key, COALESCE(t.description, '') AS description, t.category_id, t.created_at, t.completed_at
 FROM payment.transactions t
 JOIN payment.journal_entries j ON j.transaction_id = t.id
 WHERE j.account_id = $1
@@ -165,6 +227,7 @@ type ListTransactionsByAccountRow struct {
 	Status         string
 	IdempotencyKey string
 	Description    string
+	CategoryID     pgtype.UUID
 	CreatedAt      time.Time
 	CompletedAt    pgtype.Timestamptz
 }
@@ -186,6 +249,7 @@ func (q *Queries) ListTransactionsByAccount(ctx context.Context, accountID uuid.
 			&i.Status,
 			&i.IdempotencyKey,
 			&i.Description,
+			&i.CategoryID,
 			&i.CreatedAt,
 			&i.CompletedAt,
 		); err != nil {

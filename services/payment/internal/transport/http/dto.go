@@ -1,15 +1,15 @@
 package http
 
-type createWalletRequest struct {
-	// user_id removed — the wallet is always created for the authenticated
-	// caller (see middleware.go). Kept as an empty struct placeholder in
-	// case an admin-only "create wallet for user X" endpoint is added later
-	// behind a separate, explicitly-privileged route.
-}
+// type createWalletRequest struct {
+// 	// user_id removed — the wallet is always created for the authenticated
+// 	// caller (see middleware.go). Kept as an empty struct placeholder in
+// 	// case an admin-only "create wallet for user X" endpoint is added later
+// 	// behind a separate, explicitly-privileged route.
+// }
 
 type transferRequest struct {
 	FromAccountID  string `json:"from_account_id" validate:"required"`
-	ToAccountID    string `json:"to_account_id" validate:"required"`
+	ToHandle       string `json:"to_handle" validate:"required"`
 	Amount         string `json:"amount" validate:"required"`
 	IdempotencyKey string `json:"idempotency_key" validate:"required"`
 	Description    string `json:"description"`

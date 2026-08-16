@@ -166,7 +166,7 @@ func (q *Queries) ListDeposits(ctx context.Context, arg ListDepositsParams) ([]P
 }
 
 const listWithdrawals = `-- name: ListWithdrawals :many
-SELECT id, from_account_id, to_account_id, amount, status, idempotency_key, description, created_at, completed_at FROM payment.transactions
+SELECT id, from_account_id, to_account_id, amount, status, idempotency_key, description, created_at, completed_at, category_id FROM payment.transactions
 WHERE to_account_id = $3::uuid
     AND ($4::uuid IS NULL OR from_account_id = $4)
 ORDER BY created_at DESC
@@ -204,6 +204,7 @@ func (q *Queries) ListWithdrawals(ctx context.Context, arg ListWithdrawalsParams
 			&i.Description,
 			&i.CreatedAt,
 			&i.CompletedAt,
+			&i.CategoryID,
 		); err != nil {
 			return nil, err
 		}

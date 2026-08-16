@@ -42,7 +42,7 @@ func (h *TransferHandler) Transfer(c fiber.Ctx) error {
 	result, err := h.transfers.Transfer(c.Context(), usecases.TransferInput{
 		AuthenticatedUserID: userID,
 		FromAccountID:       req.FromAccountID,
-		ToAccountID:         req.ToAccountID,
+		ToHandle:            req.ToHandle,
 		AmountPaise:         amountPaise,
 		IdempotencyKey:      req.IdempotencyKey,
 		Description:         req.Description,
