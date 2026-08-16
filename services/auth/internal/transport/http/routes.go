@@ -46,7 +46,9 @@ func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret stri
 
 func registerRoleRoutes(router fiber.Router, h *RoleHandler) {
 	roles := router.Group("/admin/roles")
+	roles.Post("", h.CreateRole)
 	roles.Post("/", h.CreateRole)
+	roles.Get("", h.ListRoles)
 	roles.Get("/", h.ListRoles)
 	roles.Get("/:id", h.GetRole)
 	roles.Put("/:id", h.UpdateRole)
@@ -58,7 +60,9 @@ func registerRoleRoutes(router fiber.Router, h *RoleHandler) {
 
 func registerUserRoutes(router fiber.Router, h *UserHandler) {
 	users := router.Group("/admin/users")
+	users.Post("", h.CreateUser)
 	users.Post("/", h.CreateUser)
+	users.Get("", h.ListUsers)
 	users.Get("/", h.ListUsers)
 	users.Get("/:id", h.GetUser)
 	users.Put("/:id", h.UpdateUser)
@@ -75,7 +79,9 @@ func registerUserPinRoutes(router fiber.Router, h *UserPinHandler) {
 
 func registerPermissionRoutes(router fiber.Router, h *PermissionHandler) {
 	permissions := router.Group("/admin/permissions")
+	permissions.Post("", h.Create)
 	permissions.Post("/", h.Create)
+	permissions.Get("", h.List)
 	permissions.Get("/", h.List)
 	permissions.Get("/:id", h.Get)
 	permissions.Delete("/:id", h.Delete)

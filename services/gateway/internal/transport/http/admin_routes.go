@@ -36,7 +36,9 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 
 func registerAdminUserRoutes(admin fiber.Router, authAddr string) {
 	adminUser := admin.Group("/users")
+	adminUser.Post("", proxy.AuthProxy(authAddr, "/admin/users"))
 	adminUser.Post("/", proxy.AuthProxy(authAddr, "/admin/users"))
+	adminUser.Get("", proxy.AuthProxy(authAddr, "/admin/users"))
 	adminUser.Get("/", proxy.AuthProxy(authAddr, "/admin/users"))
 	adminUser.Get("/:id", proxy.AuthProxy(authAddr, "/admin/users/:id"))
 	adminUser.Put("/:id", proxy.AuthProxy(authAddr, "/admin/users/:id"))
@@ -46,7 +48,9 @@ func registerAdminUserRoutes(admin fiber.Router, authAddr string) {
 
 func registerAdminRoleRoutes(admin fiber.Router, authAddr string) {
 	adminRole := admin.Group("/roles")
+	adminRole.Post("", proxy.AuthProxy(authAddr, "/admin/roles"))
 	adminRole.Post("/", proxy.AuthProxy(authAddr, "/admin/roles"))
+	adminRole.Get("", proxy.AuthProxy(authAddr, "/admin/roles"))
 	adminRole.Get("/", proxy.AuthProxy(authAddr, "/admin/roles"))
 	adminRole.Get("/:id", proxy.AuthProxy(authAddr, "/admin/roles/:id"))
 	adminRole.Put("/:id", proxy.AuthProxy(authAddr, "/admin/roles/:id"))
@@ -58,7 +62,9 @@ func registerAdminRoleRoutes(admin fiber.Router, authAddr string) {
 
 func registerAdminPermissionRoutes(admin fiber.Router, authAddr string) {
 	adminPermission := admin.Group("/permissions")
+	adminPermission.Post("", proxy.AuthProxy(authAddr, "/admin/permissions"))
 	adminPermission.Post("/", proxy.AuthProxy(authAddr, "/admin/permissions"))
+	adminPermission.Get("", proxy.AuthProxy(authAddr, "/admin/permissions"))
 	adminPermission.Get("/", proxy.AuthProxy(authAddr, "/admin/permissions"))
 	adminPermission.Get("/:id", proxy.AuthProxy(authAddr, "/admin/permissions/:id"))
 	adminPermission.Delete("/:id", proxy.AuthProxy(authAddr, "/admin/permissions/:id"))
@@ -81,6 +87,7 @@ func registerAdminMerchantRoutes(admin fiber.Router, merchantAddr string) {
 
 func registerAdminCampaignRoutes(admin fiber.Router, merchantAddr string) {
 	adminCampaign := admin.Group("/campaigns")
+	adminCampaign.Get("", proxy.MerchantProxy(merchantAddr, "/admin/campaigns"))
 	adminCampaign.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/campaigns"))
 	adminCampaign.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id/status"))
 	adminCampaign.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/campaigns/:id"))
@@ -88,6 +95,7 @@ func registerAdminCampaignRoutes(admin fiber.Router, merchantAddr string) {
 
 func registerAdminKYCRoutes(admin fiber.Router, merchantAddr string) {
 	adminKYC := admin.Group("/kyc")
+	adminKYC.Get("", proxy.MerchantProxy(merchantAddr, "/admin/kyc"))
 	adminKYC.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/kyc"))
 	adminKYC.Get("/:store_id", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id"))
 	adminKYC.Put("/:store_id/verify", proxy.MerchantProxy(merchantAddr, "/admin/kyc/:store_id/verify"))
@@ -101,6 +109,7 @@ func registerAdminRewardsRoutes(admin fiber.Router, merchantAddr string) {
 
 func registerAdminSubscriptionRoutes(admin fiber.Router, merchantAddr string) {
 	adminSubscriptions := admin.Group("/subscriptions")
+	adminSubscriptions.Get("", proxy.MerchantProxy(merchantAddr, "/admin/subscriptions"))
 	adminSubscriptions.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/subscriptions"))
 }
 
