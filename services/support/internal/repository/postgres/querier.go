@@ -6,17 +6,23 @@ package postgres
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
+	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
 	CreateComplaint(ctx context.Context, arg CreateComplaintParams) (Complaint, error)
 	CreateFeedback(ctx context.Context, arg CreateFeedbackParams) (Feedback, error)
 	CreateReport(ctx context.Context, arg CreateReportParams) (Report, error)
+	GetAdminChatHistory(ctx context.Context, senderID uuid.UUID) ([]ChatMessage, error)
+	GetChatHistory(ctx context.Context, arg GetChatHistoryParams) ([]ChatMessage, error)
 	ListComplaints(ctx context.Context, arg ListComplaintsParams) ([]Complaint, error)
 	ListComplaintsByUser(ctx context.Context, arg ListComplaintsByUserParams) ([]Complaint, error)
 	ListFeedbacks(ctx context.Context, arg ListFeedbacksParams) ([]Feedback, error)
 	ListReports(ctx context.Context, arg ListReportsParams) ([]Report, error)
 	ListReportsByUser(ctx context.Context, arg ListReportsByUserParams) ([]Report, error)
+	MarkMessagesAsRead(ctx context.Context, arg MarkMessagesAsReadParams) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -59,9 +60,22 @@ func (h *Hub) HandleConnection(authClient proxy.AuthClient) fiber.Handler {
 		}()
 
 		for {
-			_, _, err := c.ReadMessage()
+			_, msg, err := c.ReadMessage()
 			if err != nil {
 				break
+			}
+
+			var incoming map[string]interface{}
+			if err := json.Unmarshal(msg, &incoming); err == nil {
+				payload := map[string]interface{}{
+					"sender_id":     userID,
+					"sender_type":   claims.Role,
+					"receiver_id":   incoming["receiver_id"],
+					"receiver_type": incoming["receiver_type"],
+					"message":       incoming["message"],
+				}
+				payloadBytes, _ := json.Marshal(payload)
+				h.rdb.Publish(context.Background(), "incoming_ws_messages", payloadBytes)
 			}
 		}
 	})
@@ -91,4 +105,25 @@ func (h *Hub) StartCleanupRoutine(interval time.Duration) {
 			log.Println("[ws] cleanup routine running (placeholder)")
 		}
 	}()
+}
+
+func (h *Hub) StartRedisSubscriber(ctx context.Context) {
+	pubsub := h.rdb.Subscribe(ctx, "chat_messages")
+	defer pubsub.Close()
+
+	ch := pubsub.Channel()
+	for msg := range ch {
+		var chatMsg struct {
+			SenderID   string `json:"sender_id"`
+			ReceiverID string `json:"receiver_id"`
+		}
+		if err := json.Unmarshal([]byte(msg.Payload), &chatMsg); err == nil {
+			var payload map[string]interface{}
+			json.Unmarshal([]byte(msg.Payload), &payload)
+			payload["type"] = "new_chat_message"
+			
+			h.PushToUser(chatMsg.ReceiverID, payload)
+			h.PushToUser(chatMsg.SenderID, payload)
+		}
+	}
 }

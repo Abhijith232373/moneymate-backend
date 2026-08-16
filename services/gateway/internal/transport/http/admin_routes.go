@@ -109,4 +109,9 @@ func registerAdminSupportRoutes(admin fiber.Router, registry *proxy.ServiceRegis
 	adminSupport.Get("/feedbacks", proxy.HTTPProxy(registry, "support", "/admin/support/feedbacks"))
 	adminSupport.Get("/complaints", proxy.HTTPProxy(registry, "support", "/admin/support/complaints"))
 	adminSupport.Get("/reports", proxy.HTTPProxy(registry, "support", "/admin/support/reports"))
+	
+	// Chat
+	adminSupport.Get("/chat/history/:user_id", proxy.HTTPProxy(registry, "support", "/admin/support/chat/history/:user_id"))
+	adminSupport.Get("/chat/inbox", proxy.HTTPProxy(registry, "support", "/admin/support/chat/inbox"))
+	adminSupport.Post("/chat/send", proxy.HTTPProxy(registry, "support", "/admin/support/chat/send"))
 }

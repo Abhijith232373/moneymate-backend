@@ -54,6 +54,7 @@ func main() {
 
 	hub := ws.NewHub(rdb)
 	hub.StartCleanupRoutine(5 * time.Minute)
+	go hub.StartRedisSubscriber(context.Background())
 
 	serviceRegistry := proxy.NewServiceRegistry(cfg.Services.Downstream)
 

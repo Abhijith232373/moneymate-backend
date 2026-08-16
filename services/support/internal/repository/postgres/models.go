@@ -10,6 +10,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type ChatMessage struct {
+	ID           uuid.UUID    `json:"id"`
+	SenderID     uuid.UUID    `json:"sender_id"`
+	SenderType   string       `json:"sender_type"`
+	ReceiverID   uuid.UUID    `json:"receiver_id"`
+	ReceiverType string       `json:"receiver_type"`
+	Message      string       `json:"message"`
+	IsRead       sql.NullBool `json:"is_read"`
+	CreatedAt    sql.NullTime `json:"created_at"`
+}
+
 type Complaint struct {
 	ID          uuid.UUID    `json:"id"`
 	UserID      uuid.UUID    `json:"user_id"`

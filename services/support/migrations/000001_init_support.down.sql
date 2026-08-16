@@ -1,3 +1,4 @@
 DROP TABLE IF EXISTS reports;
 DROP TABLE IF EXISTS complaints;
 DROP TABLE IF EXISTS feedbacks;
+DROP TABLE IF EXISTS chat_messages;
