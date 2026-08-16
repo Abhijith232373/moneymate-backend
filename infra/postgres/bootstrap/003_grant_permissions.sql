@@ -62,3 +62,12 @@ GRANT CREATE ON DATABASE moneymate TO rewards_user;
 GRANT CREATE ON DATABASE moneymate TO automation_user;
 GRANT CREATE ON DATABASE moneymate TO payment_user;
 GRANT CREATE ON DATABASE moneymate TO support_user;
+
+
+
+REVOKE ALL ON SCHEMA notification FROM PUBLIC;
+GRANT USAGE ON SCHEMA notification TO notification_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA notification TO notification_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA notification TO notification_user;
+GRANT CREATE ON SCHEMA notification TO notification_user;
+GRANT CREATE ON DATABASE moneymate TO notification_user;    

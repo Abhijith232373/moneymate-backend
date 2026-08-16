@@ -69,3 +69,5 @@ firebase-service-account.json
 MoneyMate_Technical_Architecture_Documentation.pdf
 doc.md
 notification_service_implementation_plan.md
+
+services/notification/firebase-service-account.json

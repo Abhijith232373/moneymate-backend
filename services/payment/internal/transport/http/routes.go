@@ -11,7 +11,6 @@ import (
 func RegisterRoutes(router fiber.Router, wh *WalletHandler, th *TransferHandler, dh *DepositHandler, wdh *WithdrawalHandler, jwtCfg sharedjwt.Config, authClient *authclient.Client, internalSecret string) {
 	pay := router.Group("/payment", RequireUserID(jwtCfg))
 
-	// pay.Get("/wallets/me", wh.GetMyWallet)
 	pay.Get("/wallets/me", RequireTransactionToken(authClient), wh.GetMyWallet)
 	pay.Get("/wallets/:id", wh.GetWalletByID)
 
@@ -20,7 +19,7 @@ func RegisterRoutes(router fiber.Router, wh *WalletHandler, th *TransferHandler,
 
 	pay.Post("/deposits",RequireTransactionToken(authClient), dh.Initiate)
 	pay.Post("/deposits/confirm", dh.Confirm)
-	pay.Get("/deposits", dh.List)
+	pay.Get("/deposits", dh.List)  
 
 	pay.Post("/withdrawals", RequireTransactionToken(authClient), wdh.Request)
 	pay.Get("/withdrawals", wdh.List)
