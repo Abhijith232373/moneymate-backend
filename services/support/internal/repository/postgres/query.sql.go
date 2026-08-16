@@ -11,6 +11,45 @@ import (
 	"github.com/google/uuid"
 )
 
+const createChatMessage = `-- name: CreateChatMessage :one
+INSERT INTO chat_messages (
+  sender_id, sender_type, receiver_id, receiver_type, message
+) VALUES (
+  $1, $2, $3, $4, $5
+)
+RETURNING id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at
+`
+
+type CreateChatMessageParams struct {
+	SenderID     uuid.UUID `json:"sender_id"`
+	SenderType   string    `json:"sender_type"`
+	ReceiverID   uuid.UUID `json:"receiver_id"`
+	ReceiverType string    `json:"receiver_type"`
+	Message      string    `json:"message"`
+}
+
+func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error) {
+	row := q.db.QueryRowContext(ctx, createChatMessage,
+		arg.SenderID,
+		arg.SenderType,
+		arg.ReceiverID,
+		arg.ReceiverType,
+		arg.Message,
+	)
+	var i ChatMessage
+	err := row.Scan(
+		&i.ID,
+		&i.SenderID,
+		&i.SenderType,
+		&i.ReceiverID,
+		&i.ReceiverType,
+		&i.Message,
+		&i.IsRead,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createComplaint = `-- name: CreateComplaint :one
 INSERT INTO complaints (
   user_id, user_type, title, description
@@ -119,6 +158,96 @@ func (q *Queries) CreateReport(ctx context.Context, arg CreateReportParams) (Rep
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getAdminChatHistory = `-- name: GetAdminChatHistory :many
+SELECT id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at FROM (
+    SELECT DISTINCT ON (
+        CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END
+    ) id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at
+    FROM chat_messages
+    WHERE sender_id = $1 OR receiver_id = $1
+    ORDER BY 
+        CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END, 
+        created_at DESC
+) AS latest_messages
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAdminChatHistory(ctx context.Context, senderID uuid.UUID) ([]ChatMessage, error) {
+	rows, err := q.db.QueryContext(ctx, getAdminChatHistory, senderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChatMessage
+	for rows.Next() {
+		var i ChatMessage
+		if err := rows.Scan(
+			&i.ID,
+			&i.SenderID,
+			&i.SenderType,
+			&i.ReceiverID,
+			&i.ReceiverType,
+			&i.Message,
+			&i.IsRead,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChatHistory = `-- name: GetChatHistory :many
+SELECT id, sender_id, sender_type, receiver_id, receiver_type, message, is_read, created_at FROM chat_messages
+WHERE (sender_id = $1 AND receiver_id = $2)
+   OR (sender_id = $2 AND receiver_id = $1)
+ORDER BY created_at ASC
+`
+
+type GetChatHistoryParams struct {
+	SenderID   uuid.UUID `json:"sender_id"`
+	ReceiverID uuid.UUID `json:"receiver_id"`
+}
+
+func (q *Queries) GetChatHistory(ctx context.Context, arg GetChatHistoryParams) ([]ChatMessage, error) {
+	rows, err := q.db.QueryContext(ctx, getChatHistory, arg.SenderID, arg.ReceiverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChatMessage
+	for rows.Next() {
+		var i ChatMessage
+		if err := rows.Scan(
+			&i.ID,
+			&i.SenderID,
+			&i.SenderType,
+			&i.ReceiverID,
+			&i.ReceiverType,
+			&i.Message,
+			&i.IsRead,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listComplaints = `-- name: ListComplaints :many
@@ -330,4 +459,20 @@ func (q *Queries) ListReportsByUser(ctx context.Context, arg ListReportsByUserPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const markMessagesAsRead = `-- name: MarkMessagesAsRead :exec
+UPDATE chat_messages
+SET is_read = TRUE
+WHERE sender_id = $1 AND receiver_id = $2 AND is_read = FALSE
+`
+
+type MarkMessagesAsReadParams struct {
+	SenderID   uuid.UUID `json:"sender_id"`
+	ReceiverID uuid.UUID `json:"receiver_id"`
+}
+
+func (q *Queries) MarkMessagesAsRead(ctx context.Context, arg MarkMessagesAsReadParams) error {
+	_, err := q.db.ExecContext(ctx, markMessagesAsRead, arg.SenderID, arg.ReceiverID)
+	return err
 }

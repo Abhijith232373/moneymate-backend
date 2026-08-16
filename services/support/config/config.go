@@ -17,6 +17,7 @@ type Config struct {
 	Env      string
 	Server   ServerConfig `mapstructure:"server"`
 	Database sharedconfig.DatabaseConfig
+	Redis    sharedconfig.RedisConfig
 }
 
 func LoadConfig() (*Config, error) {
@@ -42,6 +43,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg.Database = sharedconfig.LoadDatabaseConfig(v, "support")
+	cfg.Redis = sharedconfig.LoadRedisConfig(v)
 	cfg.Env = sharedconfig.Get("ENVIRONMENT", "dev")
 
 	return &cfg, nil
