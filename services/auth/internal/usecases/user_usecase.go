@@ -28,11 +28,12 @@ type adminUserUsecase struct {
 	roleRepo domain.RoleRepository
 	idGen    IDGenerator
 	hasher   PasswordHasher
-	
+	pinRepo  domain.UserPinRepository
+	tx       domain.TxManager
 }
 
-func NewAdminUserUsecase(userRepo domain.UserRepository, roleRepo domain.RoleRepository, hasher PasswordHasher,idGen IDGenerator) AdminUserUsecase {
-	return &adminUserUsecase{userRepo: userRepo, roleRepo: roleRepo, hasher: hasher,idGen: idGen}
+func NewAdminUserUsecase(userRepo domain.UserRepository, roleRepo domain.RoleRepository, hasher PasswordHasher, idGen IDGenerator, pinRepo domain.UserPinRepository, tx domain.TxManager) AdminUserUsecase {
+	return &adminUserUsecase{userRepo: userRepo, roleRepo: roleRepo, hasher: hasher, idGen: idGen, pinRepo: pinRepo, tx: tx}
 }
 
 // ── Create ─────────────────────────────────────────────────────────
@@ -65,9 +66,18 @@ func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest
 		return nil, fmt.Errorf("prepare user creation: %w", err)
 	}
 
+	pinHash, err := u.hasher.Hash(req.PIN)
+	if err != nil {
+		return nil, fmt.Errorf("hash pin: %w", err)
+	}
+
 	userID, err := u.idGen.NewV7()
 	if err != nil {
 		return nil, fmt.Errorf("generate user id: %w", err)
+	}
+	pinID, err := u.idGen.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate pin id: %w", err)
 	}
 
 	var phonePtr *string
@@ -86,8 +96,17 @@ func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest
 		IsEmailVerified: true,
 	}
 
-	if err := u.userRepo.Create(ctx, user); err != nil {
-		return nil, fmt.Errorf("create user: %w", err)
+	err = u.tx.WithTx(ctx, func(ctx context.Context) error {
+		if err := u.userRepo.Create(ctx, user); err != nil {
+			return fmt.Errorf("create user: %w", err)
+		}
+		if err := u.pinRepo.Create(ctx, &domain.UserPin{ID: pinID, UserID: user.ID, PinHash: pinHash}); err != nil {
+			return fmt.Errorf("create pin: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	// Phase 2: both only need user.ID — independent of each other

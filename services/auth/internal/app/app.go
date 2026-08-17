@@ -172,7 +172,7 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 
 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 	adminRoleUC := usecase.NewAdminRoleUsecase(roleRepo, userRepo, g)
-	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
+	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g, pinRepo, txMgr)
 	staffUC := usecase.NewStaffUsecase(staffRepo, roleRepo, h, g)
 	permissionUC := usecase.NewPermissionUsecase(permRepo, roleRepo, g)
 

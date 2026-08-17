@@ -90,6 +90,8 @@ func registerAdminPermissionRoutes(admin fiber.Router, authAddr string) {
 
 func registerAdminMerchantRoutes(admin fiber.Router, merchantAddr string) {
 	adminMerchant := admin.Group("/merchants")
+	adminMerchant.Get("", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
+	adminMerchant.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
 	adminMerchant.Get("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
 	adminMerchant.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id/status"))
 	adminMerchant.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
