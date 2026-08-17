@@ -8,8 +8,10 @@ import (
 
 func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string, registry *proxy.ServiceRegistry) {
 	admin := api.Group("/admin")
+	
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
+	admin.Post("/login", proxy.AuthProxy(authAddr, "/admin/login"))
 
 	admin.Get("/dashboard", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
