@@ -162,10 +162,11 @@ func ParseAccessToken(tokenString, secret string) (*AccesClaims, error) {
 
     _, err := jwt.ParseWithClaims(tokenString, claims, signingKeyFunc(secret))
     if err != nil {
+        fmt.Printf("[JWT ERROR] Failed to parse access token: %v\n", err)
         if errors.Is(err, jwt.ErrTokenExpired) {
             return claims, apperrors.ErrTokenExpired
         }
-        return nil, apperrors.ErrInvalidToken
+        return nil, fmt.Errorf("%w: %v", apperrors.ErrInvalidToken, err)
     }
 
     return claims, nil

@@ -26,6 +26,11 @@ func AuthProxy(authAddr, targetPath string) fiber.Handler {
 		for _, p := range c.Route().Params {
 			upstreamPath = strings.ReplaceAll(upstreamPath, ":"+p, c.Params(p))
 		}
+
+		if len(c.Request().URI().QueryString()) > 0 {
+			upstreamPath += "?" + string(c.Request().URI().QueryString())
+		}
+
 		body := c.Body()
 		
 		
@@ -78,7 +83,11 @@ func AuthProxyGET(authAddr, targetPath string) fiber.Handler {
 	baseURL := withScheme(authAddr)
 	
 	return func(c fiber.Ctx) error {
-		req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseURL+targetPath, nil)
+		upstreamPath := targetPath
+		if len(c.Request().URI().QueryString()) > 0 {
+			upstreamPath += "?" + string(c.Request().URI().QueryString())
+		}
+		req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseURL+upstreamPath, nil)
 		if err != nil {
 			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 				"success": false,

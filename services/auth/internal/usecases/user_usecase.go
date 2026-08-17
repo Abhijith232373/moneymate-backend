@@ -58,7 +58,7 @@ func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest
 			return generateHandle(ctx, u.userRepo, email,req.FullName)
 		},
 		func(ctx context.Context) (*domain.Role, error) {
-			return u.roleRepo.GetByName(ctx, req.Role)
+			return u.roleRepo.GetByName(ctx, strings.ToLower(req.Role))
 		},
 	)
 	if err != nil {
@@ -126,7 +126,14 @@ func (u *adminUserUsecase) ListUsers(ctx context.Context, req ListUsersRequest) 
 
 	summaries := make([]AdminUserSummary, len(result.Users))
 	for i, us := range result.Users {
-		summaries[i] = toAdminUserSummary(us)
+		summary := toAdminUserSummary(us)
+		roles, err := u.roleRepo.GetUserRoles(ctx, us.ID)
+		if err == nil && len(roles) > 0 {
+			summary.Role = roles[0].Name
+		} else {
+			summary.Role = "user"
+		}
+		summaries[i] = summary
 	}
 
 	return &ListUsersResponse{

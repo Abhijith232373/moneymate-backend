@@ -13,12 +13,13 @@ import (
 
 
 
-func seedAdmin(ctx context.Context, userRepo domain.UserRepository, roleRepo domain.RoleRepository, h *hasher.Argon2Hasher, g *idgen.Generator, cfg *config.Config) error {    if cfg.Admin.Email == "" {
+func seedAdmin(ctx context.Context, staffRepo domain.StaffRepository, roleRepo domain.RoleRepository, h *hasher.Argon2Hasher, g *idgen.Generator, cfg *config.Config) error {
+    if cfg.Admin.Email == "" {
         log.Println("[SEED] no ADMIN_EMAIL set, skipping admin seed")
         return nil
     }
 
-    exists, err := userRepo.EmailExists(ctx, cfg.Admin.Email)
+    exists, err := staffRepo.EmailExists(ctx, cfg.Admin.Email)
     if err != nil {
         return fmt.Errorf("check admin exists: %w", err)
     }
@@ -42,21 +43,17 @@ func seedAdmin(ctx context.Context, userRepo domain.UserRepository, roleRepo dom
         return fmt.Errorf("resolve admin role: %w", err)
     }
 
-    user := &domain.User{
+    user := &domain.Staff{
         ID:           userID,
         Email:        cfg.Admin.Email,
         FullName:     "System Admin",
-        Handle:       "admin@moneymate",
-        PasswordHash: &passwordHash,
+        PasswordHash: passwordHash,
         Status:       domain.UserStatusActive,
     }
-    if err := userRepo.Create(ctx, user); err != nil {
+    if err := staffRepo.Create(ctx, user); err != nil {
         return fmt.Errorf("create admin user: %w", err)
     }
-    if err := userRepo.VerifyEmail(ctx, user.ID); err != nil {
-        return fmt.Errorf("verify admin email: %w", err)
-    }
-    if err := roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil); err != nil {
+    if err := staffRepo.AssignRole(ctx, user.ID, role.ID); err != nil {
         return fmt.Errorf("assign admin role: %w", err)
     }
 

@@ -34,6 +34,16 @@ func RegisterRoutes(cfg RouteConfig) {
 	registerSupportRoutes(api, cfg.AuthMiddleware, cfg.Registry)
 	registerDownstreamRoutes(api, cfg.AuthMiddleware, cfg.Registry)
 
+	// Backward compatibility for frontend calls without /api/v1 prefix
+	registerAuthRoutes(cfg.App, cfg.AuthAddr, cfg.AuthMiddleware)
+	registerPinRoutes(cfg.App, cfg.AuthAddr, cfg.AuthMiddleware)
+	registerAdminRoutes(cfg.App, cfg.AuthMiddleware, cfg.AuthAddr, cfg.MerchantAddr, cfg.Registry)
+	registerMerchantRoutes(cfg.App, cfg.MerchantAddr)
+	registerPaymentRoutes(cfg.App, cfg.AuthMiddleware, cfg.Registry)
+	registerSecureRoutes(cfg.App, cfg.AuthMiddleware, cfg.AuthAddr)
+	registerSupportRoutes(cfg.App, cfg.AuthMiddleware, cfg.Registry)
+	registerDownstreamRoutes(cfg.App, cfg.AuthMiddleware, cfg.Registry)
+
 	
 	ws.RegisterWebSocketRoutes(cfg.App, cfg.Hub, cfg.AuthClient)
 }
