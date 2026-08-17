@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -13,8 +14,7 @@ import (
 
 type TransferInput struct {
 	AuthenticatedUserID string
-	FromAccountID       string
-	ToHandle            string // was: ToAccountID
+	ToHandle            string
 	AmountPaise         int64
 	IdempotencyKey      string
 	Description         string
@@ -53,32 +53,23 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 	if err != nil {
 		return nil, apperrors.ErrUnauthorized
 	}
-	fromID, err := uuid.Parse(in.FromAccountID)
+
+	// The caller's own wallet — resolved server-side, never client-supplied.
+	fromAcc, err := u.accounts.GetWalletByUserID(ctx, authUserID)
 	if err != nil {
-		return nil, apperrors.ErrInvalidInput
+		return nil, fmt.Errorf("get sender wallet: %w", err)
 	}
+	fromID := fromAcc.ID
 
 	handle := strings.TrimSpace(in.ToHandle)
 	if handle == "" {
 		return nil, apperrors.ErrInvalidInput
 	}
 
-	fromAcc, err := u.accounts.GetByID(ctx, fromID)
-	if err != nil {
-		return nil, err
-	}
-	if fromAcc.Type != domain.AccountTypeWallet {
-		return nil, apperrors.ErrInvalidInput
-	}
-	if fromAcc.UserID == nil || *fromAcc.UserID != authUserID {
-		return nil, apperrors.ErrForbidden
-	}
-
-	// Resolve the recipient's handle to their wallet account.
 	toAcc, err := u.accounts.GetByHandle(ctx, handle)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil, apperrors.ErrInvalidInput // don't leak "handle not found" vs other errors — keep it generic
+			return nil, apperrors.ErrInvalidInput
 		}
 		return nil, err
 	}
@@ -88,7 +79,7 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 	toID := toAcc.ID
 
 	if fromID == toID {
-		return nil, apperrors.ErrInvalidInput // can't send to yourself
+		return nil, apperrors.ErrInvalidInput
 	}
 
 	existing, err := u.transactions.GetByIdempotencyKey(ctx, key, fromID)

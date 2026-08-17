@@ -41,11 +41,11 @@ func (h *TransferHandler) Transfer(c fiber.Ctx) error {
 
 	result, err := h.transfers.Transfer(c.Context(), usecases.TransferInput{
 		AuthenticatedUserID: userID,
-		FromAccountID:       req.FromAccountID,
 		ToHandle:            req.ToHandle,
 		AmountPaise:         amountPaise,
 		IdempotencyKey:      req.IdempotencyKey,
 		Description:         req.Description,
+		CategoryID:          req.CategoryID,
 	})
 	if err != nil {
 		return handleError(c, err)
