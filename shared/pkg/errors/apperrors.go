@@ -147,6 +147,9 @@ func ParseError(err error) *AppError {
 	case errors.Is(err, ErrNotFound), errors.Is(err, ErrUserNotFound):
 		return NewAppError(http.StatusNotFound, "NOT_FOUND", "The requested resource was not found.", err)
 
+	case errors.Is(err, ErrInvalidPassword):
+		return NewAppError(http.StatusUnauthorized, "UNAUTHORIZED", "Invalid email or password.", err)
+
 	case errors.Is(err, ErrEmailAlreadyTaken):
 		return NewAppError(http.StatusConflict, "EMAIL_TAKEN", "This email is already in use.", err)
 

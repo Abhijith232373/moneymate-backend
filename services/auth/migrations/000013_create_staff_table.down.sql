@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS auth.staff_roles CASCADE;
+DROP TABLE IF EXISTS auth.staff CASCADE;

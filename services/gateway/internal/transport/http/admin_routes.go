@@ -24,6 +24,7 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
 	registerAdminUserRoutes(admin, authAddr)
+	registerAdminStaffRoutes(admin, authAddr) // NEW
 	registerAdminRoleRoutes(admin, authAddr)
 	registerAdminPermissionRoutes(admin, authAddr)
 	registerAdminMerchantRoutes(admin, merchantAddr)
@@ -32,6 +33,18 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	registerAdminRewardsRoutes(admin, merchantAddr)
 	registerAdminSubscriptionRoutes(admin, merchantAddr)
 	registerAdminSupportRoutes(admin, registry)
+}
+
+func registerAdminStaffRoutes(admin fiber.Router, authAddr string) {
+	adminStaff := admin.Group("/staff")
+	adminStaff.Post("", proxy.AuthProxy(authAddr, "/admin/staff"))
+	adminStaff.Post("/", proxy.AuthProxy(authAddr, "/admin/staff"))
+	adminStaff.Get("", proxy.AuthProxy(authAddr, "/admin/staff"))
+	adminStaff.Get("/", proxy.AuthProxy(authAddr, "/admin/staff"))
+	adminStaff.Get("/:id", proxy.AuthProxy(authAddr, "/admin/staff/:id"))
+	adminStaff.Put("/:id", proxy.AuthProxy(authAddr, "/admin/staff/:id"))
+	adminStaff.Patch("/:id/status", proxy.AuthProxy(authAddr, "/admin/staff/:id/status"))
+	adminStaff.Delete("/:id", proxy.AuthProxy(authAddr, "/admin/staff/:id"))
 }
 
 func registerAdminUserRoutes(admin fiber.Router, authAddr string) {

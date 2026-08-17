@@ -10,6 +10,7 @@ type Handlers struct {
 	Auth       *AuthHandler
 	Role       *RoleHandler
 	User       *UserHandler
+	Staff      *StaffHandler
 	UserPin    *UserPinHandler
 	Permission *PermissionHandler
 }
@@ -18,6 +19,7 @@ func RegisterRoutes(router fiber.Router, h *Handlers, internalSecret string) {
 	registerAuthRoutes(router, h.Auth, internalSecret)
 	registerRoleRoutes(router, h.Role)
 	registerUserRoutes(router, h.User)
+	registerStaffRoutes(router, h.Staff) // NEW
 	registerUserPinRoutes(router, h.UserPin)
 	registerPermissionRoutes(router, h.Permission) // NEW
 }
@@ -88,4 +90,16 @@ func registerPermissionRoutes(router fiber.Router, h *PermissionHandler) {
 	permissions.Post("/assign", h.AssignToRole)
 	permissions.Delete("/roles/:roleId/permissions/:permissionId", h.RemoveFromRole)
 	permissions.Get("/roles/:roleId", h.GetRolePermissions)
+}
+
+func registerStaffRoutes(router fiber.Router, h *StaffHandler) {
+	staff := router.Group("/admin/staff")
+	staff.Post("", h.CreateStaff)
+	staff.Post("/", h.CreateStaff)
+	staff.Get("", h.ListStaff)
+	staff.Get("/", h.ListStaff)
+	staff.Get("/:id", h.GetStaff)
+	staff.Put("/:id", h.UpdateStaff)
+	staff.Patch("/:id/status", h.UpdateStaffStatus)
+	staff.Delete("/:id", h.DeleteStaff)
 }

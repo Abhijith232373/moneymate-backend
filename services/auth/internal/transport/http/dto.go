@@ -109,11 +109,6 @@ type verifyPINRequest struct {
 
 // transaction pin (payment flow)
 
-type pinRequest struct {
-	PIN string `json:"pin" validate:"required,len=6,numeric"`
-}
 
-type pinVerifyResponse struct {
-	TransactionToken string `json:"transaction_token"`
-	ExpiresIn        int    `json:"expires_in"`
-}
+
+
