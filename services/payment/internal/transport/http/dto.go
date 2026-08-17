@@ -8,11 +8,11 @@ package http
 // }
 
 type transferRequest struct {
-	FromAccountID  string `json:"from_account_id" validate:"required"`
-	ToHandle       string `json:"to_handle" validate:"required"`
-	Amount         string `json:"amount" validate:"required"`
-	IdempotencyKey string `json:"idempotency_key" validate:"required"`
-	Description    string `json:"description"`
+	ToHandle       string  `json:"to_handle" validate:"required"`
+	Amount         string  `json:"amount" validate:"required"`
+	IdempotencyKey string  `json:"idempotency_key" validate:"required"`
+	Description    string  `json:"description"`
+	CategoryID     *string `json:"category_id"`
 }
 
 type walletResponse struct {
