@@ -14,6 +14,7 @@ type ConsumerConfig struct {
 	Password string
 	CACert   string
 	Topic    string
+	GroupTopics []string
 	GroupID  string
 }
 
@@ -26,17 +27,22 @@ func NewConsumer(cfg ConsumerConfig) (*Consumer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build tls config: %w", err)
 	}
-	return &Consumer{
-		reader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers: cfg.Brokers,
-			Topic:   cfg.Topic,
-			GroupID: cfg.GroupID,
-			Dialer: &kafka.Dialer{
-				SASLMechanism: plain.Mechanism{Username: cfg.Username, Password: cfg.Password},
-				TLS:           tlsCfg,
-			},
-		}),
-	}, nil
+
+	rc := kafka.ReaderConfig{
+		Brokers: cfg.Brokers,
+		GroupID: cfg.GroupID,
+		Dialer: &kafka.Dialer{
+			SASLMechanism: plain.Mechanism{Username: cfg.Username, Password: cfg.Password},
+			TLS:           tlsCfg,
+		},
+	}
+	if len(cfg.GroupTopics) > 0 {
+		rc.GroupTopics = cfg.GroupTopics
+	} else {
+		rc.Topic = cfg.Topic
+	}
+
+	return &Consumer{reader: kafka.NewReader(rc)}, nil
 }
 
 func (c *Consumer) Run(ctx context.Context, handler func(ctx context.Context, payload []byte) error) {

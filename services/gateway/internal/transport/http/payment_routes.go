@@ -10,9 +10,20 @@ func registerPaymentRoutes(api fiber.Router, authMiddleware fiber.Handler, regis
 	payment.Use(authMiddleware)
 
 	payment.Get("/wallets/me", proxy.HTTPProxy(registry, "payment", "/payment/wallets/me"))
+	payment.Get("/wallets/:id", proxy.HTTPProxy(registry, "payment", "/payment/wallets/:id"))
+
+	payment.Post("/transfers", proxy.HTTPProxy(registry, "payment", "/payment/transfers"))
+	payment.Get("/transactions/:id", proxy.HTTPProxy(registry, "payment", "/payment/transactions/:id"))
+
+	payment.Post("/categories", proxy.HTTPProxy(registry, "payment", "/payment/categories"))
+	payment.Get("/categories", proxy.HTTPProxy(registry, "payment", "/payment/categories"))
+	payment.Put("/categories/:id", proxy.HTTPProxy(registry, "payment", "/payment/categories/:id"))
+	payment.Delete("/categories/:id", proxy.HTTPProxy(registry, "payment", "/payment/categories/:id"))
+
 	payment.Post("/deposits", proxy.HTTPProxy(registry, "payment", "/payment/deposits"))
 	payment.Post("/deposits/confirm", proxy.HTTPProxy(registry, "payment", "/payment/deposits/confirm"))
 	payment.Get("/deposits", proxy.HTTPProxy(registry, "payment", "/payment/deposits"))
+
 	payment.Post("/withdrawals", proxy.HTTPProxy(registry, "payment", "/payment/withdrawals"))
 	payment.Get("/withdrawals", proxy.HTTPProxy(registry, "payment", "/payment/withdrawals"))
 }

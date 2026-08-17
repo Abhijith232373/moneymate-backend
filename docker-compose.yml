@@ -1,4 +1,33 @@
 services:
+  notification:
+      build:
+        context: .
+        dockerfile: ./services/notification/Dockerfile
+        target: dev
+      volumes:
+        - ./:/moneymate-backend
+        - ./shared:/moneymate-backend/shared
+        - ./services/notification/migrations:/app/migrations
+      working_dir: /moneymate-backend/services/notification
+      env_file:
+        - .env
+      environment:
+        - CONFIG_PATH=/moneymate-backend/services/notification/config/config.yaml
+        - POSTGRES_HOST=${POSTGRES_HOST}
+        - POSTGRES_PORT=5432
+        - ENVIRONMENT=dev
+        - FIREBASE_PROJECT_ID=money-mate2026
+        - FIREBASE_CREDENTIALS_PATH=/moneymate-backend/firebase-service-account.json
+      ports:
+        - "9095:9095"
+      restart: unless-stopped
+      depends_on:
+        postgres:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+      networks:
+        - moneymate-network
   merchant:
     build:
       context: .
