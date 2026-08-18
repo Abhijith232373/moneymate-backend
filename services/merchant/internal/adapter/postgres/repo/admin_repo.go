@@ -304,9 +304,10 @@ func (r *AdminRepo) UpdateStoreSubscriptionPlan(ctx context.Context, storeID uui
 	defer tx.Rollback(ctx)
 
 	updateSub := `
-		UPDATE merchant_subscriptions
-		SET plan_code = $2, updated_at = NOW()
-		WHERE store_id = $1
+		INSERT INTO merchant_subscriptions (store_id, plan_code, status, billing_cycle, current_period_start, current_period_end, auto_renew, created_at, updated_at)
+		VALUES ($1, $2, 'active', 'monthly', NOW(), NOW() + INTERVAL '30 days', true, NOW(), NOW())
+		ON CONFLICT (store_id) DO UPDATE 
+		SET plan_code = EXCLUDED.plan_code, updated_at = NOW()
 		RETURNING id, store_id, plan_code, status, billing_cycle, current_period_start, current_period_end, auto_renew, created_at, updated_at;`
 	var s domain.MerchantSubscription
 	err = tx.QueryRow(ctx, updateSub, storeID, planCode).Scan(
