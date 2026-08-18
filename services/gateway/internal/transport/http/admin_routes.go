@@ -1,12 +1,14 @@
 package http
 
 import (
+	"context"
 	"github.com/gofiber/fiber/v3"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/middlewares"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
+	"github.com/redis/go-redis/v9"
 )
 
-func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string, registry *proxy.ServiceRegistry) {
+func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string, registry *proxy.ServiceRegistry, rdb *redis.Client) {
 	admin := api.Group("/admin")
 	
 	admin.Use(authMiddleware)
@@ -25,8 +27,35 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	})
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
+	admin.Get("/config", func(c fiber.Ctx) error {
+		ctx := context.Background()
+		modules := []string{"auth_routes", "pin_routes", "admin_routes", "merchant_routes", "payment_routes", "secure_routes", "support_routes", "downstream_routes"}
+		states := make(map[string]bool)
+		for _, m := range modules {
+			val, _ := rdb.Get(ctx, "config:module:"+m).Result()
+			states[m] = (val != "false")
+		}
+		return c.JSON(fiber.Map{"success": true, "data": states})
+	})
+
+	admin.Put("/config", func(c fiber.Ctx) error {
+		var req map[string]bool
+		if err := c.Bind().Body(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"success": false, "error": "invalid payload"})
+		}
+		ctx := context.Background()
+		for k, v := range req {
+			if v {
+				rdb.Set(ctx, "config:module:"+k, "true", 0)
+			} else {
+				rdb.Set(ctx, "config:module:"+k, "false", 0)
+			}
+		}
+		return c.JSON(fiber.Map{"success": true, "message": "config updated"})
+	})
+
 	registerAdminUserRoutes(admin, authAddr)
-	registerAdminStaffRoutes(admin, authAddr) // NEW
+	registerAdminStaffRoutes(admin, authAddr)
 	registerAdminRoleRoutes(admin, authAddr)
 	registerAdminPermissionRoutes(admin, authAddr)
 	registerAdminMerchantRoutes(admin, merchantAddr)
