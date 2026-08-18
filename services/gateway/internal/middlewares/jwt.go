@@ -28,7 +28,7 @@ func RequireAuth(jwtSecret string) fiber.Handler {
 
 		claims, err := jwtutil.ParseAccessToken(token, jwtSecret)
 		if err != nil {
-			log.Print(err)
+			log.Printf("JWT parsing error: %v (token: %s)", err, token)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid or expired token",
 			})

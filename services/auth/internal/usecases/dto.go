@@ -104,6 +104,7 @@ type AdminUserSummary struct {
 	FullName        string `json:"full_name"`
 	Handle          string `json:"handle"`
 	Status          string `json:"status"`
+	Role            string `json:"role"`
 	IsEmailVerified bool   `json:"is_email_verified"`
 	IsPhoneVerified bool   `json:"is_phone_verified"`
 	CreatedAt       string `json:"created_at"`
@@ -132,10 +133,10 @@ type ListUsersResponse struct {
 }
 
 type UpdateUserRequest struct {
-	FullName *string
-	Email    *string
-	Phone    *string
-	Password *string 
+	FullName *string `json:"full_name,omitempty"`
+	Email    *string `json:"email,omitempty"`
+	Phone    *string `json:"phone,omitempty"`
+	Password *string `json:"password,omitempty"`
 }
 
 // ── Role Management ──────────────────────────────────────────────

@@ -57,7 +57,9 @@ type authUsecase struct {
 	idGen            IDGenerator
 	issuer           TokenIssuer
 	jwtCfg           jwtutil.Config
+	staffRepo        domain.StaffRepository
 }
+
 
 func NewAuthUsecase(
 	userRepo domain.UserRepository,
@@ -72,11 +74,13 @@ func NewAuthUsecase(
 	idGen IDGenerator,
 	issuer TokenIssuer,
 	jwtCfg jwtutil.Config,
+	staffRepo domain.StaffRepository,
 ) AuthUsecase {
 	return &authUsecase{
 		userRepo: userRepo, roleRepo: roleRepo, refreshTokenRepo: refreshTokenRepo,
 		pinRepo: pinRepo, pinUsecase: pinUsecase, store: store, tx: tx,
 		hasher: hasher, idGen: idGen, issuer: issuer, jwtCfg: jwtCfg,outboxRepo: outboxRepo,
+		staffRepo: staffRepo,
 	}
 }
 
@@ -273,53 +277,62 @@ func (u *authUsecase) AdminLogin(ctx context.Context, req AdminLoginRequest) (*L
 		return nil, apperrors.ErrInvalidInput
 	}
 
-	user, err := u.userRepo.GetByEmail(ctx, email)
+	staff, err := u.staffRepo.GetByEmail(ctx, email)
 	if err != nil {
 		if err == apperrors.ErrUserNotFound {
 			return nil, apperrors.ErrInvalidPassword
 		}
-		return nil, fmt.Errorf("get user: %w", err)
+		return nil, fmt.Errorf("get staff: %w", err)
 	}
-	if user.PasswordHash == nil {
+	if staff.PasswordHash == "" {
 		return nil, apperrors.ErrInvalidPassword
 	}
-	ok, err := u.hasher.Verify(*user.PasswordHash, req.Password)
+	ok, err := u.hasher.Verify(staff.PasswordHash, req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("verify password: %w", err)
 	}
 	if !ok {
 		return nil, apperrors.ErrInvalidPassword
 	}
-	if user.Status != domain.UserStatusActive {
+	if staff.Status != domain.UserStatusActive {
 		return nil, apperrors.ErrForbidden
 	}
 
-	roles, err := u.roleRepo.GetUserRoles(ctx, user.ID)
+	roles, err := u.staffRepo.GetRoles(ctx, staff.ID)
 	if err != nil {
-		return nil, fmt.Errorf("get user roles: %w", err)
+		return nil, fmt.Errorf("get staff roles: %w", err)
 	}
-	isAdmin := false
-	for _, r := range roles {
-		if r.Name == string(domain.AccountTypeAdmin) {
-			isAdmin = true
-			break
-		}
-	}
-	if !isAdmin {
-		return nil, apperrors.ErrForbidden
+	
+	roleNames := make([]string, len(roles))
+	for i, r := range roles {
+		roleNames[i] = r.Name
 	}
 
-	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
+	accessToken, accessExp, err := u.issuer.IssueAccessToken(staff.ID, "admin", roleNames, staff.TokenVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("issue access token: %w", err)
+	}
+	refreshToken, refreshHash, refreshExp, err := u.issuer.IssueRefreshToken(staff.ID)
+	if err != nil {
+		return nil, fmt.Errorf("issue refresh token: %w", err)
+	}
+
+	refreshID, err := u.idGen.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate refresh token id: %w", err)
+	}
+	if err := u.refreshTokenRepo.Create(ctx, &domain.RefreshToken{
+		ID: refreshID, UserID: staff.ID, TokenHash: refreshHash, ExpiresAt: refreshExp,
+	}); err != nil {
+		return nil, fmt.Errorf("persist refresh token: %w", err)
 	}
 
 	return &LoginResponse{
 		AccessToken: accessToken, RefreshToken: refreshToken,
 		AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
 		User: UserSummary{
-			ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
-			Status: string(user.Status), IsEmailVerified: user.IsEmailVerified,
+			ID: staff.ID, Email: staff.Email, Handle: "admin", FullName: staff.FullName,
+			Status: string(staff.Status), IsEmailVerified: true,
 		},
 	}, nil
 }
@@ -552,9 +565,6 @@ func constantTimeEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
-func hashTokenForLookup(raw string) string {
-	return jwtutil.HashToken(raw)
-}
 
 func (u *authUsecase) issueAndPersistTokens(ctx context.Context, user *domain.User) (accessToken, refreshToken string, accessExp, refreshExp time.Time, err error) {
 	roles, tokenVersion, err := parallelrunners.Query2(ctx,

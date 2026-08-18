@@ -11,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-
 	"github.com/moneymate-2026/moneymate-backend/auth/config"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres/repo"
@@ -71,9 +70,9 @@ func Build(cfg *config.Config) (app *App, err error) {
 	if err = postgres.RunMigrations(dsn, cfg.Database.MigrationsPath); err != nil {
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
-	userRepo := repo.NewUserRepo(pool)
+	staffRepo := repo.NewStaffRepo(pool)
 	roleRepo := repo.NewRoleRepo(pool)
-	if err := seedAdmin(context.Background(), userRepo, roleRepo, hasher.New(), idgen.New(), cfg); err != nil {
+	if err := seedAdmin(context.Background(), staffRepo, roleRepo, hasher.New(), idgen.New(), cfg); err != nil {
 		return nil, fmt.Errorf("seed admin: %w", err)
 	}
 	redisClient, err = setupRedis(cfg)
@@ -154,6 +153,7 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	otpMailer := mailer.NewOtpMail(mailerClient)
 
 	userRepo := repo.NewUserRepo(pool)
+	staffRepo := repo.NewStaffRepo(pool) // NEW
 	roleRepo := repo.NewRoleRepo(pool)
 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
 	pinRepo := repo.NewUserPinRepo(pool)
@@ -162,7 +162,7 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	txMgr := sharedpgxtx.New(pool)
 
 	pinUC := usecase.NewUserPinUsecase(pinRepo, h, g)
-	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, outboxRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg)
+	authUC := usecase.NewAuthUsecase(userRepo, roleRepo, outboxRepo, refreshTokenRepo, pinRepo, pinUC, store, txMgr, h, g, issuer, jwtCfg, staffRepo)
 
 	otpMailerIface := usecase.EmailSender(otpMailer)
 	if cfg.Env == "dev" {
@@ -173,12 +173,14 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	otpUC := usecase.NewOTPUsecase(userRepo, store, otpMailerIface, cfg.OTP)
 	adminRoleUC := usecase.NewAdminRoleUsecase(roleRepo, userRepo, g)
 	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g)
+	staffUC := usecase.NewStaffUsecase(staffRepo, roleRepo, h, g)
 	permissionUC := usecase.NewPermissionUsecase(permRepo, roleRepo, g)
 
 	return &transporthttp.Handlers{
 		Auth:       transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
 		Role:       transporthttp.NewRoleHandler(adminRoleUC),
 		User:       transporthttp.NewUserHandler(adminUserUC),
+		Staff:      transporthttp.NewStaffHandler(staffUC),
 		UserPin:    transporthttp.NewUserPinHandler(pinUC, issuer),
 		Permission: transporthttp.NewPermissionHandler(permissionUC),
 	}
