@@ -18,6 +18,9 @@ type SupportUseCase interface {
 	CreateReport(ctx context.Context, reporterID uuid.UUID, reporterType string, reportedVPA, title, description string) (*domain.Report, error)
 	ListReports(ctx context.Context, limit, offset int32) ([]*domain.Report, error)
 	ListReportsByUser(ctx context.Context, reporterID uuid.UUID, reporterType string) ([]*domain.Report, error)
+
+	CreateAuditLog(ctx context.Context, adminID uuid.UUID, adminName, adminRole, module, action string) (*domain.AuditLog, error)
+	ListAuditLogs(ctx context.Context, limit, offset int32) ([]*domain.AuditLog, error)
 }
 
 type supportUseCase struct {
@@ -60,7 +63,6 @@ func (u *supportUseCase) ListComplaintsByUser(ctx context.Context, userID uuid.U
 	return u.repo.ListComplaintsByUser(ctx, userID, userType)
 }
 
-
 func (u *supportUseCase) CreateReport(ctx context.Context, reporterID uuid.UUID, reporterType string, reportedVPA, title, description string) (*domain.Report, error) {
 	return u.repo.CreateReport(ctx, &domain.Report{
 		ReporterID:   reporterID,
@@ -79,3 +81,16 @@ func (u *supportUseCase) ListReportsByUser(ctx context.Context, reporterID uuid.
 	return u.repo.ListReportsByUser(ctx, reporterID, reporterType)
 }
 
+func (u *supportUseCase) CreateAuditLog(ctx context.Context, adminID uuid.UUID, adminName, adminRole, module, action string) (*domain.AuditLog, error) {
+	return u.repo.CreateAuditLog(ctx, &domain.AuditLog{
+		AdminID:   adminID,
+		AdminName: adminName,
+		AdminRole: adminRole,
+		Module:    module,
+		Action:    action,
+	})
+}
+
+func (u *supportUseCase) ListAuditLogs(ctx context.Context, limit, offset int32) ([]*domain.AuditLog, error) {
+	return u.repo.ListAuditLogs(ctx, limit, offset)
+}

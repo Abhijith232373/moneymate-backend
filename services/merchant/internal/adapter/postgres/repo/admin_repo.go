@@ -74,7 +74,37 @@ func (r *AdminRepo) GetStoreByID(ctx context.Context, storeID uuid.UUID) (*domai
 }
 
 func (r *AdminRepo) UpdateStoreStatus(ctx context.Context, storeID uuid.UUID, status string) error {
-	return r.storeRepo.UpdateStoreStatus(ctx, storeID, status)
+	// Update in merchant DB
+	err := r.storeRepo.UpdateStoreStatus(ctx, storeID, status)
+	if err != nil {
+		return err
+	}
+
+	// Fetch store to get email
+	store, err := r.storeRepo.GetStoreProfileByStoreID(ctx, storeID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch store profile for auth sync: %w", err)
+	}
+
+	// Sync with auth DB
+	authStatus := "active"
+	switch status {
+	case "blocked", "suspended":
+		authStatus = "suspended"
+	case "deleted":
+		authStatus = "deleted"
+	case "pending_kyc":
+		authStatus = "pending"
+	}
+
+	query := `UPDATE auth.users SET status = $1::text::auth.user_status, updated_at = NOW() WHERE email = $2;`
+	_, err = r.db.Exec(ctx, query, authStatus, store.ContactEmail)
+	if err != nil {
+		// Just log or return error
+		return fmt.Errorf("failed to sync status to auth.users: %w", err)
+	}
+
+	return nil
 }
 
 func (r *AdminRepo) DeleteStore(ctx context.Context, storeID uuid.UUID) error {

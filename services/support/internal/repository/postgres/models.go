@@ -8,7 +8,19 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
+
+type AuditLog struct {
+	ID        uuid.UUID             `json:"id"`
+	AdminID   uuid.UUID             `json:"admin_id"`
+	AdminName string                `json:"admin_name"`
+	AdminRole string                `json:"admin_role"`
+	Module    string                `json:"module"`
+	Action    string                `json:"action"`
+	Changes   pqtype.NullRawMessage `json:"changes"`
+	CreatedAt sql.NullTime          `json:"created_at"`
+}
 
 type ChatMessage struct {
 	ID           uuid.UUID    `json:"id"`

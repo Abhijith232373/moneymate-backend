@@ -79,3 +79,15 @@ ORDER BY created_at DESC;
 UPDATE chat_messages
 SET is_read = TRUE
 WHERE sender_id = $1 AND receiver_id = $2 AND is_read = FALSE;
+
+-- name: CreateAuditLog :one
+INSERT INTO audit_logs (
+    admin_id, admin_name, admin_role, module, action, changes
+) VALUES (
+    $1, $2, $3, $4, $5, $6
+) RETURNING *;
+
+-- name: ListAuditLogs :many
+SELECT * FROM audit_logs
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;

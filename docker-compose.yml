@@ -73,6 +73,7 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - ENVIRONMENT=dev
+      - REDIS_ADDR=redis:6379
     ports:
       - "8085:8085"
     restart: unless-stopped
