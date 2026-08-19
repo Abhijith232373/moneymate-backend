@@ -49,7 +49,7 @@ func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret stri
 }
 func registerProfilePictureRoutes(router fiber.Router, h *ProfilePictureHandler, u *UserHandler) {
 	profile := router.Group("/users/me/profile", RequireUserID)
-	profile.Get("/users/me", RequireUserID, u.GetMe)
+	profile.Get("/", RequireUserID, u.GetMe)
 	profile.Post("/presign", h.Presign)
 	profile.Post("/", h.Set)
 }
