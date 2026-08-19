@@ -5,13 +5,21 @@ INSERT INTO auth.users (
     phone,
     full_name,
     handle,
-    password_hash
+    password_hash,
+    qr_code
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6, $7
 )
 RETURNING *;
 
+-- name: UpdateProfilePicture :one
+UPDATE auth.users
+SET
+    profile_picture_url = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 
 
 -- name: GetUserByID :one

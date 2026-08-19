@@ -48,6 +48,7 @@ type UserSummary struct {
 	FullName        string
 	Status          string
 	IsEmailVerified bool
+	QRCode string
 }
 type AdminLoginRequest struct {
 	Email    string
@@ -108,6 +109,8 @@ type AdminUserSummary struct {
 	IsEmailVerified bool   `json:"is_email_verified"`
 	IsPhoneVerified bool   `json:"is_phone_verified"`
 	CreatedAt       string `json:"created_at"`
+	QRCode            string `json:"qr_code"`
+	ProfilePictureURL string `json:"profile_picture_url,omitempty"`	
 }
 
 type UserDetail struct {

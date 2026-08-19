@@ -10,9 +10,8 @@ import (
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/domain"
 	apperrors "github.com/moneymate-2026/moneymate-backend/shared/pkg/errors"
 	"github.com/moneymate-2026/moneymate-backend/shared/pkg/parallelrunners"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/qrcode"
 )
-
-
 
 type AdminUserUsecase interface {
 	CreateUser(ctx context.Context, req CreateUserRequest) (*UserDetail, error)
@@ -28,11 +27,10 @@ type adminUserUsecase struct {
 	roleRepo domain.RoleRepository
 	idGen    IDGenerator
 	hasher   PasswordHasher
-	
 }
 
-func NewAdminUserUsecase(userRepo domain.UserRepository, roleRepo domain.RoleRepository, hasher PasswordHasher,idGen IDGenerator) AdminUserUsecase {
-	return &adminUserUsecase{userRepo: userRepo, roleRepo: roleRepo, hasher: hasher,idGen: idGen}
+func NewAdminUserUsecase(userRepo domain.UserRepository, roleRepo domain.RoleRepository, hasher PasswordHasher, idGen IDGenerator) AdminUserUsecase {
+	return &adminUserUsecase{userRepo: userRepo, roleRepo: roleRepo, hasher: hasher, idGen: idGen}
 }
 
 // ── Create ─────────────────────────────────────────────────────────
@@ -55,7 +53,7 @@ func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest
 			return u.hasher.Hash(req.Password)
 		},
 		func(ctx context.Context) (string, error) {
-			return generateHandle(ctx, u.userRepo, email,req.FullName)
+			return generateHandle(ctx, u.userRepo, email, req.FullName)
 		},
 		func(ctx context.Context) (*domain.Role, error) {
 			return u.roleRepo.GetByName(ctx, strings.ToLower(req.Role))
@@ -75,6 +73,12 @@ func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest
 		phonePtr = &phone
 	}
 
+	qrPayload := qrcode.BuildPaymentPayload(string(req.Role), handle)
+	qrCode, err := qrcode.GenerateBase64(qrPayload)
+	if err != nil {
+		return nil, fmt.Errorf("generate qr code: %w", err)
+	}
+
 	user := &domain.User{
 		ID:              userID,
 		Email:           email,
@@ -84,6 +88,7 @@ func (u *adminUserUsecase) CreateUser(ctx context.Context, req CreateUserRequest
 		PasswordHash:    &passwordHash,
 		Status:          domain.UserStatusActive,
 		IsEmailVerified: true,
+		QRCode:          qrCode,
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
@@ -164,7 +169,7 @@ func (u *adminUserUsecase) GetUser(ctx context.Context, userID uuid.UUID) (*User
 
 	return &UserDetail{
 		AdminUserSummary: toAdminUserSummary(*user),
-		Roles:       roleNames,
+		Roles:            roleNames,
 	}, nil
 }
 
@@ -212,7 +217,7 @@ func (u *adminUserUsecase) UpdateUser(ctx context.Context, userID uuid.UUID, req
 
 	return &UserDetail{
 		AdminUserSummary: toAdminUserSummary(*updated),
-		Roles:       roleNames,
+		Roles:            roleNames,
 	}, nil
 }
 
@@ -255,9 +260,18 @@ func toAdminUserSummary(u domain.User) AdminUserSummary {
 		IsEmailVerified: u.IsEmailVerified,
 		IsPhoneVerified: u.IsPhoneVerified,
 		CreatedAt:       u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		QRCode:          u.QRCode,
 	}
 	if u.Phone != nil {
 		s.Phone = *u.Phone
 	}
+	if u.ProfilePictureURL != nil {
+		s.ProfilePictureURL = *u.ProfilePictureURL
+	}
 	return s
+}
+
+
+func (u *adminUserUsecase) GetSelf(ctx context.Context, userID uuid.UUID) (*UserDetail, error) {
+	return u.GetUser(ctx, userID) 
 }

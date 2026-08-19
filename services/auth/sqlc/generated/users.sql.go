@@ -20,7 +20,7 @@ SET
     password_hash = COALESCE($4, password_hash),
     updated_at    = NOW()
 WHERE id = $5
-RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at
+RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url
 `
 
 type AdminUpdateUserParams struct {
@@ -53,6 +53,8 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
 	)
 	return i, err
 }
@@ -88,12 +90,13 @@ INSERT INTO auth.users (
     phone,
     full_name,
     handle,
-    password_hash
+    password_hash,
+    qr_code
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6, $7
 )
-RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at
+RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url
 `
 
 type CreateUserParams struct {
@@ -103,6 +106,7 @@ type CreateUserParams struct {
 	FullName     string      `json:"full_name"`
 	Handle       string      `json:"handle"`
 	PasswordHash pgtype.Text `json:"password_hash"`
+	QrCode       pgtype.Text `json:"qr_code"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUser, error) {
@@ -113,6 +117,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUse
 		arg.FullName,
 		arg.Handle,
 		arg.PasswordHash,
+		arg.QrCode,
 	)
 	var i AuthUser
 	err := row.Scan(
@@ -128,6 +133,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AuthUse
 		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
 	)
 	return i, err
 }
@@ -158,7 +165,7 @@ func (q *Queries) GetTokenVersion(ctx context.Context, id pgtype.UUID) (int64, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url FROM auth.users
 WHERE email = $1
 `
 
@@ -178,12 +185,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AuthUser, e
 		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
 	)
 	return i, err
 }
 
 const getUserByHandle = `-- name: GetUserByHandle :one
-SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url FROM auth.users
 WHERE handle = $1
 `
 
@@ -203,12 +212,14 @@ func (q *Queries) GetUserByHandle(ctx context.Context, handle string) (AuthUser,
 		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url FROM auth.users
 WHERE id = $1
 `
 
@@ -228,12 +239,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (AuthUser, er
 		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
 	)
 	return i, err
 }
 
 const getUserByPhone = `-- name: GetUserByPhone :one
-SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url FROM auth.users
 WHERE phone = $1
 `
 
@@ -253,6 +266,8 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phone pgtype.Text) (AuthUs
 		&i.IsPhoneVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
 	)
 	return i, err
 }
@@ -287,7 +302,7 @@ func (q *Queries) IncrementTokenVersion(ctx context.Context, id pgtype.UUID) (in
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at FROM auth.users
+SELECT id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url FROM auth.users
 WHERE
     ($1::auth.user_status IS NULL OR status = $1)
     AND (
@@ -345,6 +360,8 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]AuthUse
 			&i.IsPhoneVerified,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.QrCode,
+			&i.ProfilePictureUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -398,6 +415,42 @@ type UpdatePasswordParams struct {
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
 	_, err := q.db.Exec(ctx, updatePassword, arg.ID, arg.PasswordHash)
 	return err
+}
+
+const updateProfilePicture = `-- name: UpdateProfilePicture :one
+UPDATE auth.users
+SET
+    profile_picture_url = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, phone, full_name, handle, password_hash, status, token_version, is_email_verified, is_phone_verified, created_at, updated_at, qr_code, profile_picture_url
+`
+
+type UpdateProfilePictureParams struct {
+	ID                pgtype.UUID `json:"id"`
+	ProfilePictureUrl pgtype.Text `json:"profile_picture_url"`
+}
+
+func (q *Queries) UpdateProfilePicture(ctx context.Context, arg UpdateProfilePictureParams) (AuthUser, error) {
+	row := q.db.QueryRow(ctx, updateProfilePicture, arg.ID, arg.ProfilePictureUrl)
+	var i AuthUser
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Phone,
+		&i.FullName,
+		&i.Handle,
+		&i.PasswordHash,
+		&i.Status,
+		&i.TokenVersion,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.QrCode,
+		&i.ProfilePictureUrl,
+	)
+	return i, err
 }
 
 const updateUserStatus = `-- name: UpdateUserStatus :exec
