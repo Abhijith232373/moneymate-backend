@@ -34,6 +34,8 @@ func registerPinRoutes(api fiber.Router, authAddr string, authMiddleware fiber.H
 func registerProfilePictureRoutes(api fiber.Router, authAddr string, authMiddleware fiber.Handler) {
 	profile := api.Group("/profile")
 	profile.Use(authMiddleware)
+
+	profile.Post("/me", proxy.AuthProxy(authAddr, "/users/me/profile/"))
 	profile.Post("/presign", proxy.AuthProxy(authAddr, "/users/me/profile/presign"))
 	profile.Post("/", proxy.AuthProxy(authAddr, "/users/me/profile/"))
 }
