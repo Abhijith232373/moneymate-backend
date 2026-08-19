@@ -268,10 +268,12 @@ func (h *AuthHandler) GetUserByID(c fiber.Ctx) error {
 	}
 
 	return response.OK(c, "user found", fiber.Map{
-		"user_id":   user.ID.String(),
-		"email":     user.Email,
-		"full_name": user.FullName,
-		"handle":    user.Handle,
-		"role":      "user", // default - role resolution happens via jwt claims
-	})
+    "user_id":             user.ID.String(),
+    "email":               user.Email,
+    "full_name":           user.FullName,
+    "handle":              user.Handle,
+    "role":                "user",
+    "qr_code":             user.QRCode,
+    "profile_picture_url": user.ProfilePictureURL,
+})
 }

@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
-	"github.com/moneymate-2026/moneymate-backend/shared/pkg/qrcode"
 	hashpass "github.com/moneymate-2026/moneymate-backend/shared/pkg/hash"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/qrcode"
 )
 
 // StoreUseCase orchestrates merchant workflows.
@@ -52,7 +52,8 @@ func (uc *StoreUseCase) ProcessRegistration(ctx context.Context, in RegisterStor
 	}
 
 	vpa := generateVPA(in.ContactEmail)
-	qrCodeBase64, err := qrcode.GenerateBase64(vpa)
+	qrPayload := qrcode.BuildPaymentPayload("merchant", vpa)
+	qrCodeBase64, err := qrcode.GenerateBase64(qrPayload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate QR code: %w", err)
 	}
@@ -140,11 +141,11 @@ func generateVPA(email string) string {
 	if len(prefix) > 10 {
 		prefix = prefix[:10]
 	}
-	
+
 	b := make([]byte, 2)
 	rand.Read(b)
 	hexStr := strings.ToLower(hex.EncodeToString(b))
-	
+
 	return fmt.Sprintf("%s%s@moneymate", prefix, hexStr)
 }
 
@@ -154,16 +155,16 @@ func (uc *StoreUseCase) GetPendingStores(ctx context.Context) ([]*domain.Store, 
 }
 
 type UpdateProfileInput struct {
-	StoreID           string
-	BusinessName      string
-	DBAName           string
-	Address           string
-	BusinessType      string
-	TaxID             string
-	OwnerName         string
-	Email             string
-	Mobile            string
-	ProfileImage      string
+	StoreID      string
+	BusinessName string
+	DBAName      string
+	Address      string
+	BusinessType string
+	TaxID        string
+	OwnerName    string
+	Email        string
+	Mobile       string
+	ProfileImage string
 }
 
 // GetProfile retrieves the store profile by store UUID.

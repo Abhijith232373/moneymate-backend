@@ -101,19 +101,38 @@ type AuthRolePermission struct {
 	AssignedAt   pgtype.Timestamptz `json:"assigned_at"`
 }
 
+type AuthStaff struct {
+	ID           pgtype.UUID        `json:"id"`
+	Email        string             `json:"email"`
+	FullName     string             `json:"full_name"`
+	PasswordHash string             `json:"password_hash"`
+	Status       AuthUserStatus     `json:"status"`
+	TokenVersion int64              `json:"token_version"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AuthStaffRole struct {
+	StaffID    pgtype.UUID        `json:"staff_id"`
+	RoleID     pgtype.UUID        `json:"role_id"`
+	AssignedAt pgtype.Timestamptz `json:"assigned_at"`
+}
+
 type AuthUser struct {
-	ID              pgtype.UUID        `json:"id"`
-	Email           string             `json:"email"`
-	Phone           pgtype.Text        `json:"phone"`
-	FullName        string             `json:"full_name"`
-	Handle          string             `json:"handle"`
-	PasswordHash    pgtype.Text        `json:"password_hash"`
-	Status          AuthUserStatus     `json:"status"`
-	TokenVersion    int64              `json:"token_version"`
-	IsEmailVerified bool               `json:"is_email_verified"`
-	IsPhoneVerified bool               `json:"is_phone_verified"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                pgtype.UUID        `json:"id"`
+	Email             string             `json:"email"`
+	Phone             pgtype.Text        `json:"phone"`
+	FullName          string             `json:"full_name"`
+	Handle            string             `json:"handle"`
+	PasswordHash      pgtype.Text        `json:"password_hash"`
+	Status            AuthUserStatus     `json:"status"`
+	TokenVersion      int64              `json:"token_version"`
+	IsEmailVerified   bool               `json:"is_email_verified"`
+	IsPhoneVerified   bool               `json:"is_phone_verified"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	QrCode            pgtype.Text        `json:"qr_code"`
+	ProfilePictureUrl pgtype.Text        `json:"profile_picture_url"`
 }
 
 type AuthUserPin struct {
