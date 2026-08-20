@@ -13,15 +13,17 @@ type Handlers struct {
 	Staff      *StaffHandler
 	UserPin    *UserPinHandler
 	Permission *PermissionHandler
+	Profile *ProfilePictureHandler
 }
 
 func RegisterRoutes(router fiber.Router, h *Handlers, internalSecret string) {
 	registerAuthRoutes(router, h.Auth, internalSecret)
 	registerRoleRoutes(router, h.Role)
 	registerUserRoutes(router, h.User)
-	registerStaffRoutes(router, h.Staff) // NEW
+	registerStaffRoutes(router, h.Staff)
 	registerUserPinRoutes(router, h.UserPin)
-	registerPermissionRoutes(router, h.Permission) // NEW
+	registerPermissionRoutes(router, h.Permission)
+	registerProfilePictureRoutes(router, h.Profile,h.User)
 }
 
 func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret string) {
@@ -44,6 +46,12 @@ func registerAuthRoutes(router fiber.Router, h *AuthHandler, internalSecret stri
 	internal.Post("/auth/verify-access-token", h.VerifyAccessToken)
 	internal.Post("/auth/verify-transaction-token", h.VerifyTransactionToken)
 	internal.Get("/auth/users/:id", h.GetUserByID)
+}
+func registerProfilePictureRoutes(router fiber.Router, h *ProfilePictureHandler, u *UserHandler) {
+	profile := router.Group("/users/me/profile", RequireUserID)
+	profile.Get("/", RequireUserID, u.GetMe)
+	profile.Post("/presign", h.Presign)
+	profile.Post("/", h.Set)
 }
 
 func registerRoleRoutes(router fiber.Router, h *RoleHandler) {

@@ -13,7 +13,7 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
-	admin.Post("/login", proxy.AuthProxy(authAddr, "/admin/login"))
+	// admin.Post("/login", proxy.AuthProxy(authAddr, "/admin/login"))
 
 	admin.Get("/dashboard/stats", proxy.MerchantProxy(merchantAddr, "/admin/dashboard/stats"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))

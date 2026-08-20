@@ -45,13 +45,14 @@ type Config struct {
 	Server   ServerConfig             `mapstructure:"server"`
 	Database sharedconfig.DatabaseConfig
 	Redis    sharedconfig.RedisConfig
-	Kafka    sharedconfig.KafkaConfig 
+	Kafka    sharedconfig.KafkaConfig
 	OTP      OTPConfig                `mapstructure:"otp"`
 	JWT      sharedconfig.JWTConfig
 	Argon2   Argon2Config             `mapstructure:"argon2"`
 	Log      LogConfig                `mapstructure:"log"`
 	Admin    sharedconfig.AdminConfig
-	Email    sharedconfig.EmailConfig 
+	Email    sharedconfig.EmailConfig
+	S3       sharedconfig.S3Config
 	InternalServiceSecret string
 }
 
@@ -80,6 +81,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Redis = sharedconfig.LoadRedisConfig(v)
 	cfg.JWT = sharedconfig.LoadJWTConfig(v)
 	cfg.Kafka = sharedconfig.LoadKafkaConfig(v)
+	cfg.S3 = sharedconfig.LoadS3Config(v)
 	cfg.Admin    = sharedconfig.LoadAdminConfig(v) 
 	cfg.InternalServiceSecret = sharedconfig.MustGet("INTERNAL_SERVICE_SECRET")
 

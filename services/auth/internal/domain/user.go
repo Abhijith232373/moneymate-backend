@@ -27,6 +27,8 @@ type User struct {
 	TokenVersion    int64
 	IsEmailVerified bool
 	IsPhoneVerified bool
+    QRCode            string 
+    ProfilePictureURL *string 
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -70,4 +72,6 @@ type UserRepository interface {
     SoftDelete(ctx context.Context, userID uuid.UUID) error
     AdminUpdate(ctx context.Context, userID uuid.UUID, fullName, email, phone, passwordHash *string) (*User, error)
     ListUsers(ctx context.Context, filter ListUsersFilter, page Pagination) (*ListUsersResult, error)
+
+    UpdateProfilePicture(ctx context.Context, userID uuid.UUID, url string) (*User, error)
 }

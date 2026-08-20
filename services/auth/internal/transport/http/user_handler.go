@@ -132,3 +132,20 @@ func (h *UserHandler) DeleteUser(c fiber.Ctx) error {
 	}
 	return response.OK(c, "user deleted", nil)
 }
+
+func (h *UserHandler) GetMe(c fiber.Ctx) error {
+	userIDStr, ok := c.Locals("user_id").(string)
+	if !ok || userIDStr == "" {
+		return response.Unauthorized(c, "authentication required")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return response.Unauthorized(c, "invalid user session")
+	}
+
+	resp, err := h.adminUserUsecase.GetUser(c.Context(), userID)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return response.OK(c, "profile fetched", resp)
+}

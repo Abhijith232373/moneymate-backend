@@ -5,8 +5,6 @@ CREATE TYPE wallet_txn_type AS ENUM (
     'adjustment'
 );
 
--- 2. Wallets Table
--- Tracks aggregate earnings, available balance, and total redeemed per merchant store.
 CREATE TABLE wallets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id UUID NOT NULL UNIQUE REFERENCES stores(id) ON DELETE CASCADE,
@@ -19,8 +17,6 @@ CREATE TABLE wallets (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Wallet Transactions Table
--- Immutable ledger of all wallet transactions (earnings and redemptions).
 CREATE TABLE wallet_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,

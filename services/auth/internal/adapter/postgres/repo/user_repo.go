@@ -44,6 +44,7 @@ func (r *userRepo) Create(ctx context.Context, user *domain.User) error {
         FullName:     user.FullName,
         Handle:       user.Handle,
         PasswordHash: stringPtrToText(user.PasswordHash),
+        QrCode:       pgtype.Text{String: user.QRCode, Valid: true},
     })
     if err != nil {
         mappedErr := apperrors.MapDBErrors(err)
@@ -164,6 +165,17 @@ func (r *userRepo) CheckUniqueFields(ctx context.Context, email, handle, phone s
 }
 
 // ── Updates ───────────────────────────────────────────────────────
+
+func (r *userRepo) UpdateProfilePicture(ctx context.Context, userID uuid.UUID, url string) (*domain.User, error) {
+    row, err := r.queries(ctx).UpdateProfilePicture(ctx, db.UpdateProfilePictureParams{
+        ID:                uuidToPgtype(userID),
+        ProfilePictureUrl: pgtype.Text{String: url, Valid: true},
+    })
+    if err != nil {
+        return nil, fmt.Errorf("update profile picture: %w", err)
+    }
+    return toDomainUser(row), nil
+}
 
 func (r *userRepo) UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
     err := r.q.UpdatePassword(ctx, db.UpdatePasswordParams{
@@ -324,6 +336,12 @@ func toDomainUser(row db.AuthUser) *domain.User {
         UpdatedAt:       row.UpdatedAt.Time,
     }
 
+     if row.QrCode.Valid {
+        user.QRCode = row.QrCode.String
+    }
+    if row.ProfilePictureUrl.Valid {
+        user.ProfilePictureURL = &row.ProfilePictureUrl.String
+    }
 
     if row.ID.Valid {
         user.ID = uuid.UUID(row.ID.Bytes)

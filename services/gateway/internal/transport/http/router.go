@@ -30,6 +30,7 @@ func RegisterRoutes(cfg RouteConfig) {
 
 	registerAuthRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "auth_routes")), cfg.AuthAddr, cfg.AuthMiddleware)
 	registerPinRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "pin_routes")), cfg.AuthAddr, cfg.AuthMiddleware)
+	registerProfilePictureRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "profile_picture_routes")), cfg.AuthAddr, cfg.AuthMiddleware)
 	registerAdminRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "admin_routes")), cfg.AuthMiddleware, cfg.AuthAddr, cfg.MerchantAddr, cfg.Registry, cfg.Redis)
 	registerMerchantRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "merchant_routes")), cfg.MerchantAddr)
 	registerPaymentRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "payment_routes")), cfg.AuthMiddleware, cfg.Registry)

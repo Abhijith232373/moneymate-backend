@@ -61,6 +61,7 @@ type Querier interface {
 	UpdatePINHash(ctx context.Context, arg UpdatePINHashParams) error
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error
 	UpdatePermission(ctx context.Context, arg UpdatePermissionParams) (AuthPermission, error)
+	UpdateProfilePicture(ctx context.Context, arg UpdateProfilePictureParams) (AuthUser, error)
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) error
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	VerifyEmail(ctx context.Context, id pgtype.UUID) error

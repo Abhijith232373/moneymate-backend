@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"github.com/moneymate-2026/moneymate-backend/auth/config"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres"
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/adapter/postgres/repo"
@@ -23,10 +22,12 @@ import (
 	"github.com/moneymate-2026/moneymate-backend/auth/internal/infra/tokenissuer"
 	transporthttp "github.com/moneymate-2026/moneymate-backend/auth/internal/transport/http"
 	usecase "github.com/moneymate-2026/moneymate-backend/auth/internal/usecases"
+	s3util "github.com/moneymate-2026/moneymate-backend/shared/pkg/S3"
 	sharedjwt "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 	"github.com/moneymate-2026/moneymate-backend/shared/pkg/kafka"
 	sharedmailer "github.com/moneymate-2026/moneymate-backend/shared/pkg/mailer"
 	sharedpgxtx "github.com/moneymate-2026/moneymate-backend/shared/pkg/pgxtx"
+	"github.com/redis/go-redis/v9"
 )
 
 const dbConnectTimeout = 10 * time.Second
@@ -91,10 +92,14 @@ func Build(cfg *config.Config) (app *App, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("create kafka producer: %w", err)
 	}
+	s3Client, err := s3util.New(context.Background(), cfg.S3.Bucket, cfg.S3.Region, cfg.S3.PublicBase)
+	if err != nil {
+		return nil, fmt.Errorf("init s3 client: %w", err)
+	}
 
 	publisher := outboxpublisher.New(outboxRepo, kafkaProducer)
 
-	handlers := setupDependencies(pool, redisClient, cfg, outboxRepo)
+	handlers := setupDependencies(pool, redisClient, cfg, outboxRepo, s3Client)
 	server := setupServer(cfg, handlers, pool, redisClient)
 
 	return &App{
@@ -131,7 +136,7 @@ func setupRedis(cfg *config.Config) (*redis.Client, error) {
 	})
 }
 
-func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config, outboxRepo domain.OutboxRepository) *transporthttp.Handlers {
+func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *config.Config, outboxRepo domain.OutboxRepository, s3Client *s3util.Client) *transporthttp.Handlers {
 	jwtCfg := sharedjwt.Config{
 		AccessSecret:      cfg.JWT.AccessSecret,
 		RefreshSecret:     cfg.JWT.RefreshSecret,
@@ -152,8 +157,9 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	mailerClient := sharedmailer.New(emailCfg)
 	otpMailer := mailer.NewOtpMail(mailerClient)
 
+	
 	userRepo := repo.NewUserRepo(pool)
-	staffRepo := repo.NewStaffRepo(pool) // NEW
+	staffRepo := repo.NewStaffRepo(pool)
 	roleRepo := repo.NewRoleRepo(pool)
 	refreshTokenRepo := repo.NewRefreshTokenRepo(pool)
 	pinRepo := repo.NewUserPinRepo(pool)
@@ -175,14 +181,16 @@ func setupDependencies(pool *pgxpool.Pool, redisClient *redis.Client, cfg *confi
 	adminUserUC := usecase.NewAdminUserUsecase(userRepo, roleRepo, h, g, pinRepo, txMgr)
 	staffUC := usecase.NewStaffUsecase(staffRepo, roleRepo, h, g)
 	permissionUC := usecase.NewPermissionUsecase(permRepo, roleRepo, g)
+	profilePictureUC := usecase.NewProfilePictureUsecase(userRepo, s3Client)
 
 	return &transporthttp.Handlers{
-		Auth:       transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
-		Role:       transporthttp.NewRoleHandler(adminRoleUC),
-		User:       transporthttp.NewUserHandler(adminUserUC),
-		Staff:      transporthttp.NewStaffHandler(staffUC),
-		UserPin:    transporthttp.NewUserPinHandler(pinUC, issuer),
-		Permission: transporthttp.NewPermissionHandler(permissionUC),
+		Auth:           transporthttp.NewAuthHandler(authUC, otpUC, userRepo, cfg.JWT.AccessSecret, redisClient),
+		Role:           transporthttp.NewRoleHandler(adminRoleUC),
+		User:           transporthttp.NewUserHandler(adminUserUC),
+		Staff:          transporthttp.NewStaffHandler(staffUC),
+		UserPin:        transporthttp.NewUserPinHandler(pinUC, issuer),
+		Permission:     transporthttp.NewPermissionHandler(permissionUC),
+		Profile: transporthttp.NewProfilePictureHandler(profilePictureUC),
 	}
 }
 

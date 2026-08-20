@@ -14,6 +14,7 @@ import (
 	apperrors "github.com/moneymate-2026/moneymate-backend/shared/pkg/errors"
 	jwtutil "github.com/moneymate-2026/moneymate-backend/shared/pkg/jwt"
 	"github.com/moneymate-2026/moneymate-backend/shared/pkg/parallelrunners"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/qrcode"
 )
 
 const maxHandleAttempts = 5
@@ -60,11 +61,10 @@ type authUsecase struct {
 	staffRepo        domain.StaffRepository
 }
 
-
 func NewAuthUsecase(
 	userRepo domain.UserRepository,
 	roleRepo domain.RoleRepository,
-	outboxRepo       domain.OutboxRepository,
+	outboxRepo domain.OutboxRepository,
 	refreshTokenRepo domain.RefreshTokenRepository,
 	pinRepo domain.UserPinRepository,
 	pinUsecase UserPinUsecase,
@@ -79,7 +79,7 @@ func NewAuthUsecase(
 	return &authUsecase{
 		userRepo: userRepo, roleRepo: roleRepo, refreshTokenRepo: refreshTokenRepo,
 		pinRepo: pinRepo, pinUsecase: pinUsecase, store: store, tx: tx,
-		hasher: hasher, idGen: idGen, issuer: issuer, jwtCfg: jwtCfg,outboxRepo: outboxRepo,
+		hasher: hasher, idGen: idGen, issuer: issuer, jwtCfg: jwtCfg, outboxRepo: outboxRepo,
 		staffRepo: staffRepo,
 	}
 }
@@ -153,6 +153,12 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 		return nil, fmt.Errorf("generate handle: %w", err)
 	}
 
+	qrPayload := qrcode.BuildPaymentPayload(string(req.AccountType), handle)
+	qrCode, err := qrcode.GenerateBase64(qrPayload)
+	if err != nil {
+		return nil, fmt.Errorf("generate qr code: %w", err)
+	}
+
 	role, err := u.roleRepo.GetByName(ctx, string(req.AccountType))
 	if err != nil {
 		return nil, fmt.Errorf("resolve role %q: %w", req.AccountType, err)
@@ -166,55 +172,55 @@ func (u *authUsecase) Register(ctx context.Context, req RegisterRequest) (*Regis
 	user := &domain.User{
 		ID: userID, Email: email, Phone: phonePtr, FullName: strings.TrimSpace(req.FullName),
 		Handle: handle, PasswordHash: &passwordHash, Status: domain.UserStatusActive,
+		QRCode: qrCode,
 	}
 
+	outboxID, err := u.idGen.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate outbox id: %w", err)
+	}
+	eventPayload, err := json.Marshal(UserRegisteredEvent{UserID: userID, Handle: handle})
+	if err != nil {
+		return nil, fmt.Errorf("marshal event: %w", err)
+	}
 
+	err = u.tx.WithTx(ctx, func(ctx context.Context) error {
+		if err := u.userRepo.Create(ctx, user); err != nil {
+			return fmt.Errorf("create user: %w", err)
+		}
+		if err := u.userRepo.VerifyEmail(ctx, user.ID); err != nil {
+			return fmt.Errorf("verify email: %w", err)
+		}
+		if err := u.roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil); err != nil {
+			return fmt.Errorf("assign role: %w", err)
+		}
+		if err := u.pinRepo.Create(ctx, &domain.UserPin{ID: pinID, UserID: user.ID, PinHash: pinHash}); err != nil {
+			return fmt.Errorf("create pin: %w", err)
+		}
+		if err := u.outboxRepo.Insert(ctx, &domain.OutboxEvent{
+			ID: outboxID, Topic: "user.registered", Payload: eventPayload,
+		}); err != nil {
+			return fmt.Errorf("insert outbox event: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
-outboxID, err := u.idGen.NewV7()
-if err != nil {
-	return nil, fmt.Errorf("generate outbox id: %w", err)
-}
-eventPayload, err := json.Marshal(UserRegisteredEvent{UserID: userID, Handle: handle})
-if err != nil {
-	return nil, fmt.Errorf("marshal event: %w", err)
-}
-
-err = u.tx.WithTx(ctx, func(ctx context.Context) error {
-	if err := u.userRepo.Create(ctx, user); err != nil {
-		return fmt.Errorf("create user: %w", err)
+	accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
+	if err != nil {
+		return nil, err
 	}
-	if err := u.userRepo.VerifyEmail(ctx, user.ID); err != nil {
-		return fmt.Errorf("verify email: %w", err)
-	}
-	if err := u.roleRepo.AssignRoleToUser(ctx, user.ID, role.ID, nil); err != nil {
-		return fmt.Errorf("assign role: %w", err)
-	}
-	if err := u.pinRepo.Create(ctx, &domain.UserPin{ID: pinID, UserID: user.ID, PinHash: pinHash}); err != nil {
-		return fmt.Errorf("create pin: %w", err)
-	}
-	if err := u.outboxRepo.Insert(ctx, &domain.OutboxEvent{
-		ID: outboxID, Topic: "user.registered", Payload: eventPayload,
-	}); err != nil {
-		return fmt.Errorf("insert outbox event: %w", err)
-	}
-	return nil
-})
-if err != nil {
-	return nil, err
-}
-
-accessToken, refreshToken, accessExp, refreshExp, err := u.issueAndPersistTokens(ctx, user)
-if err != nil {
-	return nil, err
-}
-return &RegisterResponse{
-	AccessToken: accessToken, RefreshToken: refreshToken,
-	AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
-	User: UserSummary{
-		ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
-		Status: string(user.Status), IsEmailVerified: true,
-	},
-}, nil
+	return &RegisterResponse{
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		AccessExpiresAt: accessExp, RefreshExpiresAt: refreshExp,
+		User: UserSummary{
+			ID: user.ID, Email: user.Email, Handle: user.Handle, FullName: user.FullName,
+			Status: string(user.Status), IsEmailVerified: true,
+			QRCode: user.QRCode,
+		},
+	}, nil
 }
 
 // ── Login ─────────────────────────────────────────────────────────
@@ -267,6 +273,7 @@ func (u *authUsecase) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 			FullName:        user.FullName,
 			Status:          string(user.Status),
 			IsEmailVerified: user.IsEmailVerified,
+			QRCode:          user.QRCode,
 		},
 	}, nil
 }
@@ -302,7 +309,7 @@ func (u *authUsecase) AdminLogin(ctx context.Context, req AdminLoginRequest) (*L
 	if err != nil {
 		return nil, fmt.Errorf("get staff roles: %w", err)
 	}
-	
+
 	roleNames := make([]string, len(roles))
 	for i, r := range roles {
 		roleNames[i] = r.Name
@@ -564,7 +571,6 @@ func validatePassword(pw string) error {
 func constantTimeEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
-
 
 func (u *authUsecase) issueAndPersistTokens(ctx context.Context, user *domain.User) (accessToken, refreshToken string, accessExp, refreshExp time.Time, err error) {
 	roles, tokenVersion, err := parallelrunners.Query2(ctx,
