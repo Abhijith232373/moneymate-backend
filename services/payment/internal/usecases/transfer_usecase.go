@@ -54,7 +54,6 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 		return nil, apperrors.ErrUnauthorized
 	}
 
-	// The caller's own wallet — resolved server-side, never client-supplied.
 	fromAcc, err := u.accounts.GetWalletByUserID(ctx, authUserID)
 	if err != nil {
 		return nil, fmt.Errorf("get sender wallet: %w", err)
@@ -73,9 +72,9 @@ func (u *transferUsecase) Transfer(ctx context.Context, in TransferInput) (*doma
 		}
 		return nil, err
 	}
-	if toAcc.Type != domain.AccountTypeWallet {
-		return nil, apperrors.ErrInvalidInput
-	}
+	if toAcc.Type != domain.AccountTypeWallet && toAcc.Type != domain.AccountTypeMerchantSettlement {
+    return nil, apperrors.ErrInvalidInput
+}
 	toID := toAcc.ID
 
 	if fromID == toID {
