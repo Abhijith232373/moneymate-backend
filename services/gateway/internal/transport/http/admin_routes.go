@@ -15,16 +15,7 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	admin.Use(middlewares.RequireRole("admin"))
 	admin.Post("/login", proxy.AuthProxy(authAddr, "/admin/login"))
 
-	admin.Get("/dashboard", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": true,
-			"message": "admin dashboard data",
-			"data": fiber.Map{
-				"total_users": 0, "total_merchants": 0,
-				"pending_reviews": 0, "total_transactions": 0,
-			},
-		})
-	})
+	admin.Get("/dashboard/stats", proxy.MerchantProxy(merchantAddr, "/admin/dashboard/stats"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
 	admin.Get("/config", func(c fiber.Ctx) error {

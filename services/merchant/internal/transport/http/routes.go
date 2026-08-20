@@ -18,6 +18,10 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 	merchant.Post("/register", h.RegisterStore)
 	merchant.Post("/login", h.LoginStore)
 
+	// Public routes that do not require authentication
+	merchant.Get("/public/campaigns", ch.GetAllPublicCampaigns)
+	merchant.Get("/public/subscriptions/plans", sh.GetPublicPlans)
+
 	// Apply auth middleware if provided
 	if authMiddleware != nil {
 		merchant.Use(authMiddleware)
@@ -41,7 +45,6 @@ func RegisterRoutes(router fiber.Router, h *MerchantHandler, ch *CampaignHandler
 	}
 
 	// Campaign routes
-	merchant.Get("/public/campaigns", ch.GetAllPublicCampaigns)
 	merchant.Post("/campaigns", ch.CreateCampaign)
 	merchant.Post("/:store_id/campaigns", ch.CreateCampaign)
 	merchant.Get("/campaigns", ch.GetCampaigns)
@@ -152,7 +155,11 @@ func RegisterAdminRoutes(router fiber.Router, ah *AdminHandler, authMiddleware f
 		grp.Get("/subscriptions", ah.GetAllSubscriptions)
 		grp.Put("/stores/:store_id/subscription", ah.UpdateStoreSubscriptionPlan)
 		grp.Put("/merchants/:store_id/subscription", ah.UpdateStoreSubscriptionPlan)
+
+		// Dashboard
+		grp.Get("/dashboard/stats", ah.GetAdminDashboardStats)
 	}
+
 
 	setupAdminGroup(router.Group("/admin"))
 	setupAdminGroup(router.Group("/merchant/admin"))

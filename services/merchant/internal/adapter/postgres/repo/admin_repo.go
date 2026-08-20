@@ -360,3 +360,49 @@ func (r *AdminRepo) UpdateStoreSubscriptionPlan(ctx context.Context, storeID uui
 
 	return &s, nil
 }
+
+// Dashboard
+func (r *AdminRepo) GetAdminDashboardStats(ctx context.Context) (*domain.AdminDashboardStats, error) {
+	stats := &domain.AdminDashboardStats{}
+
+	err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(total_earnings), 0), COALESCE(SUM(available_balance), 0) FROM wallets;`).Scan(&stats.TotalRevenue, &stats.SystemWallet)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to fetch total revenue and wallet: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, `SELECT COALESCE(SUM(available_balance), 0) FROM reward_balances;`).Scan(&stats.RewardPool)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to fetch reward pool: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM wallet_transactions WHERE created_at >= CURRENT_DATE;`).Scan(&stats.DailyTransactions)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to fetch daily transactions: %w", err)
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT transaction_id, title, amount, created_at, 'Completed' AS status 
+		FROM wallet_transactions 
+		ORDER BY created_at DESC LIMIT 5;`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch recent transactions: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tx domain.AdminRecentTransaction
+		var t time.Time
+		var amt float64
+		if err := rows.Scan(&tx.ID, &tx.User, &amt, &t, &tx.Status); err == nil {
+			tx.Amount = fmt.Sprintf("₹%.2f", amt)
+			tx.Date = t.Format("2006-01-02")
+			stats.RecentTransactions = append(stats.RecentTransactions, tx)
+		}
+	}
+
+	if stats.RecentTransactions == nil {
+		stats.RecentTransactions = []domain.AdminRecentTransaction{}
+	}
+
+	return stats, nil
+}

@@ -17,6 +17,8 @@ import (
 type SubscriptionUseCase interface {
 	// GetPlans retrieves all available subscription pricing tiers from the catalog and marks the store's active plan.
 	GetPlans(ctx context.Context, storeID uuid.UUID) ([]*domain.SubscriptionPlanDetail, error)
+	// GetPublicPlans retrieves all available subscription pricing tiers without requiring a store ID.
+	GetPublicPlans(ctx context.Context) ([]*domain.SubscriptionPlanDetail, error)
 	// GetCurrentSubscription fetches the active billing record and renewal timeline for a merchant store.
 	GetCurrentSubscription(ctx context.Context, storeID uuid.UUID) (*domain.MerchantSubscription, error)
 	// ChangePlan validates tier eligibility, checks active promotional limits, and atomically upgrades or downgrades the store's plan.
@@ -54,6 +56,11 @@ func (uc *subscriptionUseCase) GetPlans(ctx context.Context, storeID uuid.UUID) 
 		return nil, errors.New("invalid store ID")
 	}
 	return uc.subRepo.GetAvailablePlans(ctx, storeID)
+}
+
+// GetPublicPlans retrieves the pricing tier catalog without needing a store ID.
+func (uc *subscriptionUseCase) GetPublicPlans(ctx context.Context) ([]*domain.SubscriptionPlanDetail, error) {
+	return uc.subRepo.GetAvailablePlans(ctx, uuid.Nil)
 }
 
 // GetCurrentSubscription retrieves the active subscription record for the merchant store, returning an error if the ID is nil.
