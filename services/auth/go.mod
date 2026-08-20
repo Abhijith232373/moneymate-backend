@@ -9,13 +9,13 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260813114436-992632ebc1a2
-	github.com/redis/go-redis/v9 v9.21.0
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/spf13/viper v1.21.0
 )
 
 require (
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	github.com/lib/pq v1.12.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.16 // indirect
 	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect

@@ -7,7 +7,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/google/uuid v1.6.0
 	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-00010101000000-000000000000
-	github.com/redis/go-redis/v9 v9.21.0
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/spf13/viper v1.21.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.44.0
