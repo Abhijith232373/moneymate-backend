@@ -129,3 +129,9 @@ func (uc *AdminUseCase) UpdateStoreSubscriptionPlan(ctx context.Context, storeID
 	}
 	return uc.adminRepo.UpdateStoreSubscriptionPlan(ctx, storeID, planCode)
 }
+
+// Dashboard
+func (uc *AdminUseCase) GetAdminDashboardStats(ctx context.Context) (*domain.AdminDashboardStats, error) {
+	return uc.adminRepo.GetAdminDashboardStats(ctx)
+}
+

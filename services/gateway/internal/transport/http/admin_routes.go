@@ -1,32 +1,83 @@
 package http
 
 import (
+	"context"
 	"github.com/gofiber/fiber/v3"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/middlewares"
 	"github.com/moneymate-2026/moneymate-backend/gateway/internal/proxy"
+	"github.com/redis/go-redis/v9"
 )
 
-func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string, registry *proxy.ServiceRegistry) {
+func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAddr, merchantAddr string, registry *proxy.ServiceRegistry, rdb *redis.Client) {
 	admin := api.Group("/admin")
 	
 	admin.Use(authMiddleware)
 	admin.Use(middlewares.RequireRole("admin"))
 	// admin.Post("/login", proxy.AuthProxy(authAddr, "/admin/login"))
 
-	admin.Get("/dashboard", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": true,
-			"message": "admin dashboard data",
-			"data": fiber.Map{
-				"total_users": 0, "total_merchants": 0,
-				"pending_reviews": 0, "total_transactions": 0,
-			},
-		})
-	})
+	admin.Get("/dashboard/stats", proxy.MerchantProxy(merchantAddr, "/admin/dashboard/stats"))
 	admin.Post("/refresh", proxy.AuthProxy(authAddr, "/auth/refresh"))
 
+	admin.Get("/config", func(c fiber.Ctx) error {
+		ctx := context.Background()
+		modules := []string{
+			// Master modules
+			"auth_routes", "pin_routes", "admin_routes", "merchant_routes", 
+			"payment_routes", "secure_routes", "support_routes", "downstream_routes",
+			
+			// Auth sub-routes
+			"auth_user_login", "auth_user_register", "auth_admin_login", "auth_merchant_login", "auth_merchant_register",
+			
+			// PIN sub-routes
+			"pin_management", "pin_verification",
+			
+			// Admin sub-routes
+			"admin_merchants_kyc", "admin_master_campaigns", "admin_platform_config", "admin_system_audit",
+			
+			// Merchant sub-routes
+			"merch_dashboard_analytics", "merch_campaigns_management", "merch_subscriptions", "merch_wallet_payouts",
+			
+			// Payment sub-routes
+			"pay_p2p_transfers", "pay_fiat_deposits", "pay_fiat_withdrawals", "pay_wallet_balances",
+			
+			// Secure sub-routes
+			"secure_service_comm", "secure_identity_sync",
+			
+			// Support sub-routes
+			"support_user_complaints", "support_fraud_reports", "support_live_chat",
+			
+			// Downstream sub-routes
+			"ds_payment_aggregator", "ds_campaign_service", "ds_notification_engine",
+		}
+		states := make(map[string]bool)
+		for _, m := range modules {
+			val, _ := rdb.Get(ctx, "config:module:"+m).Result()
+			states[m] = (val != "false")
+		}
+		return c.JSON(fiber.Map{"success": true, "data": states})
+	})
+
+	admin.Put("/config", func(c fiber.Ctx) error {
+		var req map[string]bool
+		if err := c.Bind().Body(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"success": false, "error": "invalid payload"})
+		}
+		ctx := context.Background()
+		for k, v := range req {
+			if v {
+				rdb.Set(ctx, "config:module:"+k, "true", 0)
+			} else {
+				rdb.Set(ctx, "config:module:"+k, "false", 0)
+			}
+		}
+		return c.JSON(fiber.Map{"success": true, "message": "config updated"})
+	})
+
+	admin.Get("/audit", proxy.HTTPProxy(registry, "support", "/admin/support/audit-logs"))
+	admin.Post("/audit", proxy.HTTPProxy(registry, "support", "/admin/support/audit-logs"))
+
 	registerAdminUserRoutes(admin, authAddr)
-	registerAdminStaffRoutes(admin, authAddr) // NEW
+	registerAdminStaffRoutes(admin, authAddr)
 	registerAdminRoleRoutes(admin, authAddr)
 	registerAdminPermissionRoutes(admin, authAddr)
 	registerAdminMerchantRoutes(admin, merchantAddr)
@@ -90,6 +141,8 @@ func registerAdminPermissionRoutes(admin fiber.Router, authAddr string) {
 
 func registerAdminMerchantRoutes(admin fiber.Router, merchantAddr string) {
 	adminMerchant := admin.Group("/merchants")
+	adminMerchant.Get("", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
+	adminMerchant.Get("/", proxy.MerchantProxy(merchantAddr, "/admin/merchants"))
 	adminMerchant.Get("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))
 	adminMerchant.Put("/:id/status", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id/status"))
 	adminMerchant.Delete("/:id", proxy.MerchantProxy(merchantAddr, "/admin/merchants/:id"))

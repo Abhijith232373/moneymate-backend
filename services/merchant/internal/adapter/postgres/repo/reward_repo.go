@@ -69,18 +69,17 @@ func (r *RewardRepo) InitializeSummary(ctx context.Context, storeID uuid.UUID) (
 	defer tx.Rollback(ctx)
 
 	qTx := r.queries.WithTx(tx)
-	now := time.Now().UTC()
 
 	var availNumeric, growthNumeric pgtype.Numeric
-	_ = availNumeric.Scan("4250.00")
-	_ = growthNumeric.Scan("12.00")
+	_ = availNumeric.Scan("0.00")
+	_ = growthNumeric.Scan("0.00")
 
-	// Initial balance seeded to match standard verified partner starting tier ($4250.00, 1150 scans, 850 points, 12% growth)
+	// Initial balance seeded
 	row, err := qTx.CreateRewardBalance(ctx, generated.CreateRewardBalanceParams{
 		StoreID:                storeID,
 		AvailableBalance:       availNumeric,
-		TotalScans:             1150,
-		PremiumPoints:          850,
+		TotalScans:             0,
+		PremiumPoints:          0,
 		WeeklyGrowthPercentage: growthNumeric,
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -90,25 +89,6 @@ func (r *RewardRepo) InitializeSummary(ctx context.Context, storeID uuid.UUID) (
 			return nil, fmt.Errorf("get existing reward balance during init: %w", err)
 		}
 	}
-
-	// Seed initial transaction ledger items representing recent QR scans
-	seedTxQuery := `
-		INSERT INTO reward_transactions (id, store_id, campaign_name, display_id, status, amount, transaction_type, created_at)
-		VALUES
-		($1, $5, 'Storefront Scan Campaign', '#QR-8820', 'Settled', 45.00, 'earning', $6),
-		($2, $5, 'Storefront Scan Campaign', '#QR-8821', 'Settled', 12.50, 'earning', $7),
-		($3, $5, 'Premium VIP Scan', '#QR-8822', 'Settled', 120.00, 'earning', $8),
-		($4, $5, 'Storefront Scan Campaign', '#QR-8823', 'Settled', 8.75, 'earning', $9)
-		ON CONFLICT DO NOTHING;
-	`
-	_, _ = tx.Exec(ctx, seedTxQuery,
-		uuid.New(), uuid.New(), uuid.New(), uuid.New(),
-		storeID,
-		now.Add(-2*time.Hour),
-		now.Add(-3*time.Hour),
-		now.Add(-5*time.Hour),
-		now.Add(-28*time.Hour),
-	)
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit init tx: %w", err)

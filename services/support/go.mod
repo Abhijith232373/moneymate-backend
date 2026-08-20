@@ -10,6 +10,7 @@ require (
 	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260812111021-646679d79551
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/spf13/viper v1.21.0
+	github.com/sqlc-dev/pqtype v0.3.0
 )
 
 require (

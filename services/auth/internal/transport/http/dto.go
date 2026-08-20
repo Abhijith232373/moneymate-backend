@@ -90,6 +90,7 @@ type createUserRequest struct {
 	FullName string `json:"full_name" validate:"required"`
 	Password string `json:"password" validate:"required,min=8"`
 	Role     string `json:"role" validate:"required"`
+	PIN      string `json:"pin" validate:"required,len=6,numeric"`
 }
 
 // user pins

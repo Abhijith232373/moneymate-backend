@@ -53,7 +53,7 @@ func (u *staffUsecase) CreateStaff(ctx context.Context, req CreateUserRequest) (
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	role, err := u.roleRepo.GetByName(ctx, strings.ToLower(req.Role))
+	role, err := u.roleRepo.GetByName(ctx, req.Role)
 	if err != nil {
 		return nil, fmt.Errorf("resolve role %q: %w", req.Role, err)
 	}

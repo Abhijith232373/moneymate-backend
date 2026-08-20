@@ -19,6 +19,14 @@ func RequireRole(allowedRoles ...string) fiber.Handler {
 			}
 		}
 
+		// Allow any role that isn't 'user' or 'merchant' to access admin areas
+		// if the allowed role requirement contains 'admin'
+		for _, allowed := range allowedRoles {
+			if allowed == "admin" && role != "user" && role != "merchant" {
+				return c.Next()
+			}
+		}
+
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "access denied: insufficient permissions",
 		})

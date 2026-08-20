@@ -41,3 +41,14 @@ CREATE TABLE chat_messages (
 
 CREATE INDEX idx_chat_messages_sender_receiver ON chat_messages(sender_id, receiver_id);
 CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);
+
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL,
+    admin_name VARCHAR(255) NOT NULL,
+    admin_role VARCHAR(100) NOT NULL,
+    module VARCHAR(100) NOT NULL,
+    action VARCHAR(255) NOT NULL,
+    changes JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

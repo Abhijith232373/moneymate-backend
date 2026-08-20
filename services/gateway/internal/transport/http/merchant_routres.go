@@ -10,6 +10,7 @@ func registerMerchantRoutes(api fiber.Router, merchantAddr string) {
 	merchantUnauth.Post("/register", proxy.MerchantProxy(merchantAddr, "/merchant/register"))
 	merchantUnauth.Post("/login", proxy.MerchantProxy(merchantAddr, "/merchant/login"))
 	merchantUnauth.Get("/public/campaigns", proxy.MerchantProxy(merchantAddr, "/merchant/public/campaigns"))
+	merchantUnauth.Get("/public/subscriptions/plans", proxy.MerchantProxy(merchantAddr, "/merchant/public/subscriptions/plans"))
 
 	merchant := api.Group("/merchant")
 	merchant.Get("/health", proxy.MerchantProxy(merchantAddr, "/merchant/health"))
