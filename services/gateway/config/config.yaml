@@ -7,6 +7,7 @@ services:
   merch_addr: "merchant:9092"
   payment_addr: "payment:9094"
   support_addr: "support:8085"
+  rewards_addr: "rewards:9096"
 
 redis:
   address: "localhost:6379"
@@ -15,7 +16,7 @@ redis:
 
 rate_limiting:
   enabled: true
-  max_requests: 100
+  max_requests: 1000
   window_seconds: 60
 
 cors:

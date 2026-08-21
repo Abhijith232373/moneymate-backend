@@ -74,7 +74,37 @@ func (r *AdminRepo) GetStoreByID(ctx context.Context, storeID uuid.UUID) (*domai
 }
 
 func (r *AdminRepo) UpdateStoreStatus(ctx context.Context, storeID uuid.UUID, status string) error {
-	return r.storeRepo.UpdateStoreStatus(ctx, storeID, status)
+	// Update in merchant DB
+	err := r.storeRepo.UpdateStoreStatus(ctx, storeID, status)
+	if err != nil {
+		return err
+	}
+
+	// Fetch store to get email
+	store, err := r.storeRepo.GetStoreProfileByStoreID(ctx, storeID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch store profile for auth sync: %w", err)
+	}
+
+	// Sync with auth DB
+	authStatus := "active"
+	switch status {
+	case "blocked", "suspended":
+		authStatus = "suspended"
+	case "deleted":
+		authStatus = "deleted"
+	case "pending_kyc":
+		authStatus = "pending"
+	}
+
+	query := `UPDATE auth.users SET status = $1::text::auth.user_status, updated_at = NOW() WHERE email = $2;`
+	_, err = r.db.Exec(ctx, query, authStatus, store.ContactEmail)
+	if err != nil {
+		// Just log or return error
+		return fmt.Errorf("failed to sync status to auth.users: %w", err)
+	}
+
+	return nil
 }
 
 func (r *AdminRepo) DeleteStore(ctx context.Context, storeID uuid.UUID) error {
@@ -304,9 +334,10 @@ func (r *AdminRepo) UpdateStoreSubscriptionPlan(ctx context.Context, storeID uui
 	defer tx.Rollback(ctx)
 
 	updateSub := `
-		UPDATE merchant_subscriptions
-		SET plan_code = $2, updated_at = NOW()
-		WHERE store_id = $1
+		INSERT INTO merchant_subscriptions (store_id, plan_code, status, billing_cycle, current_period_start, current_period_end, auto_renew, created_at, updated_at)
+		VALUES ($1, $2, 'active', 'monthly', NOW(), NOW() + INTERVAL '30 days', true, NOW(), NOW())
+		ON CONFLICT (store_id) DO UPDATE 
+		SET plan_code = EXCLUDED.plan_code, updated_at = NOW()
 		RETURNING id, store_id, plan_code, status, billing_cycle, current_period_start, current_period_end, auto_renew, created_at, updated_at;`
 	var s domain.MerchantSubscription
 	err = tx.QueryRow(ctx, updateSub, storeID, planCode).Scan(
@@ -328,4 +359,50 @@ func (r *AdminRepo) UpdateStoreSubscriptionPlan(ctx context.Context, storeID uui
 	}
 
 	return &s, nil
+}
+
+// Dashboard
+func (r *AdminRepo) GetAdminDashboardStats(ctx context.Context) (*domain.AdminDashboardStats, error) {
+	stats := &domain.AdminDashboardStats{}
+
+	err := r.db.QueryRow(ctx, `SELECT COALESCE(SUM(total_earnings), 0), COALESCE(SUM(available_balance), 0) FROM wallets;`).Scan(&stats.TotalRevenue, &stats.SystemWallet)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to fetch total revenue and wallet: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, `SELECT COALESCE(SUM(available_balance), 0) FROM reward_balances;`).Scan(&stats.RewardPool)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to fetch reward pool: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, `SELECT COUNT(*) FROM wallet_transactions WHERE created_at >= CURRENT_DATE;`).Scan(&stats.DailyTransactions)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to fetch daily transactions: %w", err)
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT transaction_id, title, amount, created_at, 'Completed' AS status 
+		FROM wallet_transactions 
+		ORDER BY created_at DESC LIMIT 5;`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch recent transactions: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tx domain.AdminRecentTransaction
+		var t time.Time
+		var amt float64
+		if err := rows.Scan(&tx.ID, &tx.User, &amt, &t, &tx.Status); err == nil {
+			tx.Amount = fmt.Sprintf("₹%.2f", amt)
+			tx.Date = t.Format("2006-01-02")
+			stats.RecentTransactions = append(stats.RecentTransactions, tx)
+		}
+	}
+
+	if stats.RecentTransactions == nil {
+		stats.RecentTransactions = []domain.AdminRecentTransaction{}
+	}
+
+	return stats, nil
 }

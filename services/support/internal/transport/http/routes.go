@@ -44,6 +44,9 @@ func RegisterAdminRoutes(router fiber.Router, h *SupportHandler, chatHandler *Ch
 
 	admin.Get("/reports", h.ListReports)
 
+	admin.Get("/audit-logs", h.ListAuditLogs)
+	admin.Post("/audit-logs", h.CreateAuditLog)
+
 	// Chat
 	admin.Get("/chat/history/:user_id", chatHandler.GetChatHistoryForAdmin)
 	admin.Get("/chat/inbox", chatHandler.GetAdminChatHistory) // Inbox view for all chats

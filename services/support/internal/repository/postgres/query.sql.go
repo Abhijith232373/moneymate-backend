@@ -9,7 +9,48 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
+
+const createAuditLog = `-- name: CreateAuditLog :one
+INSERT INTO audit_logs (
+    admin_id, admin_name, admin_role, module, action, changes
+) VALUES (
+    $1, $2, $3, $4, $5, $6
+) RETURNING id, admin_id, admin_name, admin_role, module, action, changes, created_at
+`
+
+type CreateAuditLogParams struct {
+	AdminID   uuid.UUID             `json:"admin_id"`
+	AdminName string                `json:"admin_name"`
+	AdminRole string                `json:"admin_role"`
+	Module    string                `json:"module"`
+	Action    string                `json:"action"`
+	Changes   pqtype.NullRawMessage `json:"changes"`
+}
+
+func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error) {
+	row := q.db.QueryRowContext(ctx, createAuditLog,
+		arg.AdminID,
+		arg.AdminName,
+		arg.AdminRole,
+		arg.Module,
+		arg.Action,
+		arg.Changes,
+	)
+	var i AuditLog
+	err := row.Scan(
+		&i.ID,
+		&i.AdminID,
+		&i.AdminName,
+		&i.AdminRole,
+		&i.Module,
+		&i.Action,
+		&i.Changes,
+		&i.CreatedAt,
+	)
+	return i, err
+}
 
 const createChatMessage = `-- name: CreateChatMessage :one
 INSERT INTO chat_messages (
@@ -235,6 +276,49 @@ func (q *Queries) GetChatHistory(ctx context.Context, arg GetChatHistoryParams) 
 			&i.ReceiverType,
 			&i.Message,
 			&i.IsRead,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditLogs = `-- name: ListAuditLogs :many
+SELECT id, admin_id, admin_name, admin_role, module, action, changes, created_at FROM audit_logs
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListAuditLogsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error) {
+	rows, err := q.db.QueryContext(ctx, listAuditLogs, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.AdminID,
+			&i.AdminName,
+			&i.AdminRole,
+			&i.Module,
+			&i.Action,
+			&i.Changes,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

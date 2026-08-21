@@ -285,3 +285,13 @@ func (h *AdminHandler) UpdateStoreSubscriptionPlan(c fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"success": true, "message": "subscription plan updated successfully", "data": sub})
 }
+
+// Dashboard
+func (h *AdminHandler) GetAdminDashboardStats(c fiber.Ctx) error {
+	stats, err := h.usecase.GetAdminDashboardStats(c.Context())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"success": true, "data": stats})
+}
+

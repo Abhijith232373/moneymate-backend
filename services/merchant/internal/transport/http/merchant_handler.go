@@ -1,6 +1,8 @@
 package http
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http/middleware"
@@ -43,6 +45,9 @@ func (h *MerchantHandler) RegisterStore(c fiber.Ctx) error {
 
 	store, err := h.usecase.ProcessRegistration(c.Context(), input)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") || strings.Contains(err.Error(), "unique constraint") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 

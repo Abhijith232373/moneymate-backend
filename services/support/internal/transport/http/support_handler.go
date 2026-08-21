@@ -171,3 +171,43 @@ func (h *SupportHandler) ListReportsByUser(c fiber.Ctx) error {
 	return response.OK(c, "Reports fetched successfully", reps)
 }
 
+
+type createAuditLogReq struct {
+	AdminName string `json:"admin_name"`
+	Module    string `json:"module"`
+	Action    string `json:"action"`
+}
+
+func (h *SupportHandler) CreateAuditLog(c fiber.Ctx) error {
+	var req createAuditLogReq
+	if err := c.Bind().Body(&req); err != nil {
+		return response.BadRequest(c, nil, "invalid request")
+	}
+
+	uidStr := c.Get("X-User-ID")
+	userRole := c.Get("X-User-Role")
+
+	uid, err := uuid.Parse(uidStr)
+	if err != nil {
+		return response.BadRequest(c, nil, "invalid admin_id from token")
+	}
+
+	log, err := h.uc.CreateAuditLog(c.Context(), uid, req.AdminName, userRole, req.Module, req.Action)
+	if err != nil {
+		return response.InternalServerError(c)
+	}
+
+	return response.Created(c, "Audit log created successfully", log)
+}
+
+func (h *SupportHandler) ListAuditLogs(c fiber.Ctx) error {
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	offset, _ := strconv.Atoi(c.Query("offset", "0"))
+
+	logs, err := h.uc.ListAuditLogs(c.Context(), int32(limit), int32(offset))
+	if err != nil {
+		return response.InternalServerError(c)
+	}
+
+	return response.OK(c, "Audit logs fetched successfully", logs)
+}

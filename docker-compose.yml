@@ -73,6 +73,7 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - ENVIRONMENT=dev
+      - REDIS_ADDR=redis:6379
     ports:
       - "8085:8085"
     restart: unless-stopped
@@ -113,6 +114,38 @@ services:
     networks:
       - moneymate-network
 
+  rewards:
+    build:
+      context: .
+      dockerfile: ./services/rewards/Dockerfile
+      target: dev
+    volumes:
+      - ./:/moneymate-backend
+      - ./shared:/moneymate-backend/shared
+      - ./services/rewards/migrations:/app/migrations
+    working_dir: /moneymate-backend/services/rewards
+    env_file:
+      - .env
+    environment:
+      - CONFIG_PATH=/moneymate-backend/services/rewards/config/config.yaml
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_SSL=disable
+      - ENVIRONMENT=dev
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - REWARDS_DB_USER=${REWARDS_DB_USER}
+      - REWARDS_DB_PASSWORD=${REWARDS_DB_PASSWORD}
+      - KAFKA_CA_CERT_PATH=/moneymate-backend/shared/certs/aiven-ca.pem
+    ports:
+      - "9096:9096"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - moneymate-network
+
   gateway:
     build:
       context: .
@@ -128,8 +161,10 @@ services:
       - CONFIG_PATH=/moneymate-backend/services/gateway/config/config.yaml
       - SERVER_PORT=8080
       - SERVICES_AUTH_ADDR=auth:8081
+      - SERVICES_MERCH_ADDR=merchant:9092
       - SERVICES_PAYMENT_ADDR=payment:9094
       - SERVICES_SUPPORT_ADDR=support:8085
+      - SERVICES_REWARDS_ADDR=rewards:9096
       - REDIS_ADDRESS=redis:6379
 
 

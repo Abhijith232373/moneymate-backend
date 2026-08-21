@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	authclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/authClient"
-	merchantclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/merchantClient"
+	// authclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/authClient"
+	// merchantclient "github.com/moneymate-2026/moneymate-backend/services/payment/internal/adapter/merchantClient"
 	"github.com/moneymate-2026/moneymate-backend/services/payment/internal/domain"
 	apperrors "github.com/moneymate-2026/moneymate-backend/shared/pkg/errors"
 )

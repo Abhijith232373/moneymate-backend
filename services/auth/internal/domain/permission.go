@@ -8,10 +8,10 @@ import (
 )
 
 type Permission struct {
-	ID          uuid.UUID
-	Name        string
-	Description *string
-	CreatedAt   time.Time
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // PermissionRepository handles pure Permission CRUD and Role-Permission relationships.

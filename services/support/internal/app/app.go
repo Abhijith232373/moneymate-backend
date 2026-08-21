@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"strings"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -32,7 +31,7 @@ type App struct {
 
 func Build(cfg *config.Config) (*App, error) {
 	dbURL := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s search_path=support",
 		cfg.Database.Host,
 		cfg.Database.Port,
 		cfg.Database.User,

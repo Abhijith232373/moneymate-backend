@@ -10,6 +10,7 @@ vars:
   MERCHANT_MIGRATIONS: /moneymate-backend/services/merchant/migrations
   PAYMENT_MIGRATIONS: /moneymate-backend/services/payment/migrations
   SUPPORT_MIGRATIONS: /moneymate-backend/services/support/migrations
+  REWARDS_MIGRATIONS: /moneymate-backend/services/rewards/migrations
 
 tasks:
 
@@ -190,9 +191,58 @@ tasks:
       -database "${SUPPORT_DB_URL}"
       version
 
+  logs:rewards:
+    desc: "Tail logs from rewards service only"
+    cmd: docker compose -f {{.DEV_COMPOSE}} logs -f rewards
+
+  migrate:rewards:
+    desc: "Run rewards service migrations up"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm rewards
+      migrate
+      -path {{.REWARDS_MIGRATIONS}}
+      -database "${REWARDS_DB_URL}"
+      up
+
+  migrate:rewards:down:
+    desc: "Roll back last rewards migration"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm rewards
+      migrate
+      -path {{.REWARDS_MIGRATIONS}}
+      -database "${REWARDS_DB_URL}"
+      down 1
+
+  migrate:rewards:status:
+    desc: "Show current rewards migration version"
+    cmd: >
+      docker compose -f {{.DEV_COMPOSE}} run --rm rewards
+      migrate
+      -path {{.REWARDS_MIGRATIONS}}
+      -database "${REWARDS_DB_URL}"
+      version
+
+  sqlc:rewards:
+    desc: "Generate SQLC code for rewards service"
+    cmd: >
+      docker run --rm
+      -v $(pwd)/services/rewards:/src
+      -w /src
+      sqlc/sqlc generate -f sqlc/sqlc.yml
+
+  test:rewards:
+    desc: "Run rewards service tests"
+    dir: services/rewards
+    cmd: go test ./...
+
+  tidy:rewards:
+    desc: "Run go mod tidy for rewards service"
+    dir: services/rewards
+    cmd: go mod tidy
+
   migrate:all:
     desc: "Run migrations for all services"
-    deps: [migrate:auth, migrate:merchant, migrate:payment, migrate:support]
+    deps: [migrate:auth, migrate:merchant, migrate:payment, migrate:support, migrate:rewards]
 
   # ── Code Generation ───────────────────────────────────────────
   sqlc:auth:
@@ -252,6 +302,7 @@ tasks:
       - task: test:auth
       - task: test:merchant
       - task: test:payment
+      - task: test:rewards
 
   # ── Utilities ─────────────────────────────────────────────────
   tidy:auth:
@@ -287,6 +338,7 @@ tasks:
       - task: tidy:gateway
       - task: tidy:shared
       - task: tidy:payment
+      - task: tidy:rewards
 
   help:
     desc: "List all available tasks"
