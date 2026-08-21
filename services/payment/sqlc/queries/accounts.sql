@@ -64,3 +64,8 @@ INSERT INTO payment.accounts (type, currency)
 VALUES ('external_settlement', 'INR')
 RETURNING id, user_id, merchant_id, type::text AS type, currency,
           balance, version, handle, created_at, updated_at;
+
+
+-- name: GetSystemAccountByType :one
+SELECT * FROM payment.accounts
+WHERE type = $1 AND user_id IS NULL AND merchant_id IS NULL;

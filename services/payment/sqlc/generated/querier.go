@@ -19,7 +19,6 @@ type Querier interface {
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (PaymentCategory, error)
 	CreateDeposit(ctx context.Context, arg CreateDepositParams) (PaymentDeposit, error)
 	CreateExternalSettlementAccount(ctx context.Context) (CreateExternalSettlementAccountRow, error)
-	CreateMerchantSettlementAccount(ctx context.Context, arg CreateMerchantSettlementAccountParams) (CreateMerchantSettlementAccountRow, error)
 	CreateWallet(ctx context.Context, arg CreateWalletParams) (CreateWalletRow, error)
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) error
 	GetAccountByHandle(ctx context.Context, handle *string) (GetAccountByHandleRow, error)
@@ -29,9 +28,8 @@ type Querier interface {
 	GetDepositByOrderID(ctx context.Context, razorpayOrderID string) (PaymentDeposit, error)
 	GetEntriesByTransactionID(ctx context.Context, transactionID uuid.UUID) ([]GetEntriesByTransactionIDRow, error)
 	GetExternalSettlementAccount(ctx context.Context) (GetExternalSettlementAccountRow, error)
-	GetMerchantSettlementAccount(ctx context.Context, merchantID pgtype.UUID) (GetMerchantSettlementAccountRow, error)
-	GetMerchantSettlementAccountForUpdate(ctx context.Context, merchantID pgtype.UUID) (GetMerchantSettlementAccountForUpdateRow, error)
 	GetSpendByCategory(ctx context.Context, arg GetSpendByCategoryParams) ([]GetSpendByCategoryRow, error)
+	GetSystemAccountByType(ctx context.Context, type_ PaymentAccountType) (PaymentAccount, error)
 	GetTotalBalanceByUser(ctx context.Context, userID pgtype.UUID) (int64, error)
 	GetTransactionByID(ctx context.Context, id uuid.UUID) (GetTransactionByIDRow, error)
 	GetTransactionByIdempotencyKey(ctx context.Context, arg GetTransactionByIdempotencyKeyParams) (GetTransactionByIdempotencyKeyRow, error)

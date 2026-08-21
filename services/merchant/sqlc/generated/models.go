@@ -377,6 +377,14 @@ type MerchantSubscription struct {
 	UpdatedAt          time.Time
 }
 
+type OutboxEvent struct {
+	ID          uuid.UUID
+	Topic       string
+	Payload     []byte
+	PublishedAt pgtype.Timestamptz
+	CreatedAt   time.Time
+}
+
 type QrTransaction struct {
 	ID                uuid.UUID
 	StoreID           uuid.UUID
