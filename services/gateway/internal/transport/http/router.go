@@ -37,7 +37,8 @@ func RegisterRoutes(cfg RouteConfig) {
 	registerSecureRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "secure_routes")), cfg.AuthMiddleware, cfg.AuthAddr)
 	registerSupportRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "support_routes")), cfg.AuthMiddleware, cfg.Registry)
 	registerDownstreamRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "downstream_routes")), cfg.AuthMiddleware, cfg.Registry)
-
+  registerRewardRoutes(api.Group("/", middlewares.MaintenanceMode(cfg.Redis, "reward_routes")), cfg.AuthMiddleware, cfg.Registry)
+  
 	// Backward compatibility for frontend calls without /api/v1 prefix
 	registerAuthRoutes(cfg.App.Group("/", middlewares.MaintenanceMode(cfg.Redis, "auth_routes")), cfg.AuthAddr, cfg.AuthMiddleware)
 	registerPinRoutes(cfg.App.Group("/", middlewares.MaintenanceMode(cfg.Redis, "pin_routes")), cfg.AuthAddr, cfg.AuthMiddleware)
@@ -47,7 +48,8 @@ func RegisterRoutes(cfg RouteConfig) {
 	registerSecureRoutes(cfg.App.Group("/", middlewares.MaintenanceMode(cfg.Redis, "secure_routes")), cfg.AuthMiddleware, cfg.AuthAddr)
 	registerSupportRoutes(cfg.App.Group("/", middlewares.MaintenanceMode(cfg.Redis, "support_routes")), cfg.AuthMiddleware, cfg.Registry)
 	registerDownstreamRoutes(cfg.App.Group("/", middlewares.MaintenanceMode(cfg.Redis, "downstream_routes")), cfg.AuthMiddleware, cfg.Registry)
-
+  registerRewardRoutes(cfg.App.Group("/", middlewares.MaintenanceMode(cfg.Redis, "reward_routes")), cfg.AuthMiddleware, cfg.Registry)
+  
 	ws.RegisterWebSocketRoutes(cfg.App, cfg.Hub, cfg.AuthClient)
 }
 

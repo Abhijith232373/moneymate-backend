@@ -84,6 +84,7 @@ func registerAdminRoutes(api fiber.Router, authMiddleware fiber.Handler, authAdd
 	registerAdminCampaignRoutes(admin, merchantAddr)
 	registerAdminKYCRoutes(admin, merchantAddr)
 	registerAdminRewardsRoutes(admin, merchantAddr)
+	registerAdminRewardRuleRoutes(admin, registry)
 	registerAdminSubscriptionRoutes(admin, merchantAddr)
 	registerAdminSupportRoutes(admin, registry)
 }
@@ -173,6 +174,15 @@ func registerAdminRewardsRoutes(admin fiber.Router, merchantAddr string) {
 	adminRewards := admin.Group("/rewards")
 	adminRewards.Get("/history", proxy.MerchantProxy(merchantAddr, "/admin/rewards/history"))
 	adminRewards.Get("/summary", proxy.MerchantProxy(merchantAddr, "/admin/rewards/summary"))
+}
+
+func registerAdminRewardRuleRoutes(admin fiber.Router, registry *proxy.ServiceRegistry) {
+	rules := admin.Group("/rewards/rules")
+	rules.Post("/", proxy.HTTPProxy(registry, "rewards", "/admin/rewards/rules"))
+	rules.Get("/", proxy.HTTPProxy(registry, "rewards", "/admin/rewards/rules"))
+	rules.Get("/:id", proxy.HTTPProxy(registry, "rewards", "/admin/rewards/rules/:id"))
+	rules.Put("/:id", proxy.HTTPProxy(registry, "rewards", "/admin/rewards/rules/:id"))
+	rules.Patch("/:id/deactivate", proxy.HTTPProxy(registry, "rewards", "/admin/rewards/rules/:id/deactivate"))
 }
 
 func registerAdminSubscriptionRoutes(admin fiber.Router, merchantAddr string) {

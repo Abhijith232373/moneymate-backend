@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/transport/http/middleware"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/usecases"
 )
@@ -281,3 +282,28 @@ func (h *MerchantHandler) UpdateProfile(c fiber.Ctx) error {
 	})
 }
 
+func (h *MerchantHandler) GetInternalProfile(c fiber.Ctx) error {
+	idStr := c.Params("id")
+	if idStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid store id"})
+	}
+
+	store, err := h.usecase.GetStoreProfile(c.Context(), id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "store not found"})
+	}
+
+	// ONLY return public fields to avoid leaking PII or credentials
+	return c.JSON(fiber.Map{
+		"store_id":   store.ID.String(),
+		"legal_name": store.LegalName,
+		"display_id": store.DisplayID,
+		"logo_url":   store.LogoURL,
+		"plan":       store.Plan,
+	})
+}

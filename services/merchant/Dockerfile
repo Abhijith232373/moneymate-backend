@@ -13,6 +13,7 @@ COPY services/merchant/go.mod services/merchant/go.mod
 COPY services/payment/go.mod services/payment/go.mod
 COPY services/support/go.mod services/support/go.mod
 COPY services/notification/go.mod services/notification/go.mod
+COPY services/rewards/go.mod services/rewards/go.mod
 
 RUN go work sync
 
@@ -36,6 +37,7 @@ RUN mkdir -p /app/config
 COPY --from=builder /bin/merchant ./merchant
 COPY --from=builder /moneymate-backend/services/merchant/config/config.yaml ./config/config.yaml
 COPY --from=builder /moneymate-backend/services/merchant/migrations ./migrations
+COPY --from=builder /moneymate-backend/shared/certs/aiven-ca.pem ./certs/aiven-ca.pem
 
 USER appuser
 EXPOSE 9092

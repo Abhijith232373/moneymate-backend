@@ -8,8 +8,8 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260819093309-10df597b4f4b
-	github.com/redis/go-redis/v9 v9.21.0
+	github.com/moneymate-2026/moneymate-backend/shared v0.0.0-20260821045331-f37ecfe8ea1b
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/spf13/viper v1.21.0
 )
 
@@ -33,7 +33,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.6 // indirect
 	github.com/aws/smithy-go v1.27.8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	github.com/lib/pq v1.12.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.16 // indirect
 	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
