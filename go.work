@@ -6,6 +6,7 @@ use (
 	./services/merchant
 	./services/notification
 	./services/payment
+	./services/rewards
 	./services/support
 	./shared
 )
