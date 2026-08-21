@@ -117,49 +117,6 @@ func (q *Queries) CreateExternalSettlementAccount(ctx context.Context) (CreateEx
 	return i, err
 }
 
-const createMerchantSettlementAccount = `-- name: CreateMerchantSettlementAccount :one
-INSERT INTO payment.accounts (merchant_id, type, currency)
-VALUES ($1, 'merchant_settlement', $2)
-RETURNING id, user_id, merchant_id, type::text AS type, currency,
-          balance, version, handle, created_at, updated_at
-`
-
-type CreateMerchantSettlementAccountParams struct {
-	MerchantID pgtype.UUID
-	Currency   string
-}
-
-type CreateMerchantSettlementAccountRow struct {
-	ID         uuid.UUID
-	UserID     pgtype.UUID
-	MerchantID pgtype.UUID
-	Type       string
-	Currency   string
-	Balance    int64
-	Version    int64
-	Handle     *string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-func (q *Queries) CreateMerchantSettlementAccount(ctx context.Context, arg CreateMerchantSettlementAccountParams) (CreateMerchantSettlementAccountRow, error) {
-	row := q.db.QueryRow(ctx, createMerchantSettlementAccount, arg.MerchantID, arg.Currency)
-	var i CreateMerchantSettlementAccountRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.MerchantID,
-		&i.Type,
-		&i.Currency,
-		&i.Balance,
-		&i.Version,
-		&i.Handle,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const createWallet = `-- name: CreateWallet :one
 INSERT INTO payment.accounts (user_id, type, currency, handle)
 VALUES ($1, 'wallet', $2, $3)
@@ -358,29 +315,14 @@ func (q *Queries) GetExternalSettlementAccount(ctx context.Context) (GetExternal
 	return i, err
 }
 
-const getMerchantSettlementAccount = `-- name: GetMerchantSettlementAccount :one
-SELECT id, user_id, merchant_id, type::text AS type, currency,
-       balance, version, handle, created_at, updated_at
-FROM payment.accounts
-WHERE merchant_id = $1 AND type = 'merchant_settlement'
+const getSystemAccountByType = `-- name: GetSystemAccountByType :one
+SELECT id, user_id, merchant_id, type, currency, balance, version, created_at, updated_at, handle FROM payment.accounts
+WHERE type = $1 AND user_id IS NULL AND merchant_id IS NULL
 `
 
-type GetMerchantSettlementAccountRow struct {
-	ID         uuid.UUID
-	UserID     pgtype.UUID
-	MerchantID pgtype.UUID
-	Type       string
-	Currency   string
-	Balance    int64
-	Version    int64
-	Handle     *string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-func (q *Queries) GetMerchantSettlementAccount(ctx context.Context, merchantID pgtype.UUID) (GetMerchantSettlementAccountRow, error) {
-	row := q.db.QueryRow(ctx, getMerchantSettlementAccount, merchantID)
-	var i GetMerchantSettlementAccountRow
+func (q *Queries) GetSystemAccountByType(ctx context.Context, type_ PaymentAccountType) (PaymentAccount, error) {
+	row := q.db.QueryRow(ctx, getSystemAccountByType, type_)
+	var i PaymentAccount
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -389,48 +331,9 @@ func (q *Queries) GetMerchantSettlementAccount(ctx context.Context, merchantID p
 		&i.Currency,
 		&i.Balance,
 		&i.Version,
-		&i.Handle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getMerchantSettlementAccountForUpdate = `-- name: GetMerchantSettlementAccountForUpdate :one
-SELECT id, user_id, merchant_id, type::text AS type, currency,
-       balance, version, handle, created_at, updated_at
-FROM payment.accounts
-WHERE merchant_id = $1 AND type = 'merchant_settlement'
-FOR UPDATE
-`
-
-type GetMerchantSettlementAccountForUpdateRow struct {
-	ID         uuid.UUID
-	UserID     pgtype.UUID
-	MerchantID pgtype.UUID
-	Type       string
-	Currency   string
-	Balance    int64
-	Version    int64
-	Handle     *string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-func (q *Queries) GetMerchantSettlementAccountForUpdate(ctx context.Context, merchantID pgtype.UUID) (GetMerchantSettlementAccountForUpdateRow, error) {
-	row := q.db.QueryRow(ctx, getMerchantSettlementAccountForUpdate, merchantID)
-	var i GetMerchantSettlementAccountForUpdateRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.MerchantID,
-		&i.Type,
-		&i.Currency,
-		&i.Balance,
-		&i.Version,
 		&i.Handle,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }

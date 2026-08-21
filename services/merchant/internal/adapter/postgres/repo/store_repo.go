@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/internal/domain"
 	"github.com/moneymate-2026/moneymate-backend/services/merchant/sqlc/generated"
+	"github.com/moneymate-2026/moneymate-backend/shared/pkg/pgxtx"
 )
 
 // StoreRepo implements domain.MerchantRepository using pgxpool for mechanical sympathy.
@@ -50,7 +51,12 @@ func (r *StoreRepo) RegisterStore(ctx context.Context, store *domain.Store) (*do
 		PasswordHash:      store.PasswordHash,
 	}
 
-	row, err := r.q.CreateStore(ctx, arg)
+	q := r.q
+	if tx, ok := pgxtx.FromContext(ctx); ok {
+		q = r.q.WithTx(tx)
+	}
+
+	row, err := q.CreateStore(ctx, arg)
 	if err != nil {
 		return nil, fmt.Errorf("StoreRepo.RegisterStore insertion failed: %w", err)
 	}
@@ -74,7 +80,12 @@ func (r *StoreRepo) SubmitKYC(ctx context.Context, kyc *domain.KYCDocument) erro
 		ShopLicenseUrl: kyc.ShopLicenseURL,
 	}
 
-	if err := r.q.SubmitKYC(ctx, arg); err != nil {
+	q := r.q
+	if tx, ok := pgxtx.FromContext(ctx); ok {
+		q = r.q.WithTx(tx)
+	}
+
+	if err := q.SubmitKYC(ctx, arg); err != nil {
 		return fmt.Errorf("StoreRepo.SubmitKYC failed: %w", err)
 	}
 	return nil
