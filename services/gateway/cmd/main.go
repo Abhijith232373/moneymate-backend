@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
@@ -75,22 +76,26 @@ func main() {
 
 	app.Use(middlewares.RequestID)
 	app.Use(middlewares.Logger)
-	app.Use(rateLimitMiddleware)
-
+	
+	// CORS must be before rate limiting so that rate limited responses still get CORS headers
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: strings.Split(cfg.CORS.AllowOrigins, ","),
 		AllowMethods: strings.Split(cfg.CORS.AllowMethods, ","),
 		AllowHeaders: strings.Split(cfg.CORS.AllowHeaders, ","),
 	}))
+
+	app.Use(rateLimitMiddleware)
+
 	http.RegisterRoutes(http.RouteConfig{
-	App:            app,
-	AuthMiddleware: authMiddleware,
-	AuthClient:     authClient,
-	Registry:       serviceRegistry,
-	Hub:            hub,
-	AuthAddr:       cfg.Services.AuthAddr,
-	MerchantAddr:   cfg.Services.MerchantAddr,
-})
+		App:            app,
+		AuthMiddleware: authMiddleware,
+		AuthClient:     authClient,
+		Registry:       serviceRegistry,
+		Hub:            hub,
+		AuthAddr:       cfg.Services.AuthAddr,
+		MerchantAddr:   cfg.Services.MerchantAddr,
+		Redis:          rdb,
+	})
 	go func() {
 		addr := ":" + cfg.Server.Port
 		log.Printf("[startup] gateway listening on %s", addr)

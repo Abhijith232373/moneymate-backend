@@ -84,6 +84,59 @@ func (h *SubscriptionHandler) GetSubscriptionPlans(c fiber.Ctx) error {
 	return c.JSON(response)
 }
 
+// GetPublicPlans handles GET /merchant/public/subscriptions/plans and returns the catalog of pricing tiers without needing a store ID.
+func (h *SubscriptionHandler) GetPublicPlans(c fiber.Ctx) error {
+	plans, err := h.usecase.GetPublicPlans(c.Context())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	var response []SubscriptionPlanResponse
+	for _, p := range plans {
+		formattedPrice := fmt.Sprintf("$%.0f", p.Price)
+		if p.Price != float64(int64(p.Price)) {
+			formattedPrice = fmt.Sprintf("$%.2f", p.Price)
+		}
+
+		formattedCycle := "/mo"
+		if strings.ToLower(p.BillingCycle) == "annual" {
+			formattedCycle = "/yr"
+		}
+
+		var featuresResp []PlanFeatureResponse
+		for _, f := range p.Features {
+			featuresResp = append(featuresResp, PlanFeatureResponse{
+				Name:     f.Name,
+				Included: f.Included,
+			})
+		}
+		if featuresResp == nil {
+			featuresResp = []PlanFeatureResponse{}
+		}
+
+		response = append(response, SubscriptionPlanResponse{
+			ID:                 p.ID.String(),
+			PlanCode:           p.PlanCode,
+			Name:               p.Name,
+			Price:              p.Price,
+			FormattedPrice:     formattedPrice,
+			BillingCycle:       p.BillingCycle,
+			FormattedCycle:     formattedCycle,
+			Description:        p.Description,
+			MaxActiveCampaigns: p.MaxActiveCampaigns,
+			IsMostPopular:      p.IsMostPopular,
+			Features:           featuresResp,
+			IsCurrent:          p.IsCurrent, // will be true for essential since no storeID is passed
+		})
+	}
+
+	if response == nil {
+		response = []SubscriptionPlanResponse{}
+	}
+
+	return c.JSON(response)
+}
+
 // GetCurrentSubscription handles GET /merchant/:store_id/subscriptions/current and returns the store's active billing timeline.
 func (h *SubscriptionHandler) GetCurrentSubscription(c fiber.Ctx) error {
 	storeIDStr := resolveMerchantID(c)

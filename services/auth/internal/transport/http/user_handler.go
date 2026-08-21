@@ -35,6 +35,7 @@ func (h *UserHandler) CreateUser(c fiber.Ctx) error {
 		FullName: req.FullName,
 		Password: req.Password,
 		Role:     req.Role,
+		PIN:      req.PIN,
 	})
 	if err != nil {
 		return handleError(c, err)

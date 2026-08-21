@@ -37,6 +37,17 @@ type Report struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+type AuditLog struct {
+	ID        uuid.UUID              `json:"id"`
+	AdminID   uuid.UUID              `json:"admin_id"`
+	AdminName string                 `json:"admin_name"`
+	AdminRole string                 `json:"admin_role"`
+	Module    string                 `json:"module"`
+	Action    string                 `json:"action"`
+	Changes   map[string]interface{} `json:"changes"`
+	CreatedAt time.Time              `json:"created_at"`
+}
+
 type SupportRepository interface {
 	CreateFeedback(ctx context.Context, f *Feedback) (*Feedback, error)
 	ListFeedbacks(ctx context.Context, limit, offset int32) ([]*Feedback, error)
@@ -48,4 +59,7 @@ type SupportRepository interface {
 	CreateReport(ctx context.Context, r *Report) (*Report, error)
 	ListReports(ctx context.Context, limit, offset int32) ([]*Report, error)
 	ListReportsByUser(ctx context.Context, reporterID uuid.UUID, reporterType string) ([]*Report, error)
+
+	CreateAuditLog(ctx context.Context, log *AuditLog) (*AuditLog, error)
+	ListAuditLogs(ctx context.Context, limit, offset int32) ([]*AuditLog, error)
 }

@@ -11,12 +11,14 @@ import (
 )
 
 type Querier interface {
+	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (ChatMessage, error)
 	CreateComplaint(ctx context.Context, arg CreateComplaintParams) (Complaint, error)
 	CreateFeedback(ctx context.Context, arg CreateFeedbackParams) (Feedback, error)
 	CreateReport(ctx context.Context, arg CreateReportParams) (Report, error)
 	GetAdminChatHistory(ctx context.Context, senderID uuid.UUID) ([]ChatMessage, error)
 	GetChatHistory(ctx context.Context, arg GetChatHistoryParams) ([]ChatMessage, error)
+	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListComplaints(ctx context.Context, arg ListComplaintsParams) ([]Complaint, error)
 	ListComplaintsByUser(ctx context.Context, arg ListComplaintsByUserParams) ([]Complaint, error)
 	ListFeedbacks(ctx context.Context, arg ListFeedbacksParams) ([]Feedback, error)

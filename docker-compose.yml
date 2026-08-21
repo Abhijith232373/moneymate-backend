@@ -73,6 +73,7 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=5432
       - ENVIRONMENT=dev
+      - REDIS_ADDR=redis:6379
     ports:
       - "8085:8085"
     restart: unless-stopped
@@ -160,6 +161,7 @@ services:
       - CONFIG_PATH=/moneymate-backend/services/gateway/config/config.yaml
       - SERVER_PORT=8080
       - SERVICES_AUTH_ADDR=auth:8081
+      - SERVICES_MERCH_ADDR=merchant:9092
       - SERVICES_PAYMENT_ADDR=payment:9094
       - SERVICES_SUPPORT_ADDR=support:8085
       - SERVICES_REWARDS_ADDR=rewards:9096

@@ -3,9 +3,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
-	"github.com/google/uuid"
 	"github.com/abijith/moneymate-backend/services/support/internal/domain"
+	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type SupportRepo struct {
@@ -134,8 +136,72 @@ func (r *SupportRepo) ListComplaintsByUser(ctx context.Context, userID uuid.UUID
 	return res, nil
 }
 
+func (r *SupportRepo) CreateAuditLog(ctx context.Context, log *domain.AuditLog) (*domain.AuditLog, error) {
+	var changesJSON []byte
+	var err error
+	if log.Changes != nil {
+		changesJSON, err = json.Marshal(log.Changes)
+		if err != nil {
+			return nil, err
+		}
+	}
 
+	row, err := r.querier.CreateAuditLog(ctx, CreateAuditLogParams{
+		AdminID:   log.AdminID,
+		AdminName: log.AdminName,
+		AdminRole: log.AdminRole,
+		Module:    log.Module,
+		Action:    log.Action,
+		Changes: pqtype.NullRawMessage{
+			RawMessage: changesJSON,
+			Valid:      log.Changes != nil,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
 
+	return &domain.AuditLog{
+		ID:        row.ID,
+		AdminID:   row.AdminID,
+		AdminName: row.AdminName,
+		AdminRole: row.AdminRole,
+		Module:    row.Module,
+		Action:    row.Action,
+		Changes:   log.Changes,
+		CreatedAt: row.CreatedAt.Time,
+	}, nil
+}
+
+func (r *SupportRepo) ListAuditLogs(ctx context.Context, limit, offset int32) ([]*domain.AuditLog, error) {
+	rows, err := r.querier.ListAuditLogs(ctx, ListAuditLogsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var res []*domain.AuditLog
+	for _, row := range rows {
+		var changes map[string]interface{}
+		if row.Changes.Valid {
+			json.Unmarshal(row.Changes.RawMessage, &changes)
+		}
+
+		res = append(res, &domain.AuditLog{
+			ID:        row.ID,
+			AdminID:   row.AdminID,
+			AdminName: row.AdminName,
+			AdminRole: row.AdminRole,
+			Module:    row.Module,
+			Action:    row.Action,
+			Changes:   changes,
+			CreatedAt: row.CreatedAt.Time,
+		})
+	}
+	return res, nil
+}
 func (r *SupportRepo) CreateReport(ctx context.Context, rp *domain.Report) (*domain.Report, error) {
 	row, err := r.querier.CreateReport(ctx, CreateReportParams{
 		ReporterID:   rp.ReporterID,

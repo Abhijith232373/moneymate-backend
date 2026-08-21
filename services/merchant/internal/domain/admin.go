@@ -33,4 +33,23 @@ type AdminRepository interface {
 	// Subscriptions
 	GetAllSubscriptions(ctx context.Context, limit, offset int) ([]*MerchantSubscription, error)
 	UpdateStoreSubscriptionPlan(ctx context.Context, storeID uuid.UUID, planCode string) (*MerchantSubscription, error)
+
+	// Dashboard
+	GetAdminDashboardStats(ctx context.Context) (*AdminDashboardStats, error)
+}
+
+type AdminDashboardStats struct {
+	TotalRevenue       float64                  `json:"total_revenue"`
+	RewardPool         float64                  `json:"reward_pool"`
+	SystemWallet       float64                  `json:"system_wallet"`
+	DailyTransactions  int64                    `json:"daily_transactions"`
+	RecentTransactions []AdminRecentTransaction `json:"recent_transactions"`
+}
+
+type AdminRecentTransaction struct {
+	ID        string  `json:"id"`
+	User      string  `json:"user"`
+	Amount    string  `json:"amount"`
+	Date      string  `json:"date"`
+	Status    string  `json:"status"`
 }
